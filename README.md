@@ -122,6 +122,6 @@ I build systems the way they would be deployed in production — with security, 
 
 ## 📫 Connect
 
-LinkedIn: *(add your link)*  
+LinkedIn: https://www.linkedin.com/in/garrett-foldy19?utm_source=share_via&utm_content=profile&utm_medium=member_ios
 GitHub: You're here  
 

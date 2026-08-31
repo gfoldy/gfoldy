@@ -654,7 +654,7 @@ function openExerciseSheet(dayId, exId) {
     </div>
     <div class="sheet-actions">
       ${exId ? `<button class="btn danger" data-act="split:delex" data-day="${dayId}" data-ex="${exId}">Delete</button>` : ''}
-      <button class="btn gold" data-act="split:saveex" data-day="${dayId}" data-ex="${exId}">Save</button>
+      <button class="btn gold" data-act="split:saveex" data-day="${dayId}" data-ex="${exId || ''}">Save</button>
     </div>
     <div class="sheet-actions" style="margin-top:8px"><button class="btn ghost" data-act="sheet:close">Cancel</button></div>
   `);

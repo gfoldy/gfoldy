@@ -1,127 +1,48 @@
-# 👋 Garrett Foldy  
+# Garrett Foldy — Personal Training Website
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Cloud--Native-Kubernetes-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white" />
-  <img src="https://img.shields.io/badge/DevOps-Automation-0A66C2?style=for-the-badge&logo=githubactions&logoColor=white" />
-  <img src="https://img.shields.io/badge/Cybersecurity-Security%20Focused-8A2BE2?style=for-the-badge&logo=shield&logoColor=white" />
-  <img src="https://img.shields.io/badge/DevSecOps-In%20Progress-111111?style=for-the-badge&logo=hackthebox&logoColor=green" />
-</p>
+A fast, mobile-friendly one-page website for online personal training and
+custom workout plans — built to convert visitors coming from Instagram into
+coaching clients. Positioned around everyday health, strength and fitness
+(not competitive bodybuilding).
 
-<p align="center">
-Cloud-Native Engineer | DevOps & Cybersecurity | Future DevSecOps
-</p>
+## Live site
 
----
+This repo deploys automatically to **GitHub Pages** via the workflow in
+`.github/workflows/static.yml` whenever changes land on the `main` branch.
+The published URL appears under **Settings → Pages** once deployed
+(typically `https://<username>.github.io/<repo>/`).
 
-## 🧠 Overview
+## Files
 
-I design and deploy secure, production-ready cloud-native systems that combine infrastructure automation and cybersecurity best practices.
+| File | Purpose |
+|------|---------|
+| `index.html` | All page content and structure |
+| `styles.css` | Bold, energetic dark theme |
+| `script.js`  | Mobile menu, scroll animations, footer year |
 
-My work focuses on building systems that are:
+## Make it yours (quick edits)
 
-- Containerized and Kubernetes-based  
-- Automated with CI/CD pipelines  
-- Secure by design  
-- Reproducible and production-structured  
+Everything below can be edited directly in `index.html` — no build step, no
+dependencies.
 
-I am intentionally developing toward **DevSecOps Engineering**, operating at the intersection of:
+1. **Instagram handle** — search `index.html` (and the footer/CTA) for
+   `garrettfoldy` and replace every occurrence with your real handle. All
+   the "Message me" buttons point to `https://instagram.com/<handle>`.
+2. **Photos** — the hero and about sections use styled placeholders. Add your
+   images to the repo and replace the placeholder `<div>`s with
+   `<img src="your-photo.jpg" alt="...">` (marked with HTML comments in the file).
+3. **Copy** — update the headline, about story, services and FAQ text to match
+   your voice and offer.
+4. **Testimonials** — swap the sample quotes in the *Results* section for real
+   client reviews as you collect them.
+5. **Colors** — tweak the palette at the top of `styles.css` (the
+   `--accent` / `--accent-2` variables control the accent colors).
 
-> Security + Automation + Infrastructure
+## Preview locally
 
----
+Just open `index.html` in a browser, or run a simple static server:
 
-## 🏗 Core Focus Areas
-
-### 🔐 Cybersecurity
-
-- Secure system configuration and hardening  
-- Container security fundamentals  
-- Secret management best practices  
-- Network segmentation principles  
-- Defensive security mindset  
-- Ongoing cybersecurity certification development  
-
----
-
-### ⚙️ DevOps / Cloud-Native Engineering
-
-- Kubernetes (k3s, Deployments, Services, Ingress, CronJobs)  
-- Docker containerization  
-- GitHub Actions CI/CD pipelines  
-- GitHub Container Registry (GHCR)  
-- PostgreSQL-backed applications  
-- Health checks and production hardening  
-- Infrastructure-as-Code concepts  
-
----
-
-## 🚀 Featured Project
-
-### AI Instagram News – Cloud-Native Kubernetes Application
-
-A production-style microservices system that:
-
-- Ingests content on a schedule  
-- Generates AI summaries and images  
-- Stores data in PostgreSQL  
-- Provides a Streamlit-based review dashboard  
-- Uses Kubernetes Ingress for routing  
-- Installs with a single bootstrap script  
-
-This project demonstrates:
-
-- Cloud-native architecture  
-- Secure secret injection  
-- Automated container builds  
-- CronJob-based worker services  
-- Real deployment structure  
-
----
-
-## 🛠 Technical Stack
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Kubernetes-326CE5?style=flat-square&logo=kubernetes&logoColor=white"/>
-  <img src="https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white"/>
-  <img src="https://img.shields.io/badge/GitHub_Actions-2088FF?style=flat-square&logo=github-actions&logoColor=white"/>
-  <img src="https://img.shields.io/badge/PostgreSQL-336791?style=flat-square&logo=postgresql&logoColor=white"/>
-  <img src="https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white"/>
-  <img src="https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white"/>
-  <img src="https://img.shields.io/badge/Streamlit-FF4B4B?style=flat-square&logo=streamlit&logoColor=white"/>
-</p>
-
----
-
-## 🎯 Career Direction
-
-I am building toward roles in:
-
-- DevSecOps Engineering  
-- Cloud Security Engineering  
-- Platform Engineering  
-- Security-focused DevOps  
-
-My goal is to engineer systems that are:
-
-- Secure by design  
-- Fully automated  
-- Scalable  
-- Production-ready  
-
----
-
-## ⚡ Engineering Philosophy
-
-Security should not be an afterthought.  
-Automation should reduce risk.  
-Infrastructure should be repeatable.  
-
-I build systems the way they would be deployed in production — with security, scalability, and maintainability from day one.
-
----
-
-## 📫 Connect
-
-LinkedIn: https://www.linkedin.com/in/garrett-foldy19?utm_source=share_via&utm_content=profile&utm_medium=member_ios
-
-
+```bash
+python3 -m http.server 8000
+# then visit http://localhost:8000
+```

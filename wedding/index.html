@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Score and auto-rank wedding venues by budget, capacity, location, vibe, availability, and inclusions. Data stays in your browser.">
+<title>Wedding Venue Shortlist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --paper:#F4F6F3; --card:#FBFCFA; --ink:#23291F; --ink-soft:#54604B;
+    --line:#DBE1D6; --line-soft:#E7EBE3;
+    --sage:#5B7355; --sage-deep:#425138; --sage-tint:#EAF0E6;
+    --brass:#B08843; --brass-tint:#F5ECDA;
+    --good:#4F7A52; --good-tint:#E6F0E4;
+    --warn:#B5822B; --warn-tint:#F6ECD8;
+    --crit:#B5533C; --crit-tint:#F6E3DC;
+    --shadow:0 1px 2px rgba(35,41,31,.05),0 8px 24px -14px rgba(35,41,31,.22);
+    --shadow-lift:0 2px 4px rgba(35,41,31,.06),0 18px 40px -18px rgba(35,41,31,.32);
+    --radius:14px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --paper:#161A13; --card:#1E241A; --ink:#EAF0E3; --ink-soft:#A9B5A0;
+      --line:#333B2C; --line-soft:#28301F;
+      --sage:#9CB88F; --sage-deep:#B7CDAB; --sage-tint:#25301F;
+      --brass:#D9B072; --brass-tint:#332916;
+      --good:#8FC28D; --good-tint:#213021;
+      --warn:#D9B061; --warn-tint:#332B16;
+      --crit:#E08A72; --crit-tint:#341F19;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 26px -14px rgba(0,0,0,.6);
+      --shadow-lift:0 2px 6px rgba(0,0,0,.4),0 20px 44px -18px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#161A13; --card:#1E241A; --ink:#EAF0E3; --ink-soft:#A9B5A0;
+    --line:#333B2C; --line-soft:#28301F;
+    --sage:#9CB88F; --sage-deep:#B7CDAB; --sage-tint:#25301F;
+    --brass:#D9B072; --brass-tint:#332916;
+    --good:#8FC28D; --good-tint:#213021;
+    --warn:#D9B061; --warn-tint:#332B16;
+    --crit:#E08A72; --crit-tint:#341F19;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 26px -14px rgba(0,0,0,.6);
+    --shadow-lift:0 2px 6px rgba(0,0,0,.4),0 20px 44px -18px rgba(0,0,0,.7);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:"Hanken Grotesk",system-ui,-apple-system,Segoe UI,sans-serif;
+    line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1000px; margin:0 auto; padding:clamp(18px,4vw,40px) clamp(14px,4vw,28px) 64px}
+  h1,h2,h3{font-family:"Fraunces",Georgia,serif; margin:0; text-wrap:balance; font-weight:600}
+  .tabnum{font-variant-numeric:tabular-nums}
+  button{font-family:inherit; cursor:pointer}
+  a{color:var(--sage-deep)}
+  :focus-visible{outline:2.5px solid var(--sage); outline-offset:2px; border-radius:6px}
+
+  /* ---------- header ---------- */
+  .topbar{display:flex; flex-wrap:wrap; gap:24px 32px; align-items:flex-end; justify-content:space-between; padding-bottom:22px; border-bottom:1px solid var(--line)}
+  .brand{display:flex; gap:14px; align-items:flex-start}
+  .sprig{flex:none; width:34px; height:44px; color:var(--sage); margin-top:4px}
+  .brand h1{font-size:clamp(1.7rem,3.6vw,2.4rem); letter-spacing:-.01em; line-height:1.05}
+  .tagline{margin:6px 0 0; color:var(--ink-soft); max-width:44ch; font-size:.96rem}
+  .settings{display:flex; gap:10px; flex-wrap:wrap}
+  .field{display:flex; flex-direction:column; gap:4px}
+  .field label{font-size:.7rem; text-transform:uppercase; letter-spacing:.09em; color:var(--ink-soft); font-weight:600}
+  .field .inbox{display:flex; align-items:center; gap:2px; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:0 10px; box-shadow:var(--shadow)}
+  .field .inbox .pfx{color:var(--ink-soft); font-size:.9rem}
+  .field input{border:0; background:transparent; color:var(--ink); font:600 1rem "Hanken Grotesk",sans-serif; padding:9px 2px; width:100%; font-variant-numeric:tabular-nums}
+  .field input:focus{outline:none}
+  .field.g input{width:3.4em}
+  .field.b input{width:5.2em}
+  .field.d input{width:8.4em}
+
+  /* ---------- priorities ---------- */
+  .panel{margin-top:26px; background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden}
+  .panel-head{display:flex; align-items:baseline; justify-content:space-between; gap:14px; padding:16px 18px; cursor:pointer; user-select:none}
+  .panel-head h2{font-size:1.12rem}
+  .panel-head .sub{color:var(--ink-soft); font-size:.82rem; margin-top:2px}
+  .panel-head .chev{color:var(--ink-soft); transition:transform .2s; font-size:1.1rem}
+  .panel[data-open="false"] .chev{transform:rotate(-90deg)}
+  .panel[data-open="false"] .weights{display:none}
+  .weights{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:4px 26px; padding:2px 18px 20px}
+  .wt{display:flex; flex-direction:column; gap:3px; padding:9px 0; border-top:1px solid var(--line-soft)}
+  .wt-top{display:flex; align-items:center; justify-content:space-between; gap:10px}
+  .wt-name{font-weight:600; font-size:.92rem}
+  .wt-name small{display:block; font-weight:400; color:var(--ink-soft); font-size:.76rem}
+  .wt-val{font-size:.72rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--sage-deep); background:var(--sage-tint); padding:3px 8px; border-radius:20px; white-space:nowrap}
+  input[type=range]{-webkit-appearance:none; appearance:none; width:100%; height:5px; border-radius:5px; background:var(--line); outline-offset:5px}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:17px; height:17px; border-radius:50%; background:var(--sage); border:2.5px solid var(--card); box-shadow:0 1px 3px rgba(35,41,31,.35); cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:15px; height:15px; border:2.5px solid var(--card); border-radius:50%; background:var(--sage); cursor:pointer}
+  .reset{border:1px solid var(--line); background:transparent; color:var(--ink-soft); border-radius:8px; padding:5px 11px; font-size:.8rem; font-weight:600}
+  .reset:hover{color:var(--ink); border-color:var(--ink-soft)}
+
+  /* ---------- summary ---------- */
+  .summary{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:26px}
+  .tile{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow)}
+  .tile .k{font-size:.72rem; text-transform:uppercase; letter-spacing:.09em; color:var(--ink-soft); font-weight:600}
+  .tile .v{font-family:"Fraunces",serif; font-size:1.9rem; font-weight:600; line-height:1.1; margin-top:5px; font-variant-numeric:tabular-nums}
+  .tile .v small{font-family:"Hanken Grotesk",sans-serif; font-size:.8rem; font-weight:500; color:var(--ink-soft)}
+  .tile.top .v{font-size:1.28rem; line-height:1.15}
+  @media (max-width:620px){.summary{grid-template-columns:1fr}}
+
+  /* ---------- list ---------- */
+  .listhead{display:flex; align-items:center; justify-content:space-between; gap:12px; margin:32px 0 14px}
+  .listhead h2{font-size:1.25rem}
+  .listhead .rowbtns{display:flex; gap:8px}
+  .btn{border-radius:10px; padding:9px 14px; font-size:.9rem; font-weight:600; border:1px solid transparent}
+  .btn.primary{background:var(--sage); color:#fff; box-shadow:var(--shadow)}
+  .btn.primary:hover{background:var(--sage-deep)}
+  :root[data-theme="dark"] .btn.primary,:root:not([data-theme="light"]) .btn.primary{color:#151a12}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn.primary{color:#151a12}}
+  .btn.ghost{background:transparent; border-color:var(--line); color:var(--ink-soft)}
+  .btn.ghost:hover{color:var(--ink); border-color:var(--ink-soft)}
+
+  .venues{display:flex; flex-direction:column; gap:12px}
+  .venue{display:grid; grid-template-columns:46px 1fr auto; gap:6px 16px; background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px; box-shadow:var(--shadow); transition:box-shadow .18s,border-color .18s}
+  .venue:hover{box-shadow:var(--shadow-lift)}
+  .venue.rank1{border-color:var(--brass); background:linear-gradient(180deg,var(--brass-tint),var(--card) 62%)}
+  .rank{font-family:"Fraunces",serif; font-size:1.5rem; font-weight:600; color:var(--ink-soft); font-variant-numeric:tabular-nums; text-align:center; line-height:1.9}
+  .venue.rank1 .rank{color:var(--brass)}
+  .crown{display:block; font-size:.6rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--brass); margin-top:-6px}
+  .vmain{min-width:0}
+  .vtop{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+  .vtop h3{font-size:1.15rem; letter-spacing:-.01em}
+  .vtop .exflag{font-size:.64rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--brass); border:1px solid var(--brass); border-radius:20px; padding:1px 7px}
+  .vtop .lnk{color:var(--ink-soft); text-decoration:none; font-size:.95rem}
+  .vtop .sp{flex:1}
+  .icobtn{border:0; background:transparent; color:var(--ink-soft); padding:4px; border-radius:7px; font-size:.82rem; font-weight:600}
+  .icobtn:hover{background:var(--line-soft); color:var(--ink)}
+  .chips{display:flex; flex-wrap:wrap; gap:6px; margin:9px 0 8px}
+  .chip{font-size:.74rem; font-weight:600; padding:3px 9px; border-radius:20px; display:inline-flex; gap:5px; align-items:center; font-variant-numeric:tabular-nums}
+  .chip.good{background:var(--good-tint); color:var(--good)}
+  .chip.warn{background:var(--warn-tint); color:var(--warn)}
+  .chip.crit{background:var(--crit-tint); color:var(--crit)}
+  .chip.dim{background:var(--line-soft); color:var(--ink-soft)}
+  .meta{display:flex; flex-wrap:wrap; gap:6px 18px; font-size:.85rem; color:var(--ink-soft); margin-top:2px}
+  .meta b{color:var(--ink); font-weight:600; font-variant-numeric:tabular-nums}
+  .meters{display:flex; flex-wrap:wrap; gap:5px 18px; margin-top:9px}
+  .meter{display:flex; align-items:center; gap:7px; font-size:.78rem; color:var(--ink-soft)}
+  .dots{display:inline-flex; gap:3px}
+  .dot{width:7px; height:7px; border-radius:50%; background:var(--line)}
+  .dot.on{background:var(--sage)}
+  .vnotes{margin-top:9px; font-size:.86rem; color:var(--ink-soft); border-left:2px solid var(--line); padding-left:10px}
+  .score{align-self:center; text-align:center; min-width:66px}
+  .score .num{font-family:"Fraunces",serif; font-size:2.15rem; font-weight:600; line-height:1; font-variant-numeric:tabular-nums}
+  .score .lbl{font-size:.66rem; text-transform:uppercase; letter-spacing:.1em; color:var(--ink-soft); font-weight:600; margin-top:3px}
+  .sgauge{height:4px; border-radius:4px; background:var(--line); margin-top:7px; overflow:hidden}
+  .sgauge i{display:block; height:100%; background:var(--sage); border-radius:4px}
+  .venue.rank1 .sgauge i{background:var(--brass)}
+
+  /* ---------- edit form ---------- */
+  .editform{grid-column:1 / -1; display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px 14px; padding-top:4px}
+  .ef{display:flex; flex-direction:column; gap:4px}
+  .ef.wide{grid-column:1 / -1}
+  .ef label{font-size:.72rem; text-transform:uppercase; letter-spacing:.07em; color:var(--ink-soft); font-weight:600}
+  .ef input,.ef select,.ef textarea{font-family:inherit; font-size:.92rem; color:var(--ink); background:var(--paper); border:1px solid var(--line); border-radius:9px; padding:8px 10px; width:100%}
+  .ef textarea{resize:vertical; min-height:44px}
+  .ef input:focus,.ef select:focus,.ef textarea:focus{outline:none; border-color:var(--sage); box-shadow:0 0 0 3px var(--sage-tint)}
+  .efactions{grid-column:1 / -1; display:flex; gap:8px; justify-content:flex-end; margin-top:2px}
+
+  .empty{text-align:center; padding:44px 20px; color:var(--ink-soft); border:1px dashed var(--line); border-radius:var(--radius)}
+  .foot{margin-top:34px; padding-top:16px; border-top:1px solid var(--line); font-size:.8rem; color:var(--ink-soft); display:flex; flex-wrap:wrap; gap:6px 16px; justify-content:space-between}
+  .foot a{color:var(--sage-deep)}
+  @media (max-width:560px){
+    .venue{grid-template-columns:40px 1fr; }
+    .score{grid-column:1 / -1; display:flex; gap:10px; align-items:center; text-align:left; margin-top:6px; border-top:1px solid var(--line-soft); padding-top:10px}
+    .score .sgauge{flex:1; margin-top:0}
+    .brand h1{font-size:1.6rem}
+  }
+</style>
+<style>img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <div class="brand">
+      <svg class="sprig" viewBox="0 0 34 44" fill="none" aria-hidden="true">
+        <path d="M17 43V9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M17 15C17 11 13 8 8 8c0 4 4 7 9 7Z" fill="currentColor" opacity=".55"/>
+        <path d="M17 15c0-4 4-7 9-7 0 4-4 7-9 7Z" fill="currentColor" opacity=".8"/>
+        <path d="M17 24c0-4 4-7 9-7 0 4-4 7-9 7Z" fill="currentColor" opacity=".55"/>
+        <path d="M17 24c0-4-4-7-9-7 0 4 4 7 9 7Z" fill="currentColor" opacity=".8"/>
+        <circle cx="17" cy="6" r="3.4" fill="currentColor"/>
+      </svg>
+      <div>
+        <h1>Wedding Venue Shortlist</h1>
+        <p class="tagline">Score every venue against what actually matters to you &mdash; then let it rank them.</p>
+      </div>
+    </div>
+    <div class="settings">
+      <div class="field g"><label for="s-guests">Guests</label>
+        <div class="inbox"><input id="s-guests" type="number" min="1" inputmode="numeric"></div></div>
+      <div class="field b"><label for="s-budget">Budget (total)</label>
+        <div class="inbox"><span class="pfx">$</span><input id="s-budget" type="number" min="0" step="500" inputmode="numeric"></div></div>
+      <div class="field d"><label for="s-date">Target date</label>
+        <div class="inbox"><input id="s-date" type="date"></div></div>
+    </div>
+  </header>
+
+  <section class="panel" id="prio" data-open="true">
+    <div class="panel-head" id="prioHead">
+      <div>
+        <h2>Your priorities</h2>
+        <div class="sub">Drag to weight what matters. Scores &amp; ranking update instantly.</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center">
+        <button class="reset" id="resetWt" type="button">Reset</button>
+        <span class="chev">&#9660;</span>
+      </div>
+    </div>
+    <div class="weights" id="weights"></div>
+  </section>
+
+  <section class="summary" id="summary"></section>
+
+  <div class="listhead">
+    <h2>Ranked by match</h2>
+    <div class="rowbtns">
+      <button class="btn ghost" id="clearAll" type="button">Clear all</button>
+      <button class="btn primary" id="addVenue" type="button">+ Add venue</button>
+    </div>
+  </div>
+  <div class="venues" id="venues"></div>
+
+  <div class="foot">
+    <span>Everything you enter is saved only in this browser &mdash; nothing is uploaded.</span>
+    <span id="footcount"></span>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var LS_KEY = "wedding-venue-shortlist-v1";
+
+  var CRITERIA = [
+    {key:"price",        name:"Price",        desc:"total cost vs. your budget"},
+    {key:"capacity",     name:"Capacity fit", desc:"comfortably holds your guests"},
+    {key:"location",     name:"Location",     desc:"convenience &amp; travel"},
+    {key:"vibe",         name:"Vibe / style", desc:"the feel you want"},
+    {key:"availability", name:"Availability", desc:"open on your date"},
+    {key:"inclusions",   name:"Inclusions",   desc:"tables, catering, coordinator"}
+  ];
+  var DEFAULT_WT = {price:5, capacity:4, location:3, vibe:3, availability:4, inclusions:3};
+
+  function uid(){ return "v"+Math.random().toString(36).slice(2,9); }
+
+  function seedVenues(){
+    return [
+      {id:uid(), name:"Cedar Hollow Barn", cost:8200, capacity:70, location:4, vibe:5, inclusions:3, availability:"yes", link:"", notes:"Rustic-chic barn, string lights included. Rentals extra.", example:true},
+      {id:uid(), name:"The Garden Room", cost:11500, capacity:60, location:5, vibe:4, inclusions:5, availability:"maybe", link:"", notes:"All-inclusive: catering, tables, coordinator. Downtown.", example:true},
+      {id:uid(), name:"Lakeside Pavilion", cost:6400, capacity:55, location:3, vibe:4, inclusions:2, availability:"yes", link:"", notes:"Beautiful water views, BYO everything. Weather backup?", example:true},
+      {id:uid(), name:"Vine & Oak Estate", cost:14800, capacity:120, location:2, vibe:5, inclusions:4, availability:"no", link:"", notes:"Gorgeous but pricey and far. Our date is booked.", example:true}
+    ];
+  }
+
+  var state = load();
+
+  function load(){
+    try{
+      var raw = localStorage.getItem(LS_KEY);
+      if(raw){
+        var p = JSON.parse(raw);
+        if(p && p.settings && Array.isArray(p.venues)){
+          p.settings.weights = Object.assign({}, DEFAULT_WT, p.settings.weights||{});
+          return p;
+        }
+      }
+    }catch(e){}
+    return {
+      settings:{ guests:60, budget:12000, date:"", weights:Object.assign({},DEFAULT_WT) },
+      venues: seedVenues()
+    };
+  }
+  function save(){
+    try{ localStorage.setItem(LS_KEY, JSON.stringify({settings:state.settings, venues:state.venues})); }catch(e){}
+  }
+
+  var editingId = null;
+  function num(v,d){ v=parseFloat(v); return isFinite(v)?v:d; }
+  function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+  function money(n){ n=Math.round(num(n,0)); return "$"+n.toLocaleString("en-US"); }
+
+  /* ---------- scoring ---------- */
+  function priceScore(cost, budget){
+    if(budget<=0) return 50;
+    cost=num(cost,0);
+    if(cost<=0) return 50;
+    if(cost<=budget){ return 60 + 40*(budget-cost)/budget; }
+    var over=(cost-budget)/budget;                 // fraction over
+    return clamp(60*(1-over/0.5),0,60);            // 50% over -> 0
+  }
+  function capacityScore(cap, guests){
+    cap=num(cap,0); guests=Math.max(1,num(guests,1));
+    if(cap<=0) return 30;
+    var r=cap/guests;
+    if(r<1) return clamp(r*45,0,45);               // can't comfortably fit
+    if(r<=1.8) return 100;                          // ideal range
+    return clamp(100-(r-1.8)*22,58,100);           // oversized = less intimate/pricier
+  }
+  function ratingScore(x){ return clamp((num(x,3)/5)*100,0,100); }
+  function availScore(a){ return a==="yes"?100 : a==="maybe"?55 : 0; }
+
+  function scoreOf(v){
+    var s=state.settings, w=s.weights;
+    var parts={
+      price:priceScore(v.cost,s.budget),
+      capacity:capacityScore(v.capacity,s.guests),
+      location:ratingScore(v.location),
+      vibe:ratingScore(v.vibe),
+      availability:availScore(v.availability),
+      inclusions:ratingScore(v.inclusions)
+    };
+    var tw=0, acc=0;
+    CRITERIA.forEach(function(c){ var wt=num(w[c.key],0); tw+=wt; acc+=wt*parts[c.key]; });
+    return { total: tw>0? Math.round(acc/tw) : 0, parts:parts };
+  }
+
+  /* ---------- chips ---------- */
+  function budgetChip(v){
+    var b=state.settings.budget, cost=num(v.cost,0);
+    if(!(b>0)||!(cost>0)) return {cls:"dim", txt:"No price yet"};
+    var diff=cost-b;
+    if(diff<=0) return {cls:"good", txt:money(-diff)+" under budget"};
+    if(diff<=b*0.1) return {cls:"warn", txt:money(diff)+" over budget"};
+    return {cls:"crit", txt:money(diff)+" over budget"};
+  }
+  function capacityChip(v){
+    var g=state.settings.guests, cap=num(v.capacity,0);
+    if(!(cap>0)) return {cls:"dim", txt:"Capacity?"};
+    if(cap<g) return {cls:"crit", txt:"Holds "+cap+" — too small"};
+    if(cap<=g*2) return {cls:"good", txt:"Fits "+g+" comfortably"};
+    return {cls:"warn", txt:"Roomy for "+g+" (cap "+cap+")"};
+  }
+  function availChip(v){
+    if(v.availability==="yes") return {cls:"good", txt:"Date open"};
+    if(v.availability==="maybe") return {cls:"warn", txt:"Check date"};
+    return {cls:"crit", txt:"Date taken"};
+  }
+
+  /* ---------- rendering ---------- */
+  var $ = function(id){ return document.getElementById(id); };
+
+  function renderWeights(){
+    var el=$("weights"); el.innerHTML="";
+    CRITERIA.forEach(function(c){
+      var wt=num(state.settings.weights[c.key],0);
+      var lbl = wt===0?"Ignore" : wt<=1?"Minor" : wt<=2?"Some" : wt<=3?"Matters" : wt<=4?"High" : "Top";
+      var d=document.createElement("div"); d.className="wt";
+      d.innerHTML =
+        '<div class="wt-top"><span class="wt-name">'+c.name+'<small>'+c.desc+'</small></span>'+
+        '<span class="wt-val" id="wv-'+c.key+'">'+lbl+'</span></div>'+
+        '<input type="range" min="0" max="5" step="1" value="'+wt+'" data-wt="'+c.key+'" aria-label="'+c.name+' weight">';
+      el.appendChild(d);
+    });
+    el.querySelectorAll("input[type=range]").forEach(function(r){
+      r.addEventListener("input", function(){
+        state.settings.weights[this.dataset.wt]=parseInt(this.value,10);
+        var wt=parseInt(this.value,10);
+        var lbl = wt===0?"Ignore" : wt<=1?"Minor" : wt<=2?"Some" : wt<=3?"Matters" : wt<=4?"High" : "Top";
+        var vEl=$("wv-"+this.dataset.wt); if(vEl) vEl.textContent=lbl;
+        save(); renderSummary(); renderVenues();
+      });
+    });
+  }
+
+  function ranked(){
+    return state.venues.map(function(v){ return {v:v, s:scoreOf(v)}; })
+      .sort(function(a,b){ return b.s.total-a.s.total; });
+  }
+
+  function renderSummary(){
+    var list=ranked(), b=state.settings.budget;
+    var within=state.venues.filter(function(v){ return num(v.cost,0)>0 && num(v.cost,0)<=b; }).length;
+    var top=list[0];
+    var el=$("summary");
+    el.innerHTML=
+      tile("Venues compared", state.venues.length + (state.venues.length===1?" <small>venue</small>":" <small>venues</small>"), "")+
+      tile("Within budget", within+' <small>of '+state.venues.length+'</small>', "")+
+      (top ? '<div class="tile top"><div class="k">Top match</div><div class="v">'+esc(top.v.name||"Untitled")+' <small>&middot; '+top.s.total+'</small></div></div>'
+           : tile("Top match","—",""));
+    $("footcount").textContent = state.venues.length+" venue"+(state.venues.length===1?"":"s")+" on your list";
+  }
+  function tile(k,v){ return '<div class="tile"><div class="k">'+k+'</div><div class="v">'+v+'</div></div>'; }
+
+  function dots(n){
+    n=clamp(Math.round(num(n,0)),0,5); var h='<span class="dots">';
+    for(var i=1;i<=5;i++) h+='<span class="dot'+(i<=n?" on":"")+'"></span>';
+    return h+'</span>';
+  }
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+
+  function renderVenues(){
+    var host=$("venues"); host.innerHTML="";
+    if(state.venues.length===0){
+      host.innerHTML='<div class="empty">No venues yet. Hit <b>+ Add venue</b> to start your shortlist.</div>';
+      return;
+    }
+    ranked().forEach(function(row, i){
+      var v=row.v, sc=row.s;
+      var art=document.createElement("article");
+      art.className="venue"+(i===0?" rank1":"");
+      if(editingId===v.id){ art.appendChild(editForm(v)); host.appendChild(art); return; }
+
+      var bc=budgetChip(v), cc=capacityChip(v), ac=availChip(v);
+      var perGuest = num(v.cost,0)>0 ? money(num(v.cost,0)/Math.max(1,num(state.settings.guests,1)))+" / guest" : "";
+      art.innerHTML =
+        '<div class="rank">'+(i+1)+(i===0?'<span class="crown">Best</span>':'')+'</div>'+
+        '<div class="vmain">'+
+          '<div class="vtop"><h3>'+esc(v.name||"Untitled venue")+'</h3>'+
+            (v.example?'<span class="exflag">example</span>':'')+
+            (v.link?'<a class="lnk" href="'+esc(v.link)+'" target="_blank" rel="noopener" title="Open link">&#8599;</a>':'')+
+            '<span class="sp"></span>'+
+            '<button class="icobtn" data-edit="'+v.id+'">Edit</button>'+
+            '<button class="icobtn" data-del="'+v.id+'" title="Remove">Remove</button>'+
+          '</div>'+
+          '<div class="chips">'+
+            '<span class="chip '+bc.cls+'">'+bc.txt+'</span>'+
+            '<span class="chip '+cc.cls+'">'+cc.txt+'</span>'+
+            '<span class="chip '+ac.cls+'">'+ac.txt+'</span>'+
+          '</div>'+
+          '<div class="meta">'+
+            (num(v.cost,0)>0?'<span><b>'+money(v.cost)+'</b> total</span>':'<span>No price yet</span>')+
+            (perGuest?'<span>'+perGuest+'</span>':'')+
+            (num(v.capacity,0)>0?'<span>cap <b>'+num(v.capacity,0)+'</b></span>':'')+
+          '</div>'+
+          '<div class="meters">'+
+            '<span class="meter">Location '+dots(v.location)+'</span>'+
+            '<span class="meter">Vibe '+dots(v.vibe)+'</span>'+
+            '<span class="meter">Inclusions '+dots(v.inclusions)+'</span>'+
+          '</div>'+
+          (v.notes?'<div class="vnotes">'+esc(v.notes)+'</div>':'')+
+        '</div>'+
+        '<div class="score"><div class="num">'+sc.total+'</div><div class="lbl">match</div>'+
+          '<div class="sgauge"><i style="width:'+sc.total+'%"></i></div></div>';
+      host.appendChild(art);
+    });
+
+    host.querySelectorAll("[data-edit]").forEach(function(b){ b.onclick=function(){ editingId=this.dataset.edit; renderVenues(); }; });
+    host.querySelectorAll("[data-del]").forEach(function(b){ b.onclick=function(){
+      var id=this.dataset.del;
+      state.venues=state.venues.filter(function(x){ return x.id!==id; });
+      if(editingId===id) editingId=null;
+      save(); renderSummary(); renderVenues();
+    }; });
+  }
+
+  function editForm(v){
+    var f=document.createElement("form"); f.className="editform"; f.noValidate=true;
+    function opt(sel){ var o=""; for(var i=1;i<=5;i++) o+='<option value="'+i+'"'+(num(v[sel],3)===i?" selected":"")+'>'+i+' / 5</option>'; return o; }
+    f.innerHTML =
+      '<div class="ef wide"><label>Venue name</label><input name="name" value="'+esc(v.name)+'" placeholder="e.g. Cedar Hollow Barn" autofocus></div>'+
+      '<div class="ef"><label>Estimated total cost ($)</label><input name="cost" type="number" min="0" step="100" value="'+(v.cost||"")+'" placeholder="8000"></div>'+
+      '<div class="ef"><label>Max capacity (guests)</label><input name="capacity" type="number" min="0" value="'+(v.capacity||"")+'" placeholder="70"></div>'+
+      '<div class="ef"><label>Date availability</label><select name="availability">'+
+        '<option value="yes"'+(v.availability==="yes"?" selected":"")+'>Open on our date</option>'+
+        '<option value="maybe"'+(v.availability==="maybe"?" selected":"")+'>Need to check</option>'+
+        '<option value="no"'+(v.availability==="no"?" selected":"")+'>Taken</option></select></div>'+
+      '<div class="ef"><label>Location</label><select name="location">'+opt("location")+'</select></div>'+
+      '<div class="ef"><label>Vibe / style</label><select name="vibe">'+opt("vibe")+'</select></div>'+
+      '<div class="ef"><label>Inclusions</label><select name="inclusions">'+opt("inclusions")+'</select></div>'+
+      '<div class="ef wide"><label>Link (optional)</label><input name="link" value="'+esc(v.link)+'" placeholder="https://..."></div>'+
+      '<div class="ef wide"><label>Notes (optional)</label><textarea name="notes" placeholder="What you loved, questions to ask, quote details...">'+esc(v.notes)+'</textarea></div>'+
+      '<div class="efactions"><button type="button" class="btn ghost" data-cancel>Cancel</button><button type="submit" class="btn primary">Save venue</button></div>';
+
+    f.querySelector("[data-cancel]").onclick=function(){
+      if(v.example===undefined && !v.name && !v.cost && !v.capacity){
+        state.venues=state.venues.filter(function(x){ return x.id!==v.id; });
+      }
+      editingId=null; renderSummary(); renderVenues();
+    };
+    f.onsubmit=function(e){
+      e.preventDefault();
+      var d=new FormData(f);
+      v.name=(d.get("name")||"").trim();
+      v.cost=num(d.get("cost"),0);
+      v.capacity=num(d.get("capacity"),0);
+      v.availability=d.get("availability");
+      v.location=num(d.get("location"),3);
+      v.vibe=num(d.get("vibe"),3);
+      v.inclusions=num(d.get("inclusions"),3);
+      v.link=(d.get("link")||"").trim();
+      v.notes=(d.get("notes")||"").trim();
+      delete v.example;
+      editingId=null; save(); renderSummary(); renderVenues();
+    };
+    return f;
+  }
+
+  /* ---------- settings wiring ---------- */
+  function bindSetting(id, key, isInt){
+    var el=$(id);
+    el.value = key==="date" ? (state.settings.date||"") : state.settings[key];
+    el.addEventListener("input", function(){
+      if(key==="date"){ state.settings.date=el.value; }
+      else { state.settings[key]= isInt? Math.max(0,Math.round(num(el.value,0))) : num(el.value,0); }
+      save(); renderSummary(); renderVenues();
+    });
+  }
+  bindSetting("s-guests","guests",true);
+  bindSetting("s-budget","budget",true);
+  bindSetting("s-date","date",false);
+
+  $("addVenue").onclick=function(){
+    var nv={id:uid(), name:"", cost:0, capacity:0, location:3, vibe:3, inclusions:3, availability:"maybe", link:"", notes:""};
+    state.venues.push(nv); editingId=nv.id;
+    renderSummary(); renderVenues();
+    var el=document.querySelector('.venue .editform input[name=name]'); if(el) el.focus();
+  };
+  $("clearAll").onclick=function(){
+    if(state.venues.length && !confirm("Remove all venues from your shortlist? This can't be undone.")) return;
+    state.venues=[]; editingId=null; save(); renderSummary(); renderVenues();
+  };
+  $("resetWt").onclick=function(e){ e.stopPropagation(); state.settings.weights=Object.assign({},DEFAULT_WT); save(); renderWeights(); renderSummary(); renderVenues(); };
+  $("prioHead").onclick=function(){ var p=$("prio"); p.dataset.open = p.dataset.open==="true"?"false":"true"; };
+
+  renderWeights();
+  renderSummary();
+  renderVenues();
+})();
+</script>
+
+</body>
+</html>

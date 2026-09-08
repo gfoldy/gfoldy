@@ -25,7 +25,10 @@ own profile, builds her own split from scratch — same app, separate data.
   (heaviest weight + best weight×reps, with the date each was hit). A toast
   fires when you beat a PR mid-workout.
 - **Split** — add / rename / reorder / delete training days and the exercises
-  inside them (name, muscle tag, target sets, rep range). Empty devices get an
+  inside them. Exercises are picked from a **built-in movement library** (~90
+  common lifts, each pre-tagged with its muscle group) so names stay consistent
+  and the analytics line up — with a custom-movement fallback for anything not
+  listed. Target sets and rep range are set per exercise. Empty devices get an
   empty state that guides building from scratch. Edits apply to Today going
   forward and never rewrite already-logged history (logs are keyed by exercise
   **name + date**, not position in the split).

@@ -62,6 +62,52 @@ const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const WEEKDAYS_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 /* --------------------------------------------------------------------------
+   Movement library — pick from these so exercise names stay consistent, which
+   is what makes the per-lift analytics and leaderboards line up. [name, muscle]
+   -------------------------------------------------------------------------- */
+const MOVEMENTS = [
+  // Chest
+  ['Barbell Bench Press', 'Chest'], ['Incline Barbell Bench Press', 'Chest'], ['Incline DB Press', 'Chest'],
+  ['Flat DB Press', 'Chest'], ['Decline Bench Press', 'Chest'], ['Machine Chest Press', 'Chest'],
+  ['Weighted Dips', 'Chest'], ['Push-Up', 'Chest'], ['Cable Fly', 'Chest'], ['Incline Cable Fly', 'Chest'],
+  ['Low-to-High Cable Fly', 'Chest'], ['Pec Deck', 'Chest'], ['DB Fly', 'Chest'], ['Landmine Press', 'Chest'],
+  // Back
+  ['Deadlift', 'Back'], ['Rack Pull', 'Back'], ['Barbell Row', 'Back'], ['Pendlay Row', 'Back'], ['T-Bar Row', 'Back'],
+  ['Seated Cable Row', 'Back'], ['Chest-Supported Row', 'Back'], ['Single-Arm DB Row', 'Back'],
+  ['Wide-Grip Lat Pulldown', 'Back'], ['Close-Grip Lat Pulldown', 'Back'], ['Pull-Up', 'Back'], ['Chin-Up', 'Back'],
+  ['Straight-Arm Pulldown', 'Back'], ['Cable Pullover', 'Back'], ['Machine Row', 'Back'], ['Meadows Row', 'Back'],
+  ['Inverted Row', 'Back'],
+  // Shoulders
+  ['Overhead Press', 'Shoulders'], ['Seated DB Shoulder Press', 'Shoulders'], ['Arnold Press', 'Shoulders'],
+  ['Machine Shoulder Press', 'Shoulders'], ['Cable Lateral Raise', 'Shoulders'], ['DB Lateral Raise', 'Shoulders'],
+  ['Rear Delt Fly', 'Shoulders'], ['Reverse Pec Deck', 'Shoulders'], ['Face Pull', 'Shoulders'],
+  ['Front Raise', 'Shoulders'], ['Upright Row', 'Shoulders'],
+  // Biceps
+  ['Barbell Curl', 'Biceps'], ['EZ-Bar Curl', 'Biceps'], ['DB Curl', 'Biceps'], ['Incline DB Curl', 'Biceps'],
+  ['Hammer Curl', 'Biceps'], ['Cable Curl', 'Biceps'], ['Preacher Curl', 'Biceps'], ['Concentration Curl', 'Biceps'],
+  ['Spider Curl', 'Biceps'],
+  // Triceps
+  ['Close-Grip Bench Press', 'Triceps'], ['Skull Crusher', 'Triceps'], ['Rope Pushdown', 'Triceps'],
+  ['Straight-Bar Pushdown', 'Triceps'], ['Overhead DB Extension', 'Triceps'], ['Overhead Cable Extension', 'Triceps'],
+  ['Triceps Dips', 'Triceps'], ['Triceps Kickback', 'Triceps'], ['JM Press', 'Triceps'],
+  // Legs
+  ['Back Squat', 'Legs'], ['Front Squat', 'Legs'], ['Hack Squat', 'Legs'], ['Leg Press', 'Legs'],
+  ['Romanian Deadlift', 'Legs'], ['Stiff-Leg Deadlift', 'Legs'], ['Bulgarian Split Squat', 'Legs'],
+  ['Walking Lunge', 'Legs'], ['Leg Extension', 'Legs'], ['Lying Leg Curl', 'Legs'], ['Seated Leg Curl', 'Legs'],
+  ['Goblet Squat', 'Legs'], ['Belt Squat', 'Legs'], ['Step-Up', 'Legs'],
+  // Glutes
+  ['Hip Thrust', 'Glutes'], ['Glute Bridge', 'Glutes'], ['Cable Kickback', 'Glutes'], ['Sumo Deadlift', 'Glutes'],
+  // Calves
+  ['Standing Calf Raise', 'Calves'], ['Seated Calf Raise', 'Calves'], ['Leg Press Calf Raise', 'Calves'],
+  // Core
+  ['Hanging Leg Raise', 'Core'], ['Cable Crunch', 'Core'], ['Plank', 'Core'], ['Ab Wheel', 'Core'],
+  ['Russian Twist', 'Core'], ['Decline Sit-Up', 'Core'],
+  // Traps / Forearms
+  ['Barbell Shrug', 'Traps'], ['DB Shrug', 'Traps'], ['Wrist Curl', 'Forearms'], ['Reverse Curl', 'Forearms'],
+  ['Farmer Carry', 'Forearms'],
+].map(([name, muscle]) => ({ name, muscle }));
+
+/* --------------------------------------------------------------------------
    Small utilities
    -------------------------------------------------------------------------- */
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
@@ -1280,25 +1326,87 @@ function openProfileSheet() {
 /* --------------------------------------------------------------------------
    Exercise editor sheet (split)
    -------------------------------------------------------------------------- */
+// The exercise sheet is a small stateful flow: pick a movement from the library
+// (or add a custom one), then configure sets/reps.
+let exSheet = null;
+
 function openExerciseSheet(dayId, exId) {
   const day = state.split.find((d) => d.id === dayId);
-  const e = exId ? day.exercises.find((x) => x.id === exId) : { id: '', name: '', muscle: 'Chest', sets: 3, reps: '8-10' };
+  const e = exId ? day.exercises.find((x) => x.id === exId) : null;
+  exSheet = { mode: 'split', dayId, exId: exId || null,
+    step: exId ? 'config' : 'pick',
+    name: e ? e.name : '', muscle: e ? e.muscle : 'Chest', sets: e ? e.sets : 3, reps: e ? e.reps : '8-10',
+    query: '', filter: 'All' };
+  renderExSheet();
+}
+
+function openAddAdhocSheet() {
+  exSheet = { mode: 'adhoc', step: 'pick', name: '', muscle: 'Chest', query: '', filter: 'All' };
+  renderExSheet();
+}
+
+function movementResults() {
+  const q = exSheet.query.trim().toLowerCase(), f = exSheet.filter;
+  return MOVEMENTS.filter((m) => (f === 'All' || m.muscle === f) && (!q || m.name.toLowerCase().includes(q)));
+}
+
+function pickerListHtml() {
+  const rows = movementResults().map((m) =>
+    `<button class="mv-row" data-act="exlib:pick" data-name="${esc(m.name)}" data-muscle="${esc(m.muscle)}">
+      <span class="mv-name">${esc(m.name)}</span><span class="pill muscle">${esc(m.muscle)}</span></button>`).join('');
+  const q = exSheet.query.trim();
+  const custom = `<button class="mv-row custom" data-act="exlib:custom">
+    <span class="mv-name">✎ ${q ? 'Add “' + esc(q) + '”' : 'Add a custom movement…'}</span><span class="faint">custom</span></button>`;
+  return rows + custom;
+}
+
+function renderExSheet() {
+  if (exSheet.step === 'pick') {
+    const muscles = ['All', ...new Set(MOVEMENTS.map((m) => m.muscle))];
+    const chips = muscles.map((m) => `<button class="chip ${exSheet.filter === m ? 'on' : ''}" data-act="exlib:filter" data-m="${m}">${m}</button>`).join('');
+    openSheet(`
+      <h3>${exSheet.mode === 'adhoc' ? 'Add an exercise' : 'Choose a movement'}</h3>
+      ${exSheet.mode === 'adhoc' ? `<p class="muted" style="margin-top:-8px">Logged for ${fmtShort(state.selectedDate)} only — it won't change your split.</p>` : ''}
+      <input type="text" id="exlib-search" class="mv-search" placeholder="Search movements…" autocomplete="off" spellcheck="false" value="${esc(exSheet.query)}" />
+      <div class="chip-row" style="margin-top:10px">${chips}</div>
+      <div id="exlib-results" class="mv-list">${pickerListHtml()}</div>
+      <div class="sheet-actions" style="margin-top:10px"><button class="btn ghost" data-act="sheet:close">Cancel</button></div>
+    `);
+    const s = document.getElementById('exlib-search');
+    if (s) { s.focus(); s.addEventListener('input', () => { exSheet.query = s.value; const r = document.getElementById('exlib-results'); if (r) r.innerHTML = pickerListHtml(); }); }
+    return;
+  }
+  // config step
+  if (exSheet.mode === 'adhoc') {
+    openSheet(`
+      <h3>Add “${esc(exSheet.name || 'exercise')}”</h3>
+      <label class="field"><span>Name</span><input type="text" id="ad-name" value="${esc(exSheet.name)}" placeholder="e.g. Face Pull" /></label>
+      <label class="field"><span>Muscle group</span>
+        <select id="ad-muscle">${MUSCLES.map((m) => `<option ${m === exSheet.muscle ? 'selected' : ''}>${m}</option>`).join('')}</select></label>
+      <button class="subtle-link" data-act="exlib:browse" style="margin:-2px 0 8px">↩ Back to the library</button>
+      <div class="sheet-actions"><button class="btn gold" data-act="adhoc:save">Add</button></div>
+      <div class="sheet-actions" style="margin-top:8px"><button class="btn ghost" data-act="sheet:close">Cancel</button></div>
+    `);
+    const n = document.getElementById('ad-name'); if (n && !exSheet.name) n.focus();
+    return;
+  }
   openSheet(`
-    <h3>${exId ? 'Edit exercise' : 'Add exercise'}</h3>
-    <label class="field"><span>Name</span><input type="text" id="ex-name" value="${esc(e.name)}" placeholder="e.g. Barbell Bench Press" /></label>
+    <h3>${exSheet.exId ? 'Edit exercise' : 'New exercise'}</h3>
+    <label class="field"><span>Movement</span><input type="text" id="ex-name" value="${esc(exSheet.name)}" placeholder="e.g. Barbell Bench Press" /></label>
+    <button class="subtle-link" data-act="exlib:browse" style="margin:-2px 0 10px">↔ Browse the movement library</button>
     <label class="field"><span>Muscle group</span>
-      <select id="ex-muscle">${MUSCLES.map((m) => `<option ${m === e.muscle ? 'selected' : ''}>${m}</option>`).join('')}</select></label>
+      <select id="ex-muscle">${MUSCLES.map((m) => `<option ${m === exSheet.muscle ? 'selected' : ''}>${m}</option>`).join('')}</select></label>
     <div class="btn-row">
-      <label class="field" style="flex:1"><span>Target sets</span><input type="number" id="ex-sets" inputmode="numeric" min="1" max="20" value="${e.sets}" /></label>
-      <label class="field" style="flex:1"><span>Target reps</span><input type="text" id="ex-reps" value="${esc(e.reps)}" placeholder="e.g. 8-10" /></label>
+      <label class="field" style="flex:1"><span>Target sets</span><input type="number" id="ex-sets" inputmode="numeric" min="1" max="20" value="${exSheet.sets}" /></label>
+      <label class="field" style="flex:1"><span>Target reps</span><input type="text" id="ex-reps" value="${esc(exSheet.reps)}" placeholder="e.g. 8-10" /></label>
     </div>
     <div class="sheet-actions">
-      ${exId ? `<button class="btn danger" data-act="split:delex" data-day="${dayId}" data-ex="${exId}">Delete</button>` : ''}
-      <button class="btn gold" data-act="split:saveex" data-day="${dayId}" data-ex="${exId || ''}">Save</button>
+      ${exSheet.exId ? `<button class="btn danger" data-act="split:delex" data-day="${exSheet.dayId}" data-ex="${exSheet.exId}">Delete</button>` : ''}
+      <button class="btn gold" data-act="split:saveex" data-day="${exSheet.dayId}" data-ex="${exSheet.exId || ''}">Save</button>
     </div>
     <div class="sheet-actions" style="margin-top:8px"><button class="btn ghost" data-act="sheet:close">Cancel</button></div>
   `);
-  const n = document.getElementById('ex-name'); if (n && !exId) n.focus();
+  const n = document.getElementById('ex-name'); if (n && !exSheet.name) n.focus();
 }
 
 /* --------------------------------------------------------------------------
@@ -1551,6 +1659,19 @@ document.addEventListener('click', async (e) => {
     closeSheet(); render(); return;
   }
 
+  // movement library picker
+  if (a === 'exlib:filter') { exSheet.filter = D.m; renderExSheet(); return; }
+  if (a === 'exlib:browse') { exSheet.step = 'pick'; exSheet.query = ''; renderExSheet(); return; }
+  if (a === 'exlib:custom') {
+    exSheet.name = exSheet.query.trim();
+    if (exSheet.filter !== 'All') exSheet.muscle = exSheet.filter;
+    exSheet.step = 'config'; renderExSheet(); return;
+  }
+  if (a === 'exlib:pick') {
+    if (exSheet.mode === 'adhoc') { await upsertSet(state.selectedDate, D.name, D.muscle, 0, {}); closeSheet(); render(); return; }
+    exSheet.name = D.name; exSheet.muscle = D.muscle; exSheet.step = 'config'; renderExSheet(); return;
+  }
+
   // split
   if (a === 'split:addday') {
     const used = state.split.map((d) => d.weekday).filter((w) => w != null);
@@ -1595,19 +1716,6 @@ function moveInArray(arr, pred, dir) {
   const i = arr.findIndex(pred); const j = i + dir;
   if (i < 0 || j < 0 || j >= arr.length) return;
   const [it] = arr.splice(i, 1); arr.splice(j, 0, it);
-}
-
-function openAddAdhocSheet() {
-  openSheet(`
-    <h3>Add exercise</h3>
-    <p class="muted" style="margin-top:-6px">Logged for ${fmtShort(state.selectedDate)} only — it won't change your saved split.</p>
-    <label class="field"><span>Name</span><input type="text" id="ad-name" placeholder="e.g. Face Pull" /></label>
-    <label class="field"><span>Muscle group</span>
-      <select id="ad-muscle">${MUSCLES.map((m) => `<option>${m}</option>`).join('')}</select></label>
-    <div class="sheet-actions"><button class="btn gold" data-act="adhoc:save">Add</button></div>
-    <div class="sheet-actions" style="margin-top:8px"><button class="btn ghost" data-act="sheet:close">Cancel</button></div>
-  `);
-  const n = document.getElementById('ad-name'); if (n) n.focus();
 }
 
 /* --------------------------------------------------------------------------

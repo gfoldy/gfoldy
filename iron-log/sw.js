@@ -1,6 +1,6 @@
 /* Iron Log service worker — offline-first app shell.
    Bump CACHE version whenever the shell assets change. */
-const CACHE = 'iron-log-v6';
+const CACHE = 'iron-log-v7';
 const ASSETS = [
   './',
   './index.html',

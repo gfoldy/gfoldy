@@ -176,6 +176,48 @@ table.habit td.wk { font-size: 11px; color: var(--text-faint); white-space: nowr
 .trend.up { color: var(--green); }
 .trend.down { color: var(--red); }
 
+/* Range chips */
+.range-chips { display: flex; gap: 8px; margin: 0 2px 14px; }
+.range-chips .chip {
+  flex: 1; min-height: 40px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--bg-elev); color: var(--text-dim); font-weight: 700; font-size: 14px;
+}
+.range-chips .chip.on { background: var(--gold-soft); border-color: var(--gold-dim); color: var(--gold); }
+
+/* SVG charts */
+.chart { display: block; width: 100%; height: auto; overflow: visible; }
+.chart .sgrid { stroke: var(--border); stroke-width: 1; }
+.chart .sax { fill: var(--text-faint); font-size: 9px; font-family: inherit; }
+.chart .svl { fill: var(--text-dim); font-size: 9px; font-weight: 700; font-family: inherit; }
+.chart rect[data-tip], .chart circle { cursor: pointer; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; }
+.legend .lg { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); }
+.legend .lg i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+
+/* Horizontal muscle-balance bars */
+.hbars { display: flex; flex-direction: column; gap: 10px; }
+.hbar-row { display: grid; grid-template-columns: 84px 1fr auto; gap: 10px; align-items: center; }
+.hbar-l { font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hbar-track { height: 16px; background: var(--bg-elev2); border-radius: 6px; overflow: hidden; }
+.hbar-fill { display: block; height: 100%; border-radius: 6px; min-width: 3px; }
+.hbar-v { font-size: 13px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.hbar-v .hbar-pct { color: var(--text-faint); font-weight: 600; font-size: 11px; }
+
+.prog-select { width: 100%; }
+
+.charttip {
+  position: fixed; z-index: 70; pointer-events: none;
+  background: var(--bg-elev2); border: 1px solid var(--gold-dim); color: var(--text);
+  font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.55); max-width: 220px; white-space: nowrap;
+}
+
+.stat-grid.stat-4 { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.stat-grid.stat-4 .stat { padding: 10px 6px; }
+.stat-grid.stat-4 .v { font-size: 19px; }
+.stat-grid.stat-4 .l { font-size: 10px; }
+
 .pb-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .pb-row:last-child { border-bottom: none; }
 .pb-row .pb-ex { font-weight: 600; }

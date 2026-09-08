@@ -151,6 +151,8 @@ const state = {
   selectedDate: todayStr(),
   selectedDayId: null,  // which split day is shown on Today
   onboardName: '',
+  progRange: 8,         // Progress tab: weeks shown (4/8/12/'all')
+  progExercise: null,   // Progress tab: exercise selected for the strength chart
 };
 
 const CUR_KEY = 'ironlog.currentProfile';
@@ -399,96 +401,292 @@ function setRow(name, muscle, i, l, extra) {
   </div>`;
 }
 
-/* ---- Progress ------------------------------------------------------------ */
+/* ---- Progress: muscle palette + chart helpers ---------------------------- */
+// Fixed muscle -> categorical slot. Validated (CVD-safe) on the app's dark
+// surface; assigning by muscle (not rank) keeps a body part's colour stable as
+// data and the range filter change. Stacking follows this order so adjacent
+// segments are the validated adjacent pairs.
+const MUSCLE_ORDER = ['Chest', 'Back', 'Shoulders', 'Legs', 'Biceps', 'Triceps', 'Core', 'Calves'];
+const MUSCLE_COLORS = {
+  Chest: '#3987e5', Back: '#d95926', Shoulders: '#199e70', Legs: '#c98500',
+  Biceps: '#d55181', Triceps: '#008300', Core: '#9085e9', Calves: '#e66767',
+};
+const OTHER_COLOR = '#8a8a94';
+const muscleBucket = (m) => (MUSCLE_COLORS[m] ? m : 'Other');
+const muscleColor = (m) => MUSCLE_COLORS[m] || OTHER_COLOR;
+
+function niceMax(v) {
+  if (v <= 5) return Math.max(1, Math.ceil(v));
+  const p = Math.pow(10, Math.floor(Math.log10(v)));
+  const n = v / p;
+  const step = n <= 2 ? 2 : n <= 5 ? 5 : 10;
+  return step * p;
+}
+
+// Build the per-week aggregates for the selected range.
+function buildWeeks(completed, range) {
+  const thisMon = mondayOf(new Date());
+  let n = range;
+  if (range === 'all') {
+    const first = completed.reduce((m, l) => (l.date < m ? l.date : m), todayStr());
+    const firstMon = mondayOf(parseDate(first));
+    n = Math.round((thisMon.getTime() - firstMon.getTime()) / (7 * 86400000)) + 1;
+    n = Math.min(Math.max(n, 4), 26);
+  }
+  const weeks = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const start = addDays(thisMon, -7 * i);
+    const s = dateToStr(start), e = dateToStr(addDays(start, 7));
+    const inWk = completed.filter((l) => l.date >= s && l.date < e);
+    const byMuscle = {};
+    inWk.forEach((l) => { const b = muscleBucket(l.muscle); byMuscle[b] = (byMuscle[b] || 0) + 1; });
+    weeks.push({
+      start, label: fmtShort(s), sets: inWk.length, byMuscle,
+      vol: inWk.reduce((a, l) => a + (l.weight || 0) * (l.reps || 0), 0),
+      dates: new Set(inWk.map((l) => l.date)),
+    });
+  }
+  return weeks;
+}
+
+function bucketsPresent(weeks) {
+  const seen = new Set();
+  weeks.forEach((w) => Object.keys(w.byMuscle).forEach((m) => seen.add(m)));
+  const ordered = MUSCLE_ORDER.filter((m) => seen.has(m));
+  if (seen.has('Other')) ordered.push('Other');
+  return ordered;
+}
+
+function legendHtml(buckets) {
+  return `<div class="legend">${buckets.map((b) =>
+    `<span class="lg"><i style="background:${muscleColor(b)}"></i>${esc(b)}</span>`).join('')}</div>`;
+}
+
+// Vertical stacked bars: sets per muscle, per week.
+function svgStackedBars(weeks, buckets) {
+  const W = 340, H = 168, padL = 22, padR = 6, padT = 12, padB = 24;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const maxT = niceMax(Math.max(1, ...weeks.map((w) => w.sets)));
+  const n = weeks.length, step = plotW / n, bw = Math.min(30, step * 0.62);
+  const yFor = (v) => padT + plotH - (v / maxT) * plotH;
+  let grid = '';
+  [0, maxT / 2, maxT].forEach((v) => {
+    grid += `<line x1="${padL}" x2="${W - padR}" y1="${yFor(v).toFixed(1)}" y2="${yFor(v).toFixed(1)}" class="sgrid"/>` +
+      `<text x="${padL - 4}" y="${(yFor(v) + 3).toFixed(1)}" class="sax" text-anchor="end">${Math.round(v)}</text>`;
+  });
+  let bars = '';
+  weeks.forEach((w, i) => {
+    const cx = padL + step * i + step / 2;
+    let yTop = padT + plotH;
+    buckets.forEach((b) => {
+      const v = w.byMuscle[b] || 0; if (!v) return;
+      const h = (v / maxT) * plotH; yTop -= h;
+      bars += `<rect x="${(cx - bw / 2).toFixed(1)}" y="${yTop.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0.5, h - 2).toFixed(1)}" rx="2" fill="${muscleColor(b)}" data-tip="${esc(b)} · ${v} set${v > 1 ? 's' : ''} · wk of ${w.label}"/>`;
+    });
+    if (w.sets) bars += `<text x="${cx.toFixed(1)}" y="${(yFor(w.sets) - 3).toFixed(1)}" class="svl" text-anchor="middle">${w.sets}</text>`;
+    if (n <= 9 || i % 2 === 0) bars += `<text x="${cx.toFixed(1)}" y="${H - 7}" class="sax" text-anchor="middle">${w.label}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Sets per muscle per week">${grid}${bars}</svg>`;
+}
+
+// Vertical single-hue bars (weekly volume).
+function svgVBars(weeks, color) {
+  const W = 340, H = 130, padL = 30, padR = 6, padT = 12, padB = 22;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const maxV = niceMax(Math.max(1, ...weeks.map((w) => w.vol)));
+  const n = weeks.length, step = plotW / n, bw = Math.min(30, step * 0.62);
+  const yFor = (v) => padT + plotH - (v / maxV) * plotH;
+  const kfmt = (v) => (v >= 1000 ? (v / 1000).toFixed(v >= 10000 ? 0 : 1) + 'k' : String(Math.round(v)));
+  let out = '';
+  [0, maxV].forEach((v) => {
+    out += `<line x1="${padL}" x2="${W - padR}" y1="${yFor(v).toFixed(1)}" y2="${yFor(v).toFixed(1)}" class="sgrid"/>` +
+      `<text x="${padL - 4}" y="${(yFor(v) + 3).toFixed(1)}" class="sax" text-anchor="end">${kfmt(v)}</text>`;
+  });
+  weeks.forEach((w, i) => {
+    const cx = padL + step * i + step / 2;
+    const h = (w.vol / maxV) * plotH;
+    const recent = i === n - 1;
+    out += `<rect x="${(cx - bw / 2).toFixed(1)}" y="${yFor(w.vol).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0.5, h).toFixed(1)}" rx="2" fill="${recent ? color : 'var(--gold-dim)'}" data-tip="wk of ${w.label} · ${fmtNum(Math.round(w.vol))} ${unit()}"/>`;
+    if (n <= 9 || i % 2 === 0) out += `<text x="${cx.toFixed(1)}" y="${H - 7}" class="sax" text-anchor="middle">${w.label}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Weekly volume">${out}</svg>`;
+}
+
+// Single-series line: heaviest set over time for one exercise.
+function svgLine(points, color) {
+  const W = 340, H = 150, padL = 30, padR = 8, padT = 12, padB = 22;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const ys = points.map((p) => p.y);
+  let lo = Math.min(...ys), hi = Math.max(...ys);
+  if (lo === hi) { lo = Math.max(0, lo - 5); hi = hi + 5; }
+  const pad = (hi - lo) * 0.15; lo = Math.max(0, lo - pad); hi = hi + pad;
+  const n = points.length;
+  const xFor = (i) => padL + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
+  const yFor = (v) => padT + plotH - ((v - lo) / (hi - lo)) * plotH;
+  let grid = '';
+  [lo, (lo + hi) / 2, hi].forEach((v) => {
+    grid += `<line x1="${padL}" x2="${W - padR}" y1="${yFor(v).toFixed(1)}" y2="${yFor(v).toFixed(1)}" class="sgrid"/>` +
+      `<text x="${padL - 4}" y="${(yFor(v) + 3).toFixed(1)}" class="sax" text-anchor="end">${Math.round(v)}</text>`;
+  });
+  const d = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${xFor(i).toFixed(1)} ${yFor(p.y).toFixed(1)}`).join(' ');
+  const line = `<path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  let marks = '';
+  points.forEach((p, i) => {
+    marks += `<circle cx="${xFor(i).toFixed(1)}" cy="${yFor(p.y).toFixed(1)}" r="3.2" fill="${color}" stroke="var(--bg-elev)" stroke-width="1.5"/>`;
+    // wide transparent hit target for tap tooltips
+    marks += `<rect x="${(xFor(i) - step2(n, plotW) / 2).toFixed(1)}" y="${padT}" width="${step2(n, plotW).toFixed(1)}" height="${plotH}" fill="transparent" data-tip="${esc(p.label)} · ${fmtNum(p.y)} ${unit()}"/>`;
+    if (n <= 9 || i % 2 === 0 || i === n - 1) marks += `<text x="${xFor(i).toFixed(1)}" y="${H - 7}" class="sax" text-anchor="middle">${p.label}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Heaviest set over time">${grid}${line}${marks}</svg>`;
+}
+function step2(n, plotW) { return n <= 1 ? plotW : plotW / (n - 1); }
+
+// Horizontal bars with always-visible labels (muscle balance over the range).
+function hBarsHtml(items, total) {
+  const max = Math.max(1, ...items.map((it) => it.value));
+  return `<div class="hbars">${items.map((it) => {
+    const pct = total ? Math.round((it.value / total) * 100) : 0;
+    return `<div class="hbar-row" data-tip="${esc(it.label)} · ${it.value} sets · ${pct}% of work">
+      <span class="hbar-l">${esc(it.label)}</span>
+      <span class="hbar-track"><span class="hbar-fill" style="width:${((it.value / max) * 100).toFixed(1)}%;background:${muscleColor(it.label)}"></span></span>
+      <span class="hbar-v">${it.value}<span class="hbar-pct"> ${pct}%</span></span>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+/* ---- Progress view ------------------------------------------------------- */
 function progressView() {
   const completed = state.logs.filter(isCompleted);
   if (completed.length === 0) {
     return `<h1 class="view-title">Progress</h1>` + emptyState('📈', 'Nothing logged yet',
-      'Once you complete a few sets on the Today tab, your stats, personal bests and habit grid will appear here.',
+      'Once you complete a few sets on the Today tab, your stats, charts, personal bests and habit grid will appear here.',
       'Go to Today', 'nav:today');
   }
 
-  // ---- Totals
-  const sessions = new Set(completed.map((l) => l.date));
-  const totalSets = completed.length;
-  const totalVol = completed.reduce((s, l) => s + (l.weight || 0) * (l.reps || 0), 0);
+  const range = state.progRange;
+  const weeks = buildWeeks(completed, range);
+  const buckets = bucketsPresent(weeks);
+  const nWeeks = weeks.length;
+  const rangeLabel = range === 'all' ? `${nWeeks} wks` : `${range} wks`;
 
-  // ---- Weekly volume for sparkline + trend (last 8 weeks)
-  const now = new Date();
-  const thisMon = mondayOf(now);
-  const weeks = [];
-  for (let i = 7; i >= 0; i--) {
-    const start = addDays(thisMon, -7 * i);
-    const end = addDays(start, 7);
-    const s = dateToStr(start), e = dateToStr(end);
-    const vol = completed.filter((l) => l.date >= s && l.date < e).reduce((a, l) => a + (l.weight || 0) * (l.reps || 0), 0);
-    weeks.push({ start, vol });
-  }
-  const maxVol = Math.max(1, ...weeks.map((w) => w.vol));
-  const spark = weeks.map((w, i) => `<div class="bar ${i === weeks.length - 1 ? 'recent' : ''}" style="height:${Math.max(2, (w.vol / maxVol) * 100)}%" title="${fmtShort(dateToStr(w.start))}: ${fmtNum(w.vol)}"></div>`).join('');
-  const last = weeks[weeks.length - 1].vol, prev = weeks[weeks.length - 2].vol;
+  // range chips
+  const chips = [4, 8, 12, 'all'].map((r) =>
+    `<button class="chip ${r === range ? 'on' : ''}" data-act="prog:range" data-range="${r}">${r === 'all' ? 'All' : r + 'w'}</button>`).join('');
+
+  // ---- Range totals
+  const rangeLogs = completed.filter((l) => l.date >= dateToStr(weeks[0].start));
+  const sessionDates = new Set(rangeLogs.map((l) => l.date));
+  const rSets = rangeLogs.length;
+  const rVol = rangeLogs.reduce((a, l) => a + (l.weight || 0) * (l.reps || 0), 0);
+  const setsPerWk = Math.round(rSets / nWeeks);
+
+  // ---- Weekly volume trend (last vs previous week in range)
+  const lastV = weeks[nWeeks - 1].vol, prevV = nWeeks > 1 ? weeks[nWeeks - 2].vol : 0;
   let trend = '<span class="trend">–</span>';
-  if (prev > 0) { const pct = Math.round(((last - prev) / prev) * 100); trend = `<span class="trend ${pct >= 0 ? 'up' : 'down'}">${pct >= 0 ? '▲' : '▼'} ${Math.abs(pct)}%</span>`; }
-  else if (last > 0) trend = `<span class="trend up">▲ new</span>`;
+  if (prevV > 0) { const pct = Math.round(((lastV - prevV) / prevV) * 100); trend = `<span class="trend ${pct >= 0 ? 'up' : 'down'}">${pct >= 0 ? '▲' : '▼'} ${Math.abs(pct)}%</span>`; }
+  else if (lastV > 0) trend = `<span class="trend up">▲ new</span>`;
 
-  // ---- Habit grid (last 8 weeks × split days)
+  // ---- Muscle balance (sets per muscle over range)
+  const balance = {};
+  rangeLogs.forEach((l) => { const b = muscleBucket(l.muscle); balance[b] = (balance[b] || 0) + 1; });
+  const balItems = bucketsPresent(weeks).map((b) => ({ label: b, value: balance[b] || 0 }))
+    .filter((it) => it.value > 0).sort((a, b) => b.value - a.value);
+
+  // ---- Exercise progression (heaviest completed set per session date)
+  const exStats = {};
+  completed.filter((l) => l.weight > 0).forEach((l) => {
+    (exStats[l.exercise] = exStats[l.exercise] || { dates: new Set(), byDate: {} });
+    exStats[l.exercise].dates.add(l.date);
+    exStats[l.exercise].byDate[l.date] = Math.max(exStats[l.exercise].byDate[l.date] || 0, l.weight);
+  });
+  const exNames = Object.keys(exStats).sort((a, b) => exStats[b].dates.size - exStats[a].dates.size || a.localeCompare(b));
+  if (exNames.length && (!state.progExercise || !exStats[state.progExercise])) state.progExercise = exNames[0];
+  let progChart = '';
+  if (exNames.length) {
+    const sel = state.progExercise;
+    const st = exStats[sel];
+    const cutoff = dateToStr(weeks[0].start);
+    const dates = [...st.dates].filter((d) => d >= cutoff).sort();
+    const opts = exNames.map((n) => `<option value="${esc(n)}" ${n === sel ? 'selected' : ''}>${esc(n)} (${exStats[n].dates.size})</option>`).join('');
+    const picker = `<select class="prog-select" data-act="prog:exercise" aria-label="Exercise">${opts}</select>`;
+    if (dates.length >= 2) {
+      const points = dates.map((d) => ({ label: fmtShort(d), y: st.byDate[d] }));
+      const first = st.byDate[dates[0]], lastW = st.byDate[dates[dates.length - 1]];
+      const delta = lastW - first;
+      const dtxt = delta === 0 ? 'flat' : `${delta > 0 ? '+' : ''}${fmtNum(delta)} ${unit()}`;
+      progChart = `${picker}<div class="faint" style="font-size:12px;margin:8px 0 2px">Top-set weight · ${dates.length} sessions · <span class="${delta >= 0 ? 'green' : 'faint'}">${dtxt}</span></div>${svgLine(points, 'var(--gold)')}`;
+    } else {
+      progChart = `${picker}<p class="muted" style="margin-top:10px">Log this lift on at least two different days in this range to see a trend.</p>`;
+    }
+  }
+
+  // ---- Habit grid (range weeks × split days)
   const days = state.split;
   let habit = '';
   if (days.length) {
     const header = days.map((d) => `<th>${d.weekday != null ? WEEKDAYS[d.weekday] : esc(d.name.slice(0, 6))}</th>`).join('');
-    const rows = [];
-    for (let i = 0; i < 8; i++) {
-      const wkMon = addDays(thisMon, -7 * (7 - i));
+    const rows = weeks.map((w) => {
       const cells = days.map((d) => {
         if (d.weekday == null) return `<td><div class="hcell rest"></div></td>`;
-        const offset = d.weekday === 0 ? 6 : d.weekday - 1; // Mon=0 … Sun=6
-        const cellDate = dateToStr(addDays(wkMon, offset));
-        const logged = sessions.has(cellDate);
+        const offset = d.weekday === 0 ? 6 : d.weekday - 1;
+        const cellDate = dateToStr(addDays(w.start, offset));
+        const logged = sessionDates.has(cellDate);
         const future = cellDate > todayStr();
         return `<td><div class="hcell ${logged ? 'on' : future ? 'rest' : ''}" title="${cellDate}"></div></td>`;
       }).join('');
-      rows.push(`<tr><td class="wk">${fmtShort(dateToStr(wkMon))}</td>${cells}</tr>`);
-    }
-    habit = `<div class="grid-scroll"><table class="habit"><thead><tr><th></th>${header}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
+      return `<tr><td class="wk">${w.label}</td>${cells}</tr>`;
+    }).join('');
+    habit = `<div class="grid-scroll"><table class="habit"><thead><tr><th></th>${header}</tr></thead><tbody>${rows}</tbody></table></div>`;
   } else {
     habit = `<p class="muted">Add training days in the Split tab to see your weekly habit grid.</p>`;
   }
 
-  // ---- Personal bests per exercise
+  // ---- Personal bests (all-time)
   const byEx = {};
-  completed.filter((l) => l.weight > 0 && l.reps > 0).forEach((l) => {
-    (byEx[l.exercise] = byEx[l.exercise] || []).push(l);
-  });
-  const pbNames = Object.keys(byEx).sort((a, b) => a.localeCompare(b));
-  const pbRows = pbNames.map((n) => {
+  completed.filter((l) => l.weight > 0 && l.reps > 0).forEach((l) => { (byEx[l.exercise] = byEx[l.exercise] || []).push(l); });
+  const pbRows = Object.keys(byEx).sort((a, b) => a.localeCompare(b)).map((n) => {
     const arr = byEx[n];
     let heavy = arr[0], best = arr[0];
     arr.forEach((l) => {
       if (l.weight > heavy.weight || (l.weight === heavy.weight && l.reps > heavy.reps)) heavy = l;
       if (l.weight * l.reps > best.weight * best.reps) best = l;
     });
-    return `<div class="pb-row">
-      <div class="pb-ex">${esc(n)}</div>
+    return `<div class="pb-row"><div class="pb-ex">${esc(n)}</div>
       <div class="pb-vals">
         <div>Heaviest <b>${fmtNum(heavy.weight)} ${unit()}</b> <span class="pb-date">${fmtShort(heavy.date)}</span></div>
         <div>Best set <b>${fmtNum(best.weight)} × ${best.reps}</b> <span class="pb-date">${fmtShort(best.date)}</span></div>
-      </div>
-    </div>`;
+      </div></div>`;
   }).join('');
 
   return `
     <h1 class="view-title">Progress</h1>
-    <div class="stat-grid">
-      <div class="stat"><div class="v">${sessions.size}</div><div class="l">Sessions</div></div>
-      <div class="stat"><div class="v">${totalSets}</div><div class="l">Sets</div></div>
-      <div class="stat"><div class="v">${fmtNum(Math.round(totalVol))}</div><div class="l">Volume ${unit()}</div></div>
+    <div class="range-chips">${chips}</div>
+    <div class="stat-grid stat-4">
+      <div class="stat"><div class="v">${sessionDates.size}</div><div class="l">Sessions</div></div>
+      <div class="stat"><div class="v">${rSets}</div><div class="l">Sets</div></div>
+      <div class="stat"><div class="v">${setsPerWk}</div><div class="l">Sets / wk</div></div>
+      <div class="stat"><div class="v">${fmtNum(Math.round(rVol))}</div><div class="l">Vol ${unit()}</div></div>
     </div>
+
+    <h2 class="section">Sets per muscle · per week</h2>
+    <div class="card">
+      ${svgStackedBars(weeks, buckets)}
+      ${legendHtml(buckets)}
+    </div>
+
+    <h2 class="section">Muscle balance · ${rangeLabel}</h2>
+    <div class="card">${balItems.length ? hBarsHtml(balItems, rSets) : '<p class="muted">No sets in this range.</p>'}</div>
+
     <h2 class="section">Weekly volume ${trend}</h2>
-    <div class="card"><div class="spark">${spark}</div>
-      <div class="faint" style="font-size:11px;text-align:right;margin-top:6px">last 8 weeks · this week ${fmtNum(Math.round(last))} ${unit()}</div>
+    <div class="card">${svgVBars(weeks, 'var(--gold)')}
+      <div class="faint" style="font-size:11px;text-align:right;margin-top:2px">this week ${fmtNum(Math.round(lastV))} ${unit()}</div>
     </div>
+
+    ${exNames.length ? `<h2 class="section">Strength progression</h2><div class="card">${progChart}</div>` : ''}
+
     <h2 class="section">Weekly consistency</h2>
     <div class="card">${habit}</div>
+
     <h2 class="section">Personal bests</h2>
     <div class="card">${pbRows || '<p class="muted">Log some weighted sets to start tracking PRs.</p>'}</div>
   `;
@@ -607,6 +805,26 @@ function showToast(msg, isPB) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.remove(), 2200);
 }
+
+/* ---- Chart tooltip (tap a bar/point to read its value) ------------------- */
+let tipTimer = null;
+function hideTip() { const el = document.getElementById('charttip'); if (el) el.remove(); }
+function showTip(text, x, y) {
+  hideTip();
+  const el = document.createElement('div');
+  el.id = 'charttip'; el.className = 'charttip'; el.textContent = text;
+  document.body.appendChild(el);
+  const w = el.offsetWidth, h = el.offsetHeight;
+  let left = x - w / 2; left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+  let top = y - h - 12; if (top < 8) top = y + 16;
+  el.style.left = left + 'px'; el.style.top = top + 'px';
+  clearTimeout(tipTimer); tipTimer = setTimeout(hideTip, 2400);
+}
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-tip]');
+  if (el) showTip(el.getAttribute('data-tip'), e.clientX, e.clientY);
+  else hideTip();
+});
 
 /* --------------------------------------------------------------------------
    Profile sheet
@@ -735,6 +953,7 @@ document.addEventListener('change', (e) => {
   const act = t.dataset.act;
   if (act === 'today:date') { state.selectedDate = t.value; state.selectedDayId = autoDayForDate(t.value); render(); }
   else if (act === 'today:daychange') { state.selectedDayId = t.value; render(); }
+  else if (act === 'prog:exercise') { state.progExercise = t.value; render(); }
   else if (act === 'split:weekday') {
     const d = state.split.find((x) => x.id === t.dataset.day);
     if (d) { d.weekday = t.value === '' ? null : parseInt(t.value, 10); saveSplit().then(render); }
@@ -749,6 +968,9 @@ document.addEventListener('click', async (e) => {
 
   // navigation
   if (a.startsWith('nav:')) { state.tab = a.slice(4); render(); return; }
+
+  // progress range selector
+  if (a === 'prog:range') { state.progRange = D.range === 'all' ? 'all' : parseInt(D.range, 10); render(); return; }
 
   // onboarding
   if (a === 'onboard:continue') return onboardContinue();

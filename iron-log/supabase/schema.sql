@@ -18,9 +18,12 @@ create table if not exists public.profiles (
   is_public    boolean not null default true,
   stats        jsonb not null default '{}'::jsonb,   -- {sessions, sets, volume}
   top_lifts    jsonb not null default '[]'::jsonb,   -- [{exercise, weight, reps, date}]
+  lifts        jsonb not null default '{}'::jsonb,   -- {exercise: {weight, reps, date, e1rm}}
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now()
 );
+-- If you created profiles before this column existed, this adds it in place:
+alter table public.profiles add column if not exists lifts jsonb not null default '{}'::jsonb;
 
 -- One row per account: the training program (array of days as JSON).
 create table if not exists public.splits (
@@ -45,10 +48,20 @@ create table if not exists public.logs (
 create index if not exists logs_user_idx on public.logs (user_id);
 create index if not exists logs_user_date_idx on public.logs (user_id, date);
 
+-- Follows: one row per (follower -> followee). "Friends" = a mutual pair.
+create table if not exists public.follows (
+  follower_id uuid not null references auth.users on delete cascade,
+  followee_id uuid not null references auth.users on delete cascade,
+  created_at  timestamptz not null default now(),
+  primary key (follower_id, followee_id)
+);
+create index if not exists follows_followee_idx on public.follows (followee_id);
+
 -- ---- Row-level security --------------------------------------------------
 alter table public.profiles enable row level security;
 alter table public.splits   enable row level security;
 alter table public.logs     enable row level security;
+alter table public.follows  enable row level security;
 
 -- profiles: read public ones (and always your own); write only your own.
 drop policy if exists profiles_read on public.profiles;
@@ -87,3 +100,15 @@ create policy logs_update on public.logs for update to authenticated
 drop policy if exists logs_delete on public.logs;
 create policy logs_delete on public.logs for delete to authenticated
   using (user_id = auth.uid());
+
+-- follows: readable by any member (for counts / friend badges); you may only
+-- create or remove your OWN follow rows.
+drop policy if exists follows_read on public.follows;
+create policy follows_read on public.follows for select to authenticated
+  using (true);
+drop policy if exists follows_insert on public.follows;
+create policy follows_insert on public.follows for insert to authenticated
+  with check (follower_id = auth.uid());
+drop policy if exists follows_delete on public.follows;
+create policy follows_delete on public.follows for delete to authenticated
+  using (follower_id = auth.uid());

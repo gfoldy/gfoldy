@@ -46,6 +46,10 @@ the device. You can optionally connect a free **Supabase** backend to turn on:
   offline, syncing when you reconnect).
 - A **People tab** — every member has a public profile; browse anyone's split,
   best lifts and basic metrics. Profiles can be switched to private per person.
+- **Follow** other members (mutual follows show as "Friends"), with a
+  Discover / Following filter.
+- A **Ranks tab** — leaderboards by estimated 1RM per lift, total volume,
+  sessions or sets, scoped to everyone or just the people you follow.
 
 It's additive: leave `config.js` blank and the app behaves exactly as before.
 Full walkthrough (about 5 minutes, one time): **[SETUP.md](./SETUP.md)**.

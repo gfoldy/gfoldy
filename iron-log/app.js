@@ -156,8 +156,14 @@ const state = {
   mode: 'local',        // 'local' or 'cloud'
   people: null,         // People tab: cached user list
   peopleErr: null,
+  peopleFilter: 'discover', // 'discover' | 'following'
   viewUserId: null,     // People tab: which user is being viewed
   viewUser: null,       // People tab: loaded {profile, days, logs}
+  viewFollow: null,     // People tab: {followers, following, followsMe} for viewed user
+  follows: null,        // Set of user ids the current user follows
+  ranksScope: 'all',    // Ranks tab: 'all' | 'following'
+  ranksMetric: 'lift',  // 'lift' | 'volume' | 'sessions' | 'sets'
+  ranksLift: null,      // selected exercise for the per-lift board
   authCreate: false,    // auth screen: false = sign in, true = create account
   authErr: null,
 };
@@ -183,19 +189,27 @@ async function saveSplit() {
   Cloud.pushSplit(state.split);
 }
 
-// Summary denormalised onto the cloud profile so the People tab can show basic
-// metrics without pulling everyone's full log history.
+// Estimated 1-rep max (Epley) — lets leaderboards compare lifts fairly across
+// different rep ranges.
+const e1rm = (w, r) => Math.round(w * (1 + r / 30));
+
+// Summary denormalised onto the cloud profile so the People and Ranks tabs can
+// show metrics/leaderboards without pulling everyone's full log history.
 function computeSummary() {
   const c = state.logs.filter(isCompleted);
   const sessions = new Set(c.map((l) => l.date)).size;
   const sets = c.length;
   const volume = Math.round(c.reduce((a, l) => a + (l.weight || 0) * (l.reps || 0), 0));
-  const best = {};
+  const lifts = {};
   c.filter((l) => l.weight > 0 && l.reps > 0).forEach((l) => {
-    if (!best[l.exercise] || l.weight > best[l.exercise].weight) best[l.exercise] = { exercise: l.exercise, weight: l.weight, reps: l.reps, date: l.date };
+    const e = e1rm(l.weight, l.reps);
+    const cur = lifts[l.exercise];
+    if (!cur || e > cur.e1rm) lifts[l.exercise] = { weight: l.weight, reps: l.reps, date: l.date, e1rm: e };
   });
-  const top_lifts = Object.values(best).sort((a, b) => b.weight - a.weight).slice(0, 4);
-  return { stats: { sessions, sets, volume }, top_lifts };
+  const top_lifts = Object.entries(lifts)
+    .map(([exercise, v]) => ({ exercise, weight: v.weight, reps: v.reps, date: v.date, e1rm: v.e1rm }))
+    .sort((a, b) => b.e1rm - a.e1rm).slice(0, 4);
+  return { stats: { sessions, sets, volume }, top_lifts, lifts };
 }
 let statsTimer = null;
 function syncStats() {
@@ -257,6 +271,7 @@ const I = {
   progress: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
   split: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5h11M6.5 6.5V4M6.5 6.5V9M17.5 6.5V4M17.5 6.5V9M2 6.5h2M20 6.5h2M6.5 17.5h11M6.5 17.5V15M6.5 17.5V20M17.5 17.5V15M17.5 17.5V20M2 17.5h2M20 17.5h2"/></svg>',
   people: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 5.2a3.2 3.2 0 0 1 0 5.6M17.5 20a5.5 5.5 0 0 0-3-4.9"/></svg>',
+  ranks: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>',
   check: '<svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>',
 };
 
@@ -295,6 +310,7 @@ function tabbar() {
     ${t('progress', 'Progress', I.progress)}
     ${t('split', 'Split', I.split)}
     ${Cloud.enabled ? t('people', 'People', I.people) : ''}
+    ${Cloud.enabled ? t('ranks', 'Ranks', I.ranks) : ''}
   </nav>`;
 }
 
@@ -303,6 +319,7 @@ function viewHtml() {
   if (state.tab === 'progress') return progressView();
   if (state.tab === 'split') return splitView();
   if (state.tab === 'people') return peopleView();
+  if (state.tab === 'ranks') return ranksView();
   return '';
 }
 
@@ -859,6 +876,7 @@ async function enterCloudUser() {
     if (!state.profile) state.profile = { id: uid, name: 'Me', unit: 'lb', username: '' };
   }
   localStorage.setItem(CUR_KEY, uid);
+  try { state.follows = await Cloud.myFollows(); } catch (e) { state.follows = new Set(); }
   syncStats();
 }
 
@@ -874,36 +892,70 @@ async function cacheMine() {
 
 async function loadPeople() {
   state.people = null; state.peopleErr = null; render();
-  try { state.people = await Cloud.listUsers(); } catch (e) { state.peopleErr = e.message; }
+  try {
+    state.people = await Cloud.listUsers();
+    patchMyRow(); // show my live numbers immediately, even before they sync up
+  } catch (e) { state.peopleErr = e.message; }
   render();
 }
+
+// Overlay my own row in the people list with current local data so I always
+// see myself accurately (the synced copy can lag a second behind).
+function patchMyRow() {
+  if (!state.people || !state.profile) return;
+  const sum = computeSummary();
+  const meRow = {
+    id: state.profileId, username: state.profile.username || '', display_name: state.profile.name,
+    unit: state.profile.unit || 'lb', is_public: state.profile.is_public !== false,
+    stats: sum.stats, top_lifts: sum.top_lifts, lifts: sum.lifts,
+  };
+  const i = state.people.findIndex((u) => u.id === state.profileId);
+  if (i >= 0) state.people[i] = meRow; else if (meRow.is_public) state.people.unshift(meRow);
+}
 async function loadUser(id) {
-  state.viewUserId = id; state.viewUser = null; render();
-  try { const u = await Cloud.getUser(id); state.viewUser = u || 'private'; }
-  catch (e) { state.viewUser = 'private'; }
+  state.viewUserId = id; state.viewUser = null; state.viewFollow = null; render();
+  try {
+    const [u, fi] = await Promise.all([Cloud.getUser(id), Cloud.followInfo(id)]);
+    state.viewUser = u || 'private'; state.viewFollow = fi;
+  } catch (e) { state.viewUser = 'private'; }
   render();
 }
 
 function peopleView() {
   if (state.viewUserId) return userDetailView();
+  const filter = state.peopleFilter;
+  const seg = `<div class="seg">
+    <button class="${filter === 'discover' ? 'on' : ''}" data-act="people:filter" data-f="discover">Discover</button>
+    <button class="${filter === 'following' ? 'on' : ''}" data-act="people:filter" data-f="following">Following</button>
+  </div>`;
+  let list = state.people;
+  if (list && filter === 'following') {
+    const f = state.follows || new Set();
+    list = list.filter((p) => f.has(p.id));
+  }
   return `
     <div class="people-head"><h1 class="view-title" style="margin:2px">People</h1>
       <button class="btn sm ghost" data-act="people:refresh">↻</button></div>
+    ${seg}
     ${state.peopleErr ? `<div class="card"><p class="muted">Couldn't load people: ${esc(state.peopleErr)}</p></div>`
       : state.people === null ? '<div class="card"><p class="muted">Loading…</p></div>'
-      : state.people.length === 0 ? emptyState('👥', 'No one here yet', 'Friends who add Iron Log and create an account will show up here.', '')
-      : `<div class="people-list">${state.people.map(userCard).join('')}</div>`}
+      : list.length === 0 ? emptyState(filter === 'following' ? '➕' : '👥',
+          filter === 'following' ? 'Not following anyone yet' : 'No one here yet',
+          filter === 'following' ? 'Open someone from Discover and tap Follow to build your circle.' : 'Friends who add Iron Log and create an account will show up here.', '')
+      : `<div class="people-list">${list.map(userCard).join('')}</div>`}
   `;
 }
 
 function userCard(p) {
   const s = p.stats || {};
   const me = state.profileId === p.id;
+  const following = state.follows && state.follows.has(p.id);
   const top = (p.top_lifts || []).slice(0, 3).map((t) => `${esc(t.exercise.split(' ').slice(0, 2).join(' '))} ${fmtNum(t.weight)}`).join(' · ');
+  const tag = me ? '<span class="pill muscle">you</span>' : following ? '<span class="pill follow">following</span>' : '';
   return `<button class="user-card" data-act="people:view" data-id="${p.id}">
     <div class="ava">${esc((p.display_name || p.username || '?').slice(0, 1).toUpperCase())}</div>
     <div class="uc-main">
-      <div class="uc-name">${esc(p.display_name || p.username)}${me ? ' <span class="pill muscle">you</span>' : ''}</div>
+      <div class="uc-name">${esc(p.display_name || p.username)}${tag ? ' ' + tag : ''}</div>
       <div class="uc-sub">@${esc(p.username)} · ${s.sessions || 0} sessions · ${s.sets || 0} sets</div>
       ${top ? `<div class="uc-top">${top} ${esc(p.unit || 'lb')}</div>` : ''}
     </div>
@@ -917,14 +969,24 @@ function userDetailView() {
   if (!u) return `<div class="people-head">${back}</div><div class="card"><p class="muted">Loading…</p></div>`;
   if (u === 'private') return `<div class="people-head">${back}</div>` + emptyState('🔒', 'Private profile', 'This member keeps their workouts private.', '');
   const p = u.profile, unitL = p.unit || 'lb', logs = u.logs || [];
+  const me = p.id === state.profileId;
   const completed = logs.filter(isCompleted);
   const sessions = new Set(completed.map((l) => l.date)).size;
   const vol = Math.round(completed.reduce((a, l) => a + (l.weight || 0) * (l.reps || 0), 0));
+  const fi = state.viewFollow || { followers: 0, following: 0, followsMe: false };
+  const following = state.follows && state.follows.has(p.id);
+  const badge = fi.followsMe ? (following ? '<span class="pill follow">friends</span>' : '<span class="pill">follows you</span>') : '';
+  const followBtn = me ? '' : `<button class="btn ${following ? '' : 'gold'} sm" data-act="user:follow" data-id="${p.id}">${following ? 'Following ✓' : '+ Follow'}</button>`;
   return `
     <div class="people-head">${back}</div>
     <div class="profile-hero">
       <div class="ava lg">${esc((p.display_name || p.username || '?').slice(0, 1).toUpperCase())}</div>
-      <div><div class="ph-name">${esc(p.display_name || p.username)}</div><div class="ph-sub">@${esc(p.username)}</div></div>
+      <div style="flex:1">
+        <div class="ph-name">${esc(p.display_name || p.username)} ${badge}</div>
+        <div class="ph-sub">@${esc(p.username)}</div>
+        <div class="ph-follow"><b>${fi.followers}</b> followers · <b>${fi.following}</b> following</div>
+      </div>
+      ${followBtn}
     </div>
     <div class="stat-grid stat-4">
       <div class="stat"><div class="v">${sessions}</div><div class="l">Sessions</div></div>
@@ -936,6 +998,68 @@ function userDetailView() {
     ${readonlySplitHtml(u.days || [])}
     <h2 class="section">Best lifts</h2>
     <div class="card">${pbListHtml(logs, unitL) || '<p class="muted">No weighted sets logged yet.</p>'}</div>
+  `;
+}
+
+/* ---- Ranks (leaderboards) ------------------------------------------------ */
+function ranksView() {
+  if (state.peopleErr) return `<h1 class="view-title">Ranks</h1><div class="card"><p class="muted">Couldn't load: ${esc(state.peopleErr)}</p></div>`;
+  if (state.people === null) return `<h1 class="view-title">Ranks</h1><div class="card"><p class="muted">Loading…</p></div>`;
+
+  const scope = state.ranksScope, metric = state.ranksMetric;
+  let users = state.people.slice();
+  if (scope === 'following') {
+    const f = state.follows || new Set();
+    users = users.filter((u) => f.has(u.id) || u.id === state.profileId);
+  }
+
+  const scopeSeg = `<div class="seg">
+    <button class="${scope === 'all' ? 'on' : ''}" data-act="ranks:scope" data-s="all">Everyone</button>
+    <button class="${scope === 'following' ? 'on' : ''}" data-act="ranks:scope" data-s="following">You + Following</button>
+  </div>`;
+  const metricChips = [['lift', 'Top lift'], ['volume', 'Volume'], ['sessions', 'Sessions'], ['sets', 'Sets']]
+    .map(([m, label]) => `<button class="chip ${metric === m ? 'on' : ''}" data-act="ranks:metric" data-m="${m}">${label}</button>`).join('');
+
+  let rows = [], valFmt, liftPicker = '';
+  if (metric === 'lift') {
+    // gather available lifts across the visible users
+    const counts = {};
+    users.forEach((u) => Object.keys(u.lifts || {}).forEach((ex) => { counts[ex] = (counts[ex] || 0) + 1; }));
+    const lifts = Object.keys(counts).sort((a, b) => counts[b] - counts[a] || a.localeCompare(b));
+    if (lifts.length && (!state.ranksLift || !counts[state.ranksLift])) state.ranksLift = lifts[0];
+    if (!lifts.length) {
+      return `<h1 class="view-title">Ranks</h1>${scopeSeg}<div class="chip-row">${metricChips}</div>` +
+        emptyState('🏋️', 'No lifts logged yet', 'Once people log some weighted sets, the per-lift leaderboard fills in.', '');
+    }
+    liftPicker = `<select class="prog-select" data-act="ranks:lift" style="margin-bottom:12px">${lifts.map((l) => `<option ${l === state.ranksLift ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
+    const lift = state.ranksLift;
+    rows = users.filter((u) => u.lifts && u.lifts[lift]).map((u) => ({ u, v: u.lifts[lift].e1rm, sub: `${fmtNum(u.lifts[lift].weight)}×${u.lifts[lift].reps}` }));
+    valFmt = (r) => `${fmtNum(r.v)} <span class="rk-unit">est ${esc(r.u.unit || 'lb')}</span>`;
+  } else {
+    rows = users.map((u) => ({ u, v: (u.stats && u.stats[metric]) || 0 })).filter((r) => r.v > 0);
+    const label = metric === 'volume' ? 'vol' : metric;
+    valFmt = (r) => `${fmtNum(r.v)} <span class="rk-unit">${metric === 'volume' ? esc(r.u.unit || 'lb') : label}</span>`;
+  }
+  rows.sort((a, b) => b.v - a.v);
+
+  const medals = ['🥇', '🥈', '🥉'];
+  const list = rows.length ? rows.map((r, i) => {
+    const me = r.u.id === state.profileId;
+    return `<button class="rank-row ${me ? 'me' : ''}" data-act="people:view" data-id="${r.u.id}">
+      <div class="rk-pos ${i < 3 ? 'medal' : ''}">${i < 3 ? medals[i] : i + 1}</div>
+      <div class="ava sm">${esc((r.u.display_name || r.u.username || '?').slice(0, 1).toUpperCase())}</div>
+      <div class="rk-main"><div class="rk-name">${esc(r.u.display_name || r.u.username)}${me ? ' <span class="pill muscle">you</span>' : ''}</div>
+        ${r.sub ? `<div class="rk-sub">${r.sub}</div>` : ''}</div>
+      <div class="rk-val">${valFmt(r)}</div>
+    </button>`;
+  }).join('') : '<div class="card"><p class="muted">No one to rank here yet.</p></div>';
+
+  return `
+    <h1 class="view-title">Ranks</h1>
+    ${scopeSeg}
+    <div class="chip-row">${metricChips}</div>
+    ${liftPicker}
+    <div class="rank-list">${list}</div>
   `;
 }
 
@@ -1181,6 +1305,7 @@ document.addEventListener('change', (e) => {
   if (act === 'today:date') { state.selectedDate = t.value; state.selectedDayId = autoDayForDate(t.value); render(); }
   else if (act === 'today:daychange') { state.selectedDayId = t.value; render(); }
   else if (act === 'prog:exercise') { state.progExercise = t.value; render(); }
+  else if (act === 'ranks:lift') { state.ranksLift = t.value; render(); }
   else if (act === 'split:weekday') {
     const d = state.split.find((x) => x.id === t.dataset.day);
     if (d) { d.weekday = t.value === '' ? null : parseInt(t.value, 10); saveSplit().then(render); }
@@ -1196,10 +1321,8 @@ document.addEventListener('click', async (e) => {
   // navigation
   if (a.startsWith('nav:')) {
     state.tab = a.slice(4);
-    if (state.tab === 'people') {
-      state.viewUserId = null; state.viewUser = null;
-      if (state.people === null) { loadPeople(); return; }
-    }
+    if (state.tab === 'people') { state.viewUserId = null; state.viewUser = null; }
+    if ((state.tab === 'people' || state.tab === 'ranks') && state.people === null) { loadPeople(); return; }
     render(); return;
   }
 
@@ -1211,6 +1334,24 @@ document.addEventListener('click', async (e) => {
   if (a === 'people:refresh') return loadPeople();
   if (a === 'people:view') return loadUser(D.id);
   if (a === 'people:back') { state.viewUserId = null; state.viewUser = null; render(); return; }
+  if (a === 'people:filter') { state.peopleFilter = D.f; render(); return; }
+
+  // Ranks tab
+  if (a === 'ranks:scope') { state.ranksScope = D.s; render(); return; }
+  if (a === 'ranks:metric') { state.ranksMetric = D.m; render(); return; }
+
+  // follow / unfollow
+  if (a === 'user:follow') {
+    const id = D.id;
+    if (!state.follows) state.follows = new Set();
+    const was = state.follows.has(id);
+    if (was) { state.follows.delete(id); if (state.viewFollow) state.viewFollow.followers = Math.max(0, state.viewFollow.followers - 1); }
+    else { state.follows.add(id); if (state.viewFollow) state.viewFollow.followers += 1; }
+    render();
+    try { if (was) await Cloud.unfollow(id); else await Cloud.follow(id); }
+    catch (e) { if (was) state.follows.add(id); else state.follows.delete(id); render(); }
+    return;
+  }
 
   // account (cloud)
   if (a === 'account:unit') { state.profile.unit = D.unit; await DB.put('profiles', state.profile); Cloud.pushProfile({ unit: D.unit }); openAccountSheet(); render(); return; }

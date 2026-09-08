@@ -112,7 +112,7 @@ const Cloud = (() => {
     session = data.session;
     if (!session) throw new Error('Account created, but sign-in did not complete. In Supabase → Authentication → Sign In / Providers, turn OFF "Confirm email", then try signing in.');
     loadOutbox();
-    const prof = { id: session.user.id, username: String(username).trim(), display_name: displayName || String(username).trim(), unit: unit || 'lb', is_public: true, stats: {}, top_lifts: [] };
+    const prof = { id: session.user.id, username: String(username).trim(), display_name: displayName || String(username).trim(), unit: unit || 'lb', is_public: true, stats: {}, top_lifts: [], lifts: {} };
     const { error: pe } = await sb.from('profiles').insert(prof);
     if (pe) {
       if (/duplicate|unique/i.test(pe.message)) throw new Error('That username is already taken.');
@@ -155,10 +155,41 @@ const Cloud = (() => {
   async function listUsers() {
     if (!enabled) return [];
     const { data, error } = await sb.from('profiles')
-      .select('id,username,display_name,unit,is_public,stats,top_lifts,created_at')
+      .select('id,username,display_name,unit,is_public,stats,top_lifts,lifts,created_at')
       .eq('is_public', true).order('updated_at', { ascending: false }).limit(200);
     if (error) throw new Error(error.message);
     return data || [];
+  }
+
+  // ---- follows -----------------------------------------------------------
+  async function myFollows() {
+    if (!enabled || !session) return new Set();
+    const { data, error } = await sb.from('follows').select('followee_id').eq('follower_id', session.user.id);
+    if (error) return new Set();
+    return new Set((data || []).map((r) => r.followee_id));
+  }
+  async function follow(id) {
+    if (!enabled || !session) return;
+    await sb.from('follows').insert({ follower_id: session.user.id, followee_id: id });
+  }
+  async function unfollow(id) {
+    if (!enabled || !session) return;
+    await sb.from('follows').delete().eq('follower_id', session.user.id).eq('followee_id', id);
+  }
+  // counts + whether this user follows me
+  async function followInfo(id) {
+    if (!enabled || !session) return { followers: 0, following: 0, followsMe: false };
+    const me = session.user.id;
+    const [followers, following, back] = await Promise.all([
+      sb.from('follows').select('follower_id', { count: 'exact', head: true }).eq('followee_id', id),
+      sb.from('follows').select('followee_id', { count: 'exact', head: true }).eq('follower_id', id),
+      sb.from('follows').select('follower_id').eq('follower_id', id).eq('followee_id', me).limit(1),
+    ]);
+    return {
+      followers: followers.count || 0,
+      following: following.count || 0,
+      followsMe: !!(back.data && back.data.length),
+    };
   }
 
   async function getUser(id) {
@@ -173,5 +204,6 @@ const Cloud = (() => {
   }
 
   return { enabled, init, user, signUp, signIn, signOut, pullMine,
-    pushLog, deleteLog, pushSplit, pushProfile, listUsers, getUser, flush };
+    pushLog, deleteLog, pushSplit, pushProfile, listUsers, getUser, flush,
+    myFollows, follow, unfollow, followInfo };
 })();

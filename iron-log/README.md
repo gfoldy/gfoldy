@@ -36,6 +36,22 @@ own profile, builds her own split from scratch — same app, separate data.
 
 ---
 
+## Social mode (optional)
+
+Iron Log runs **local-only** by default — no backend, no accounts, everything on
+the device. You can optionally connect a free **Supabase** backend to turn on:
+
+- **Accounts** (username + password) instead of the local "Who's training?" prompt.
+- **Cloud sync** — your logs, split and PBs live in the cloud (and still work
+  offline, syncing when you reconnect).
+- A **People tab** — every member has a public profile; browse anyone's split,
+  best lifts and basic metrics. Profiles can be switched to private per person.
+
+It's additive: leave `config.js` blank and the app behaves exactly as before.
+Full walkthrough (about 5 minutes, one time): **[SETUP.md](./SETUP.md)**.
+
+---
+
 ## Run it locally
 
 Any static file server works. From this folder:
@@ -118,10 +134,15 @@ deleting things in your split never corrupts or orphans past workouts.
 iron-log/
 ├── index.html              # app shell
 ├── styles.css              # dark / gold / green theme
-├── app.js                  # all app logic (views, storage, events)
+├── app.js                  # all app logic (views, storage, events, charts)
+├── cloud.js                # optional Supabase layer (auth, sync, community)
+├── config.js               # Supabase URL + anon key (blank = local-only)
 ├── sw.js                   # service worker (offline cache)
 ├── manifest.webmanifest    # PWA manifest
 ├── vercel.json             # static headers (SW no-cache, manifest type)
+├── vendor/supabase.js      # vendored Supabase JS client (offline-safe)
+├── supabase/schema.sql     # database schema + row-level-security policies
+├── SETUP.md                # how to turn on accounts + the People tab
 ├── icons/                  # generated PNG icons (any + maskable, apple-touch)
 └── scripts/gen-icons.js    # regenerates icons/ (zero-dependency PNG writer)
 ```

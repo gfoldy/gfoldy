@@ -281,4 +281,37 @@ table.habit td.wk { font-size: 11px; color: var(--text-faint); white-space: nowr
 .onboard .tag { text-align: center; color: var(--text-dim); margin-bottom: 30px; }
 .onboard .q { font-size: 20px; font-weight: 700; margin-bottom: 14px; text-align: center; }
 
+/* Auth screen */
+.auth-err { background: var(--red-soft); border: 1px solid var(--red); color: var(--red); padding: 10px 12px; border-radius: 10px; margin-bottom: 14px; font-size: 14px; font-weight: 600; }
+.row-check { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; font-size: 14px; color: var(--text-dim); }
+.row-check input { width: 22px; height: 22px; accent-color: var(--gold); flex: 0 0 auto; }
+
+/* People tab */
+.people-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.people-list { display: flex; flex-direction: column; gap: 10px; }
+.user-card {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  background: var(--bg-elev); border: 1px solid var(--border); border-radius: 14px; padding: 12px; color: var(--text);
+}
+.user-card:active { transform: scale(0.99); }
+.ava {
+  width: 44px; height: 44px; border-radius: 50%; flex: 0 0 auto;
+  background: var(--gold-soft); color: var(--gold); border: 1px solid var(--gold-dim);
+  display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px;
+}
+.ava.lg { width: 58px; height: 58px; font-size: 24px; }
+.uc-main { flex: 1; min-width: 0; }
+.uc-name { font-weight: 700; }
+.uc-sub { font-size: 12px; color: var(--text-faint); }
+.uc-top { font-size: 12px; color: var(--gold); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-card .chev { color: var(--text-faint); font-size: 20px; }
+
+.profile-hero { display: flex; align-items: center; gap: 14px; margin: 6px 2px 16px; }
+.ph-name { font-size: 20px; font-weight: 800; }
+.ph-sub { color: var(--text-faint); font-size: 13px; }
+
+.ro-day { padding: 12px 14px; }
+.ro-day-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; font-size: 15px; }
+.ro-ex { display: flex; justify-content: space-between; padding: 5px 0; border-top: 1px solid var(--border); font-size: 14px; }
+
 .hide { display: none !important; }

@@ -153,6 +153,13 @@ const state = {
   onboardName: '',
   progRange: 8,         // Progress tab: weeks shown (4/8/12/'all')
   progExercise: null,   // Progress tab: exercise selected for the strength chart
+  mode: 'local',        // 'local' or 'cloud'
+  people: null,         // People tab: cached user list
+  peopleErr: null,
+  viewUserId: null,     // People tab: which user is being viewed
+  viewUser: null,       // People tab: loaded {profile, days, logs}
+  authCreate: false,    // auth screen: false = sign in, true = create account
+  authErr: null,
 };
 
 const CUR_KEY = 'ironlog.currentProfile';
@@ -173,6 +180,28 @@ async function loadProfileData(pid) {
 
 async function saveSplit() {
   await DB.put('splits', { profileId: state.profileId, days: state.split });
+  Cloud.pushSplit(state.split);
+}
+
+// Summary denormalised onto the cloud profile so the People tab can show basic
+// metrics without pulling everyone's full log history.
+function computeSummary() {
+  const c = state.logs.filter(isCompleted);
+  const sessions = new Set(c.map((l) => l.date)).size;
+  const sets = c.length;
+  const volume = Math.round(c.reduce((a, l) => a + (l.weight || 0) * (l.reps || 0), 0));
+  const best = {};
+  c.filter((l) => l.weight > 0 && l.reps > 0).forEach((l) => {
+    if (!best[l.exercise] || l.weight > best[l.exercise].weight) best[l.exercise] = { exercise: l.exercise, weight: l.weight, reps: l.reps, date: l.date };
+  });
+  const top_lifts = Object.values(best).sort((a, b) => b.weight - a.weight).slice(0, 4);
+  return { stats: { sessions, sets, volume }, top_lifts };
+}
+let statsTimer = null;
+function syncStats() {
+  if (!Cloud.enabled) return;
+  clearTimeout(statsTimer);
+  statsTimer = setTimeout(() => Cloud.pushProfile(computeSummary()), 700);
 }
 
 async function createProfile(name, seedStarter) {
@@ -203,12 +232,14 @@ async function upsertSet(dateStr, exName, muscle, setIndex, patch) {
   Object.assign(rec, patch);
   rec.updatedAt = Date.now();
   await DB.put('logs', rec);
+  Cloud.pushLog(rec); syncStats();
   return rec;
 }
 
 async function deleteSet(rec) {
   state.logs = state.logs.filter((l) => l.id !== rec.id);
   await DB.del('logs', rec.id);
+  Cloud.deleteLog(rec.id); syncStats();
 }
 
 function setsFor(dateStr, exName) {
@@ -225,6 +256,7 @@ const I = {
   today: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>',
   progress: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
   split: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5h11M6.5 6.5V4M6.5 6.5V9M17.5 6.5V4M17.5 6.5V9M2 6.5h2M20 6.5h2M6.5 17.5h11M6.5 17.5V15M6.5 17.5V20M17.5 17.5V15M17.5 17.5V20M2 17.5h2M20 17.5h2"/></svg>',
+  people: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 5.2a3.2 3.2 0 0 1 0 5.6M17.5 20a5.5 5.5 0 0 0-3-4.9"/></svg>',
   check: '<svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>',
 };
 
@@ -234,7 +266,7 @@ const I = {
 const root = document.getElementById('root');
 
 function render() {
-  if (!state.profileId) { renderOnboard(); return; }
+  if (!state.profileId) { if (Cloud.enabled) renderAuth(); else renderOnboard(); return; }
   const y = window.scrollY;
   root.innerHTML = `
     <div id="app">
@@ -249,7 +281,7 @@ function render() {
 function appbar() {
   return `<header class="appbar">
     <div class="brand"><img class="mark" src="./icons/icon-192.png" alt="" />Iron<b>Log</b></div>
-    <button class="profile-chip" data-act="profile:open" aria-label="Switch profile">
+    <button class="profile-chip" data-act="profile:open" aria-label="Account & profile">
       <span class="who">${esc(state.profile ? state.profile.name : '')}</span><span class="chev">▾</span>
     </button>
   </header>`;
@@ -262,6 +294,7 @@ function tabbar() {
     ${t('today', 'Today', I.today)}
     ${t('progress', 'Progress', I.progress)}
     ${t('split', 'Split', I.split)}
+    ${Cloud.enabled ? t('people', 'People', I.people) : ''}
   </nav>`;
 }
 
@@ -269,6 +302,7 @@ function viewHtml() {
   if (state.tab === 'today') return todayView();
   if (state.tab === 'progress') return progressView();
   if (state.tab === 'split') return splitView();
+  if (state.tab === 'people') return peopleView();
   return '';
 }
 
@@ -756,6 +790,199 @@ function emptyState(emoji, title, text, btnLabel, act) {
 }
 
 /* --------------------------------------------------------------------------
+   Cloud: auth screen, account, and the People (community) tab
+   -------------------------------------------------------------------------- */
+function renderAuth() {
+  const create = state.authCreate;
+  root.innerHTML = `<div id="app"><div class="onboard">
+    <div class="logo"><img src="./icons/icon-512.png" alt="Iron Log" /></div>
+    <h1>Iron<b>Log</b></h1>
+    <p class="tag">${create ? 'Create your account' : 'Welcome back'}</p>
+    ${state.authErr ? `<div class="auth-err">${esc(state.authErr)}</div>` : ''}
+    <label class="field"><span>Username</span>
+      <input type="text" id="au-user" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username" placeholder="e.g. garrett" /></label>
+    <label class="field"><span>Password</span>
+      <input type="password" id="au-pass" autocomplete="${create ? 'new-password' : 'current-password'}" placeholder="at least 6 characters" /></label>
+    ${create ? `
+      <label class="field"><span>Display name (optional)</span><input type="text" id="au-name" placeholder="Shown to others" /></label>
+      <label class="field"><span>Units</span><select id="au-unit"><option value="lb">lb</option><option value="kg">kg</option></select></label>
+      <label class="row-check"><input type="checkbox" id="au-seed" checked /> <span>Start with the Iron Log starter split</span></label>
+    ` : ''}
+    <button class="btn gold block" data-act="auth:submit" style="margin-top:6px">${create ? 'Create account' : 'Sign in'}</button>
+    <button class="subtle-link" data-act="auth:toggle" style="margin-top:14px;display:block;width:100%">${create ? 'Have an account? Sign in' : 'New here? Create an account'}</button>
+    ${create ? '<p class="faint" style="font-size:11px;text-align:center;margin-top:16px">Your workouts are public to other Iron Log members. You can switch to private anytime in account settings.</p>' : ''}
+  </div></div>`;
+  const u = document.getElementById('au-user'); if (u) u.focus();
+  ['au-user', 'au-pass', 'au-name'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('keydown', (e) => { if (e.key === 'Enter') authSubmit(); });
+  });
+}
+
+async function authSubmit() {
+  const username = ((document.getElementById('au-user') || {}).value || '').trim();
+  const password = (document.getElementById('au-pass') || {}).value || '';
+  state.authErr = null;
+  if (!/^[a-zA-Z0-9_.]{2,20}$/.test(username)) { state.authErr = 'Username: 2–20 letters, numbers, _ or .'; renderAuth(); return; }
+  if (password.length < 6) { state.authErr = 'Password must be at least 6 characters.'; renderAuth(); return; }
+  const btn = document.querySelector('[data-act="auth:submit"]'); if (btn) { btn.textContent = 'Please wait…'; btn.disabled = true; }
+  try {
+    if (state.authCreate) {
+      const displayName = ((document.getElementById('au-name') || {}).value || '').trim() || username;
+      const unitSel = (document.getElementById('au-unit') || {}).value || 'lb';
+      const seed = (document.getElementById('au-seed') || {}).checked;
+      await Cloud.signUp({ username, password, displayName, unit: unitSel, days: seed ? STARTER_SPLIT() : [] });
+    } else {
+      await Cloud.signIn({ username, password });
+    }
+    await enterCloudUser();
+    state.tab = 'today'; state.selectedDate = todayStr(); state.selectedDayId = null; state.authErr = null;
+    render();
+  } catch (e) { state.authErr = e.message || 'Something went wrong.'; renderAuth(); }
+}
+
+// Load the signed-in user's data from the cloud into state (with an offline
+// fallback to the local IndexedDB cache).
+async function enterCloudUser() {
+  const uid = Cloud.user().id;
+  state.mode = 'cloud'; state.profileId = uid;
+  let pulled = null;
+  try { pulled = await Cloud.pullMine(); } catch (e) { /* offline */ }
+  if (pulled && pulled.profile) {
+    const pr = pulled.profile;
+    state.profile = { id: uid, name: pr.display_name || pr.username, username: pr.username, unit: pr.unit || 'lb', is_public: pr.is_public !== false };
+    state.split = pulled.days || [];
+    state.logs = (pulled.logs || []).map((l) => ({ ...l, profileId: uid, updatedAt: Date.now() }));
+    await cacheMine();
+  } else {
+    await loadProfiles(); await loadProfileData(uid);
+    if (!state.profile) state.profile = { id: uid, name: 'Me', unit: 'lb', username: '' };
+  }
+  localStorage.setItem(CUR_KEY, uid);
+  syncStats();
+}
+
+// Overwrite the local offline snapshot with current cloud state.
+async function cacheMine() {
+  const uid = state.profileId;
+  await DB.put('profiles', state.profile);
+  await DB.put('splits', { profileId: uid, days: state.split });
+  const existing = await DB.logsByProfile(uid);
+  for (const l of existing) await DB.del('logs', l.id);
+  for (const l of state.logs) await DB.put('logs', l);
+}
+
+async function loadPeople() {
+  state.people = null; state.peopleErr = null; render();
+  try { state.people = await Cloud.listUsers(); } catch (e) { state.peopleErr = e.message; }
+  render();
+}
+async function loadUser(id) {
+  state.viewUserId = id; state.viewUser = null; render();
+  try { const u = await Cloud.getUser(id); state.viewUser = u || 'private'; }
+  catch (e) { state.viewUser = 'private'; }
+  render();
+}
+
+function peopleView() {
+  if (state.viewUserId) return userDetailView();
+  return `
+    <div class="people-head"><h1 class="view-title" style="margin:2px">People</h1>
+      <button class="btn sm ghost" data-act="people:refresh">↻</button></div>
+    ${state.peopleErr ? `<div class="card"><p class="muted">Couldn't load people: ${esc(state.peopleErr)}</p></div>`
+      : state.people === null ? '<div class="card"><p class="muted">Loading…</p></div>'
+      : state.people.length === 0 ? emptyState('👥', 'No one here yet', 'Friends who add Iron Log and create an account will show up here.', '')
+      : `<div class="people-list">${state.people.map(userCard).join('')}</div>`}
+  `;
+}
+
+function userCard(p) {
+  const s = p.stats || {};
+  const me = state.profileId === p.id;
+  const top = (p.top_lifts || []).slice(0, 3).map((t) => `${esc(t.exercise.split(' ').slice(0, 2).join(' '))} ${fmtNum(t.weight)}`).join(' · ');
+  return `<button class="user-card" data-act="people:view" data-id="${p.id}">
+    <div class="ava">${esc((p.display_name || p.username || '?').slice(0, 1).toUpperCase())}</div>
+    <div class="uc-main">
+      <div class="uc-name">${esc(p.display_name || p.username)}${me ? ' <span class="pill muscle">you</span>' : ''}</div>
+      <div class="uc-sub">@${esc(p.username)} · ${s.sessions || 0} sessions · ${s.sets || 0} sets</div>
+      ${top ? `<div class="uc-top">${top} ${esc(p.unit || 'lb')}</div>` : ''}
+    </div>
+    <span class="chev">›</span>
+  </button>`;
+}
+
+function userDetailView() {
+  const u = state.viewUser;
+  const back = `<button class="btn sm ghost" data-act="people:back">‹ People</button>`;
+  if (!u) return `<div class="people-head">${back}</div><div class="card"><p class="muted">Loading…</p></div>`;
+  if (u === 'private') return `<div class="people-head">${back}</div>` + emptyState('🔒', 'Private profile', 'This member keeps their workouts private.', '');
+  const p = u.profile, unitL = p.unit || 'lb', logs = u.logs || [];
+  const completed = logs.filter(isCompleted);
+  const sessions = new Set(completed.map((l) => l.date)).size;
+  const vol = Math.round(completed.reduce((a, l) => a + (l.weight || 0) * (l.reps || 0), 0));
+  return `
+    <div class="people-head">${back}</div>
+    <div class="profile-hero">
+      <div class="ava lg">${esc((p.display_name || p.username || '?').slice(0, 1).toUpperCase())}</div>
+      <div><div class="ph-name">${esc(p.display_name || p.username)}</div><div class="ph-sub">@${esc(p.username)}</div></div>
+    </div>
+    <div class="stat-grid stat-4">
+      <div class="stat"><div class="v">${sessions}</div><div class="l">Sessions</div></div>
+      <div class="stat"><div class="v">${completed.length}</div><div class="l">Sets</div></div>
+      <div class="stat"><div class="v">${fmtNum(vol)}</div><div class="l">Vol ${unitL}</div></div>
+      <div class="stat"><div class="v">${(u.days || []).length}</div><div class="l">Days</div></div>
+    </div>
+    <h2 class="section">Their split</h2>
+    ${readonlySplitHtml(u.days || [])}
+    <h2 class="section">Best lifts</h2>
+    <div class="card">${pbListHtml(logs, unitL) || '<p class="muted">No weighted sets logged yet.</p>'}</div>
+  `;
+}
+
+function readonlySplitHtml(days) {
+  if (!days || !days.length) return '<div class="card"><p class="muted">No split set up.</p></div>';
+  return days.map((d) => `<div class="card ro-day">
+    <div class="ro-day-head"><b>${esc(d.name)}</b>${d.weekday != null ? `<span class="faint">${WEEKDAYS[d.weekday]}</span>` : ''}</div>
+    ${(d.exercises || []).map((e) => `<div class="ro-ex"><span>${esc(e.name)}</span><span class="faint">${e.sets}×${esc(e.reps || '—')}</span></div>`).join('')}
+  </div>`).join('');
+}
+
+function pbListHtml(logs, unitL) {
+  const byEx = {};
+  logs.filter((l) => isCompleted(l) && l.weight > 0 && l.reps > 0).forEach((l) => { (byEx[l.exercise] = byEx[l.exercise] || []).push(l); });
+  const names = Object.keys(byEx).sort((a, b) => a.localeCompare(b));
+  if (!names.length) return '';
+  return names.map((n) => {
+    const arr = byEx[n]; let heavy = arr[0], best = arr[0];
+    arr.forEach((l) => { if (l.weight > heavy.weight || (l.weight === heavy.weight && l.reps > heavy.reps)) heavy = l; if (l.weight * l.reps > best.weight * best.reps) best = l; });
+    return `<div class="pb-row"><div class="pb-ex">${esc(n)}</div>
+      <div class="pb-vals">
+        <div>Heaviest <b>${fmtNum(heavy.weight)} ${unitL}</b> <span class="pb-date">${fmtShort(heavy.date)}</span></div>
+        <div>Best set <b>${fmtNum(best.weight)} × ${best.reps}</b> <span class="pb-date">${fmtShort(best.date)}</span></div>
+      </div></div>`;
+  }).join('');
+}
+
+function openAccountSheet() {
+  const p = state.profile, u = unit();
+  openSheet(`
+    <h3>${esc(p.name)}</h3>
+    <p class="muted" style="margin-top:-8px">@${esc(p.username || '')}</p>
+    <label class="field"><span>Display name</span><input type="text" id="ac-name" value="${esc(p.name)}" /></label>
+    <label class="field"><span>Units</span></label>
+    <div class="btn-row" style="margin:-6px 0 14px">
+      <button class="btn sm ${u === 'lb' ? 'gold' : ''}" data-act="account:unit" data-unit="lb">lb</button>
+      <button class="btn sm ${u === 'kg' ? 'gold' : ''}" data-act="account:unit" data-unit="kg">kg</button>
+    </div>
+    <label class="row-check"><input type="checkbox" id="ac-public" ${p.is_public !== false ? 'checked' : ''} /> <span>Public — others can find me in People</span></label>
+    <div class="btn-row" style="margin:14px 0"><button class="btn sm" data-act="data:export">Export backup</button></div>
+    <div class="sheet-actions"><button class="btn gold" data-act="account:save">Save</button></div>
+    <div class="sheet-actions" style="margin-top:8px"><button class="btn danger" data-act="account:signout">Sign out</button></div>
+    <div class="sheet-actions" style="margin-top:8px"><button class="btn ghost" data-act="sheet:close">Close</button></div>
+  `);
+}
+
+/* --------------------------------------------------------------------------
    Onboarding (first run)
    -------------------------------------------------------------------------- */
 function renderOnboard() {
@@ -940,7 +1167,7 @@ document.addEventListener('input', (e) => {
     if (t.dataset.kind === 'weight') rec.weight = num(t.value); else rec.reps = num(t.value);
     rec.updatedAt = Date.now();
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => DB.put('logs', rec), 250);
+    saveTimer = setTimeout(() => { DB.put('logs', rec); Cloud.pushLog(rec); syncStats(); }, 250);
   } else if (act === 'split:dayname') {
     const d = state.split.find((x) => x.id === t.dataset.day);
     if (d) { d.name = t.value; saveSplit(); }
@@ -967,7 +1194,43 @@ document.addEventListener('click', async (e) => {
   const D = t.dataset;
 
   // navigation
-  if (a.startsWith('nav:')) { state.tab = a.slice(4); render(); return; }
+  if (a.startsWith('nav:')) {
+    state.tab = a.slice(4);
+    if (state.tab === 'people') {
+      state.viewUserId = null; state.viewUser = null;
+      if (state.people === null) { loadPeople(); return; }
+    }
+    render(); return;
+  }
+
+  // auth screen
+  if (a === 'auth:submit') return authSubmit();
+  if (a === 'auth:toggle') { state.authCreate = !state.authCreate; state.authErr = null; renderAuth(); return; }
+
+  // People tab
+  if (a === 'people:refresh') return loadPeople();
+  if (a === 'people:view') return loadUser(D.id);
+  if (a === 'people:back') { state.viewUserId = null; state.viewUser = null; render(); return; }
+
+  // account (cloud)
+  if (a === 'account:unit') { state.profile.unit = D.unit; await DB.put('profiles', state.profile); Cloud.pushProfile({ unit: D.unit }); openAccountSheet(); render(); return; }
+  if (a === 'account:save') {
+    const name = ((document.getElementById('ac-name') || {}).value || '').trim() || state.profile.name;
+    const isPub = (document.getElementById('ac-public') || {}).checked;
+    state.profile.name = name; state.profile.is_public = isPub;
+    await DB.put('profiles', state.profile);
+    Cloud.pushProfile({ display_name: name, is_public: isPub });
+    closeSheet(); render(); return;
+  }
+  if (a === 'account:signout') {
+    if (!confirm('Sign out of Iron Log on this device?')) return;
+    await Cloud.signOut();
+    state.profileId = null; state.profile = null; state.split = []; state.logs = [];
+    state.people = null; state.viewUserId = null; state.viewUser = null; state.tab = 'today';
+    state.authCreate = false; state.authErr = null; state.mode = 'cloud';
+    localStorage.removeItem(CUR_KEY);
+    closeSheet(); renderAuth(); return;
+  }
 
   // progress range selector
   if (a === 'prog:range') { state.progRange = D.range === 'all' ? 'all' : parseInt(D.range, 10); render(); return; }
@@ -986,7 +1249,7 @@ document.addEventListener('click', async (e) => {
   if (a === 'sheet:scrim') { if (e.target.classList.contains('scrim')) closeSheet(); return; }
 
   // profile
-  if (a === 'profile:open') return openProfileSheet();
+  if (a === 'profile:open') return state.mode === 'cloud' ? openAccountSheet() : openProfileSheet();
   if (a === 'profile:select') {
     if (D.id !== state.profileId) { await loadProfileData(D.id); state.tab = 'today'; state.selectedDayId = null; }
     closeSheet(); render(); return;
@@ -1157,11 +1420,18 @@ function importData() {
    Boot
    -------------------------------------------------------------------------- */
 async function boot() {
-  await loadProfiles();
-  const saved = localStorage.getItem(CUR_KEY);
-  const pid = (saved && state.profiles.find((p) => p.id === saved)) ? saved : (state.profiles[0] && state.profiles[0].id);
-  if (pid) await loadProfileData(pid);
-  render();
+  if (Cloud.enabled) {
+    state.mode = 'cloud';
+    try { await Cloud.init(); } catch (e) { /* ignore */ }
+    if (Cloud.user()) { try { await enterCloudUser(); } catch (e) { /* offline */ } }
+    render(); // renders auth screen when there is no session
+  } else {
+    await loadProfiles();
+    const saved = localStorage.getItem(CUR_KEY);
+    const pid = (saved && state.profiles.find((p) => p.id === saved)) ? saved : (state.profiles[0] && state.profiles[0].id);
+    if (pid) await loadProfileData(pid);
+    render();
+  }
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));

@@ -1,11 +1,14 @@
 /* Iron Log service worker — offline-first app shell.
    Bump CACHE version whenever the shell assets change. */
-const CACHE = 'iron-log-v3';
+const CACHE = 'iron-log-v4';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
   './app.js',
+  './config.js',
+  './cloud.js',
+  './vendor/supabase.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',

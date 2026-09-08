@@ -306,6 +306,19 @@ table.habit td.wk { font-size: 11px; color: var(--text-faint); white-space: nowr
 .uc-top { font-size: 12px; color: var(--gold); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .user-card .chev { color: var(--text-faint); font-size: 20px; }
 
+/* Activity feed */
+.feed { display: flex; flex-direction: column; gap: 10px; }
+.feed-card {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  background: var(--bg-elev); border: 1px solid var(--border); border-radius: 14px; padding: 12px; color: var(--text);
+}
+.feed-card:active { transform: scale(0.99); }
+.feed-card.pr { border-color: var(--gold-dim); background: var(--gold-soft); }
+.fc-main { flex: 1; min-width: 0; }
+.fc-line { font-weight: 700; font-size: 14px; }
+.fc-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fc-time { font-size: 11px; color: var(--text-faint); flex: 0 0 auto; align-self: flex-start; font-variant-numeric: tabular-nums; }
+
 .profile-hero { display: flex; align-items: center; gap: 14px; margin: 6px 2px 16px; }
 .ph-name { font-size: 20px; font-weight: 800; }
 .ph-sub { color: var(--text-faint); font-size: 13px; }

@@ -41,11 +41,11 @@ const Cloud = (() => {
   });
 
   // ---- offline outbox ----------------------------------------------------
-  let outbox = { logs: {}, dels: {}, split: null, profile: null };
+  let outbox = { logs: {}, dels: {}, split: null, profile: null, acts: {}, actDels: {} };
   const obKey = () => `ironlog.outbox.${session ? session.user.id : 'anon'}`;
   function loadOutbox() {
-    try { outbox = JSON.parse(localStorage.getItem(obKey())) || { logs: {}, dels: {}, split: null, profile: null }; }
-    catch { outbox = { logs: {}, dels: {}, split: null, profile: null }; }
+    try { outbox = JSON.parse(localStorage.getItem(obKey())) || { logs: {}, dels: {}, split: null, profile: null, acts: {}, actDels: {} }; }
+    catch { outbox = { logs: {}, dels: {}, split: null, profile: null, acts: {}, actDels: {} }; }
   }
   function saveOutbox() { try { localStorage.setItem(obKey(), JSON.stringify(outbox)); } catch {} }
 
@@ -81,6 +81,17 @@ const Cloud = (() => {
         const patch = { id: session.user.id, ...outbox.profile, updated_at: new Date().toISOString() };
         const { error } = await sb.from('profiles').upsert(patch, { onConflict: 'id' });
         if (!error) { outbox.profile = null; saveOutbox(); }
+      }
+      // activity events
+      const acts = Object.values(outbox.acts);
+      if (acts.length) {
+        const { error } = await sb.from('activity').upsert(acts, { onConflict: 'id' });
+        if (!error) { outbox.acts = {}; saveOutbox(); }
+      }
+      const actDels = Object.keys(outbox.actDels);
+      if (actDels.length) {
+        const { error } = await sb.from('activity').delete().in('id', actDels);
+        if (!error) { outbox.actDels = {}; saveOutbox(); }
       }
     } catch (e) { /* stay queued; will retry */ }
     flushing = false;
@@ -119,6 +130,10 @@ const Cloud = (() => {
       throw new Error(pe.message);
     }
     await sb.from('splits').insert({ user_id: session.user.id, days: days || [] });
+    try {
+      await sb.from('activity').insert({ id: 'join_' + session.user.id, user_id: session.user.id,
+        username: prof.username, display_name: prof.display_name, type: 'joined', data: {}, created_at: new Date().toISOString() });
+    } catch (e) { /* non-fatal */ }
     return { id: session.user.id, username: prof.username };
   }
 
@@ -151,6 +166,15 @@ const Cloud = (() => {
   function deleteLog(id) { if (!enabled) return; delete outbox.logs[id]; outbox.dels[id] = 1; saveOutbox(); scheduleFlush(); }
   function pushSplit(days) { if (!enabled) return; outbox.split = days; saveOutbox(); scheduleFlush(); }
   function pushProfile(patch) { if (!enabled) return; outbox.profile = { ...(outbox.profile || {}), ...patch }; saveOutbox(); scheduleFlush(); }
+  function pushActivity(row) { if (!enabled || !session) return; row.user_id = session.user.id; delete outbox.actDels[row.id]; outbox.acts[row.id] = row; saveOutbox(); scheduleFlush(); }
+  function deleteActivity(id) { if (!enabled) return; delete outbox.acts[id]; outbox.actDels[id] = 1; saveOutbox(); scheduleFlush(); }
+  async function feed(ids) {
+    if (!enabled || !ids || !ids.length) return [];
+    const { data, error } = await sb.from('activity').select('*').in('user_id', ids)
+      .order('created_at', { ascending: false }).limit(60);
+    if (error) throw new Error(error.message);
+    return data || [];
+  }
 
   async function listUsers() {
     if (!enabled) return [];
@@ -205,5 +229,5 @@ const Cloud = (() => {
 
   return { enabled, init, user, signUp, signIn, signOut, pullMine,
     pushLog, deleteLog, pushSplit, pushProfile, listUsers, getUser, flush,
-    myFollows, follow, unfollow, followInfo };
+    myFollows, follow, unfollow, followInfo, pushActivity, deleteActivity, feed };
 })();

@@ -57,11 +57,29 @@ create table if not exists public.follows (
 );
 create index if not exists follows_followee_idx on public.follows (followee_id);
 
+-- Activity: feed events (a logged session, a new PR, joining). The actor's
+-- username/display_name are denormalised on the row so the feed renders with
+-- no joins. id is client-generated and deterministic for de-duping (e.g. one
+-- 'session' row per user per day, updated as more sets are logged).
+create table if not exists public.activity (
+  id           text primary key,
+  user_id      uuid not null references auth.users on delete cascade,
+  username     citext,
+  display_name text,
+  type         text not null,          -- 'session' | 'pr' | 'joined'
+  date         text,                   -- 'YYYY-MM-DD' for sessions
+  data         jsonb not null default '{}'::jsonb,
+  created_at   timestamptz not null default now()
+);
+create index if not exists activity_created_idx on public.activity (created_at desc);
+create index if not exists activity_user_idx on public.activity (user_id);
+
 -- ---- Row-level security --------------------------------------------------
 alter table public.profiles enable row level security;
 alter table public.splits   enable row level security;
 alter table public.logs     enable row level security;
 alter table public.follows  enable row level security;
+alter table public.activity enable row level security;
 
 -- profiles: read public ones (and always your own); write only your own.
 drop policy if exists profiles_read on public.profiles;
@@ -112,3 +130,19 @@ create policy follows_insert on public.follows for insert to authenticated
 drop policy if exists follows_delete on public.follows;
 create policy follows_delete on public.follows for delete to authenticated
   using (follower_id = auth.uid());
+
+-- activity: readable when the actor's profile is public (or it's yours);
+-- you may only write your own activity.
+drop policy if exists activity_read on public.activity;
+create policy activity_read on public.activity for select to authenticated
+  using (exists (select 1 from public.profiles p
+                 where p.id = activity.user_id and (p.is_public or p.id = auth.uid())));
+drop policy if exists activity_insert on public.activity;
+create policy activity_insert on public.activity for insert to authenticated
+  with check (user_id = auth.uid());
+drop policy if exists activity_update on public.activity;
+create policy activity_update on public.activity for update to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+drop policy if exists activity_delete on public.activity;
+create policy activity_delete on public.activity for delete to authenticated
+  using (user_id = auth.uid());

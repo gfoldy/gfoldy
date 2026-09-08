@@ -156,7 +156,9 @@ const state = {
   mode: 'local',        // 'local' or 'cloud'
   people: null,         // People tab: cached user list
   peopleErr: null,
-  peopleFilter: 'discover', // 'discover' | 'following'
+  peopleMode: 'feed',   // People tab: 'feed' | 'discover' | 'following'
+  feed: null,           // People tab: cached activity feed
+  feedErr: null,
   viewUserId: null,     // People tab: which user is being viewed
   viewUser: null,       // People tab: loaded {profile, days, logs}
   viewFollow: null,     // People tab: {followers, following, followsMe} for viewed user
@@ -218,6 +220,37 @@ function syncStats() {
   statsTimer = setTimeout(() => Cloud.pushProfile(computeSummary()), 700);
 }
 
+const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 40);
+function relTime(iso) {
+  const t = new Date(iso).getTime();
+  if (isNaN(t)) return '';
+  const s = (Date.now() - t) / 1000;
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s / 60) + 'm';
+  if (s < 86400) return Math.floor(s / 3600) + 'h';
+  if (s < 604800) return Math.floor(s / 86400) + 'd';
+  return fmtShort(dateToStr(new Date(t)));
+}
+
+// Upsert one feed "session" row per training day, updated as sets are logged.
+let sessTimer = null;
+function syncSessionActivity(date) {
+  if (!Cloud.enabled) return;
+  clearTimeout(sessTimer);
+  sessTimer = setTimeout(() => {
+    const uid = state.profileId, id = 'sess_' + uid + '_' + date;
+    const sets = state.logs.filter((l) => l.date === date && isCompleted(l));
+    if (!sets.length) { Cloud.deleteActivity(id); return; }
+    const volume = Math.round(sets.reduce((a, l) => a + (l.weight || 0) * (l.reps || 0), 0));
+    const muscles = [...new Set(sets.map((l) => muscleBucket(l.muscle)))];
+    const wd = state.split.find((d) => d.weekday === weekdayOf(date));
+    const dayName = wd ? wd.name : '';
+    Cloud.pushActivity({ id, type: 'session', date, username: state.profile.username, display_name: state.profile.name,
+      data: { sets: sets.length, volume, muscles, dayName, unit: unit() }, created_at: new Date().toISOString() });
+    state.feed = null; // invalidate cached feed so it reloads with this event
+  }, 900);
+}
+
 async function createProfile(name, seedStarter) {
   const p = { id: uid(), name: name.trim() || 'Athlete', unit: 'lb', createdAt: Date.now() };
   await DB.put('profiles', p);
@@ -246,14 +279,14 @@ async function upsertSet(dateStr, exName, muscle, setIndex, patch) {
   Object.assign(rec, patch);
   rec.updatedAt = Date.now();
   await DB.put('logs', rec);
-  Cloud.pushLog(rec); syncStats();
+  Cloud.pushLog(rec); syncStats(); syncSessionActivity(dateStr);
   return rec;
 }
 
 async function deleteSet(rec) {
   state.logs = state.logs.filter((l) => l.id !== rec.id);
   await DB.del('logs', rec.id);
-  Cloud.deleteLog(rec.id); syncStats();
+  Cloud.deleteLog(rec.id); syncStats(); syncSessionActivity(rec.date);
 }
 
 function setsFor(dateStr, exName) {
@@ -923,27 +956,65 @@ async function loadUser(id) {
 
 function peopleView() {
   if (state.viewUserId) return userDetailView();
-  const filter = state.peopleFilter;
+  const mode = state.peopleMode;
   const seg = `<div class="seg">
-    <button class="${filter === 'discover' ? 'on' : ''}" data-act="people:filter" data-f="discover">Discover</button>
-    <button class="${filter === 'following' ? 'on' : ''}" data-act="people:filter" data-f="following">Following</button>
+    <button class="${mode === 'feed' ? 'on' : ''}" data-act="people:mode" data-m="feed">Feed</button>
+    <button class="${mode === 'discover' ? 'on' : ''}" data-act="people:mode" data-m="discover">Discover</button>
+    <button class="${mode === 'following' ? 'on' : ''}" data-act="people:mode" data-m="following">Following</button>
   </div>`;
+  const refresh = mode === 'feed' ? 'people:refreshFeed' : 'people:refresh';
+  const head = `<div class="people-head"><h1 class="view-title" style="margin:2px">People</h1>
+      <button class="btn sm ghost" data-act="${refresh}">↻</button></div>`;
+
+  if (mode === 'feed') return head + seg + feedHtml();
+
   let list = state.people;
-  if (list && filter === 'following') {
-    const f = state.follows || new Set();
-    list = list.filter((p) => f.has(p.id));
-  }
-  return `
-    <div class="people-head"><h1 class="view-title" style="margin:2px">People</h1>
-      <button class="btn sm ghost" data-act="people:refresh">↻</button></div>
-    ${seg}
-    ${state.peopleErr ? `<div class="card"><p class="muted">Couldn't load people: ${esc(state.peopleErr)}</p></div>`
+  if (list && mode === 'following') { const f = state.follows || new Set(); list = list.filter((p) => f.has(p.id)); }
+  return head + seg + (
+    state.peopleErr ? `<div class="card"><p class="muted">Couldn't load people: ${esc(state.peopleErr)}</p></div>`
       : state.people === null ? '<div class="card"><p class="muted">Loading…</p></div>'
-      : list.length === 0 ? emptyState(filter === 'following' ? '➕' : '👥',
-          filter === 'following' ? 'Not following anyone yet' : 'No one here yet',
-          filter === 'following' ? 'Open someone from Discover and tap Follow to build your circle.' : 'Friends who add Iron Log and create an account will show up here.', '')
-      : `<div class="people-list">${list.map(userCard).join('')}</div>`}
-  `;
+      : list.length === 0 ? emptyState(mode === 'following' ? '➕' : '👥',
+          mode === 'following' ? 'Not following anyone yet' : 'No one here yet',
+          mode === 'following' ? 'Open someone from Discover and tap Follow to build your circle.' : 'Friends who add Iron Log and create an account will show up here.', '')
+      : `<div class="people-list">${list.map(userCard).join('')}</div>`);
+}
+
+function feedHtml() {
+  if (state.feedErr) return `<div class="card"><p class="muted">Couldn't load feed: ${esc(state.feedErr)}</p></div>`;
+  if (state.feed === null) return '<div class="card"><p class="muted">Loading…</p></div>';
+  if (!state.feed.length) return emptyState('📣', 'Your feed is quiet',
+    'Follow people in Discover — their sessions and PRs will show up here, right alongside yours.', '');
+  return `<div class="feed">${state.feed.map(feedCard).join('')}</div>`;
+}
+
+function feedCard(a) {
+  const name = esc(a.display_name || a.username || 'Someone');
+  const ini = esc((a.display_name || a.username || '?').slice(0, 1).toUpperCase());
+  const d = a.data || {}, unitL = esc(d.unit || 'lb');
+  let line = name, sub = '', cls = a.type;
+  if (a.type === 'pr') {
+    line = `🏆 ${name} hit a PR`;
+    sub = `${esc(d.exercise || '')} ${fmtNum(d.weight)}×${d.reps} · est ${fmtNum(d.e1rm)} ${unitL}`;
+  } else if (a.type === 'session') {
+    line = `${name} trained${d.dayName ? ' ' + esc(d.dayName) : ''}`;
+    sub = `${d.sets} set${d.sets === 1 ? '' : 's'} · ${fmtNum(d.volume)} ${unitL}${d.muscles && d.muscles.length ? ' · ' + esc(d.muscles.slice(0, 4).join(', ')) : ''}`;
+  } else if (a.type === 'joined') {
+    line = `🎉 ${name} joined Iron Log`; sub = 'Say hi 👋';
+  }
+  return `<button class="feed-card ${cls}" data-act="people:view" data-id="${a.user_id}">
+    <div class="ava">${ini}</div>
+    <div class="fc-main"><div class="fc-line">${line}</div>${sub ? `<div class="fc-sub">${sub}</div>` : ''}</div>
+    <div class="fc-time">${relTime(a.created_at)}</div>
+  </button>`;
+}
+
+async function loadFeed() {
+  state.feed = null; state.feedErr = null; render();
+  try {
+    const ids = [...(state.follows || new Set()), state.profileId].filter(Boolean);
+    state.feed = await Cloud.feed(ids);
+  } catch (e) { state.feedErr = e.message; }
+  render();
 }
 
 function userCard(p) {
@@ -1240,6 +1311,15 @@ function checkPB(exName, rec) {
   const maxVol = others.reduce((m, l) => Math.max(m, l.weight * l.reps), 0);
   if (rec.weight > maxW) showToast(`🏆 New PB — ${fmtNum(rec.weight)} ${unit()}!`, true);
   else if (rec.weight * rec.reps > maxVol) showToast(`🏆 New best set — ${fmtNum(rec.weight)} × ${rec.reps}!`, true);
+  // Post a PR to the feed when it beats your best estimated 1RM for this lift.
+  const myE = e1rm(rec.weight, rec.reps);
+  const maxE = others.reduce((m, l) => Math.max(m, e1rm(l.weight, l.reps)), 0);
+  if (myE > maxE && Cloud.enabled) {
+    Cloud.pushActivity({ id: `pr_${state.profileId}_${rec.date}_${slug(exName)}`, type: 'pr', date: rec.date,
+      username: state.profile.username, display_name: state.profile.name,
+      data: { exercise: exName, weight: rec.weight, reps: rec.reps, e1rm: myE, unit: unit() }, created_at: new Date().toISOString() });
+    state.feed = null;
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -1291,7 +1371,7 @@ document.addEventListener('input', (e) => {
     if (t.dataset.kind === 'weight') rec.weight = num(t.value); else rec.reps = num(t.value);
     rec.updatedAt = Date.now();
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => { DB.put('logs', rec); Cloud.pushLog(rec); syncStats(); }, 250);
+    saveTimer = setTimeout(() => { DB.put('logs', rec); Cloud.pushLog(rec); syncStats(); syncSessionActivity(state.selectedDate); }, 250);
   } else if (act === 'split:dayname') {
     const d = state.split.find((x) => x.id === t.dataset.day);
     if (d) { d.name = t.value; saveSplit(); }
@@ -1321,8 +1401,12 @@ document.addEventListener('click', async (e) => {
   // navigation
   if (a.startsWith('nav:')) {
     state.tab = a.slice(4);
-    if (state.tab === 'people') { state.viewUserId = null; state.viewUser = null; }
-    if ((state.tab === 'people' || state.tab === 'ranks') && state.people === null) { loadPeople(); return; }
+    if (state.tab === 'people') {
+      state.viewUserId = null; state.viewUser = null;
+      if (state.peopleMode === 'feed') { if (state.feed === null) { loadFeed(); return; } }
+      else if (state.people === null) { loadPeople(); return; }
+    }
+    if (state.tab === 'ranks' && state.people === null) { loadPeople(); return; }
     render(); return;
   }
 
@@ -1334,7 +1418,13 @@ document.addEventListener('click', async (e) => {
   if (a === 'people:refresh') return loadPeople();
   if (a === 'people:view') return loadUser(D.id);
   if (a === 'people:back') { state.viewUserId = null; state.viewUser = null; render(); return; }
-  if (a === 'people:filter') { state.peopleFilter = D.f; render(); return; }
+  if (a === 'people:refreshFeed') return loadFeed();
+  if (a === 'people:mode') {
+    state.peopleMode = D.m;
+    if (D.m === 'feed') { if (state.feed === null) return loadFeed(); }
+    else if (state.people === null) return loadPeople();
+    render(); return;
+  }
 
   // Ranks tab
   if (a === 'ranks:scope') { state.ranksScope = D.s; render(); return; }
@@ -1347,6 +1437,7 @@ document.addEventListener('click', async (e) => {
     const was = state.follows.has(id);
     if (was) { state.follows.delete(id); if (state.viewFollow) state.viewFollow.followers = Math.max(0, state.viewFollow.followers - 1); }
     else { state.follows.add(id); if (state.viewFollow) state.viewFollow.followers += 1; }
+    state.feed = null; // following changed → next feed view reloads
     render();
     try { if (was) await Cloud.unfollow(id); else await Cloud.follow(id); }
     catch (e) { if (was) state.follows.add(id); else state.follows.delete(id); render(); }

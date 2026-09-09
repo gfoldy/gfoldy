@@ -12,6 +12,16 @@ const path = require('path');
 const BG = [13, 13, 15]; // near-black #0d0d0f
 const GOLD = [201, 169, 79]; // #c9a94f
 const GOLD_DIM = [150, 125, 58];
+// Metallic gold ramp (light highlight -> mid -> deep) for a gradient fill.
+const GOLD_LT = [236, 214, 152];
+const GOLD_MD = [203, 171, 83];
+const GOLD_DK = [150, 122, 50];
+const lerp = (a, b, t) => [Math.round(a[0] + (b[0] - a[0]) * t), Math.round(a[1] + (b[1] - a[1]) * t), Math.round(a[2] + (b[2] - a[2]) * t)];
+// Vertical metallic gradient: highlight at top, catching a brighter band ~30%.
+function metal(t) {
+  if (t < 0.32) return lerp(GOLD_LT, GOLD_MD, t / 0.32);
+  return lerp(GOLD_MD, GOLD_DK, (t - 0.32) / 0.68);
+}
 
 // --- CRC32 (for PNG chunks) ---------------------------------------------
 const CRC_TABLE = (() => {
@@ -76,8 +86,9 @@ function setPx(cv, x, y, rgb, a = 255) {
   cv.buf[i + 2] = Math.round(rgb[2] * ia + cv.buf[i + 2] * (1 - ia));
   cv.buf[i + 3] = Math.max(cv.buf[i + 3], a);
 }
-// filled rounded rectangle, coords in [0,1] fractions
-function roundRect(cv, x0, y0, x1, y1, r, rgb) {
+// filled rounded rectangle, coords in [0,1] fractions. `col` is an [r,g,b] or
+// a function(t) returning [r,g,b] where t is the vertical fraction (0=top).
+function roundRect(cv, x0, y0, x1, y1, r, col) {
   const S = cv.size;
   const ax = x0 * S, ay = y0 * S, bx = x1 * S, by = y1 * S, rr = r * S;
   for (let y = Math.floor(ay); y < Math.ceil(by); y++) {
@@ -103,38 +114,58 @@ function roundRect(cv, x0, y0, x1, y1, r, rgb) {
           if (inside) hit++;
         }
       }
-      if (hit) setPx(cv, x, y, rgb, Math.round((hit / 4) * 255));
+      if (hit) {
+        const t = by > ay ? Math.min(1, Math.max(0, (y + 0.5 - ay) / (by - ay))) : 0;
+        const rgb = typeof col === 'function' ? col(t) : col;
+        setPx(cv, x, y, rgb, Math.round((hit / 4) * 255));
+      }
     }
   }
 }
 function dist(x, y, c) { return Math.hypot(x - c[0], y - c[1]); }
 
+// Radial background: a soft charcoal glow up top fading to near-black — depth.
+function drawBg(cv, rounded) {
+  const S = cv.size, cx = S * 0.5, cy = S * 0.34, maxR = S * 0.95;
+  const top = [30, 30, 36], bot = [9, 9, 11];
+  const rr = rounded ? 0.22 * S : 0;
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      if (rr > 0) { // rounded-corner clip
+        const cxk = Math.min(Math.max(x, rr), S - rr), cyk = Math.min(Math.max(y, rr), S - rr);
+        if (Math.hypot(x - cxk, y - cyk) > rr) continue;
+      }
+      const d = Math.min(1, Math.hypot(x - cx, y - cy) / maxR);
+      setPx(cv, x, y, lerp(top, bot, d * d), 255);
+    }
+  }
+}
+
 function drawIcon(size, { maskable = false } = {}) {
   const cv = makeCanvas(size);
-  // Background: fill whole square (near-black). For non-maskable give rounded
-  // corners; maskable is full-bleed (OS applies its own mask).
-  if (maskable) {
-    roundRect(cv, 0, 0, 1, 1, 0, BG);
-  } else {
-    roundRect(cv, 0, 0, 1, 1, 0.22, BG);
-  }
+  drawBg(cv, !maskable);
   // Barbell, horizontally centered. Extra inset for maskable safe zone.
   const inset = maskable ? 0.10 : 0.0;
-  const cy = 0.5;
-  const barH = 0.085;
-  // central bar
-  roundRect(cv, 0.30 + inset, cy - barH / 2, 0.70 - inset, cy + barH / 2, barH / 2, GOLD);
+  const cy = 0.5, barH = 0.085;
+  // soft shadow underlay for the whole barbell (depth off the background)
+  const sh = [0, 0, 0];
+  const shOff = 0.012;
+  roundRect(cv, 0.30 + inset, cy - barH / 2 + shOff, 0.70 - inset, cy + barH / 2 + shOff, barH / 2, () => sh);
+  roundRect(cv, 0.15 + inset, cy - 0.20 + shOff, 0.30 + inset, cy + 0.20 + shOff, 0.035, () => sh);
+  roundRect(cv, 0.70 - inset, cy - 0.20 + shOff, 0.85 - inset, cy + 0.20 + shOff, 0.035, () => sh);
+  // central bar (metallic)
+  roundRect(cv, 0.30 + inset, cy - barH / 2, 0.70 - inset, cy + barH / 2, barH / 2, metal);
   // inner plates
-  const ip = 0.15; // half-height
-  roundRect(cv, 0.22 + inset, cy - ip, 0.30 + inset, cy + ip, 0.03, GOLD);
-  roundRect(cv, 0.70 - inset, cy - ip, 0.78 - inset, cy + ip, 0.03, GOLD);
+  const ip = 0.15;
+  roundRect(cv, 0.22 + inset, cy - ip, 0.30 + inset, cy + ip, 0.03, metal);
+  roundRect(cv, 0.70 - inset, cy - ip, 0.78 - inset, cy + ip, 0.03, metal);
   // outer plates
   const op = 0.20;
-  roundRect(cv, 0.15 + inset, cy - op, 0.22 + inset, cy + op, 0.03, GOLD);
-  roundRect(cv, 0.78 - inset, cy - op, 0.85 - inset, cy + op, 0.03, GOLD);
-  // end caps
-  roundRect(cv, 0.115 + inset, cy - 0.10, 0.15 + inset, cy + 0.10, 0.02, GOLD_DIM);
-  roundRect(cv, 0.85 - inset, cy - 0.10, 0.885 - inset, cy + 0.10, 0.02, GOLD_DIM);
+  roundRect(cv, 0.15 + inset, cy - op, 0.22 + inset, cy + op, 0.035, metal);
+  roundRect(cv, 0.78 - inset, cy - op, 0.85 - inset, cy + op, 0.035, metal);
+  // end caps (deeper gold)
+  roundRect(cv, 0.115 + inset, cy - 0.10, 0.15 + inset, cy + 0.10, 0.02, GOLD_DK);
+  roundRect(cv, 0.85 - inset, cy - 0.10, 0.885 - inset, cy + 0.10, 0.02, GOLD_DK);
   return encodePNG(size, size, cv.buf);
 }
 

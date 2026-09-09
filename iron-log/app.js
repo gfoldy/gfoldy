@@ -482,6 +482,49 @@ function todayView() {
   `;
 }
 
+/* ---- Exercise history + auto progression -------------------------------- */
+function parseRepRange(reps) {
+  const m = String(reps || '').match(/(\d+)\s*(?:[-–]\s*(\d+))?/);
+  if (!m) return null;
+  const low = parseInt(m[1], 10);
+  return { low, high: m[2] ? parseInt(m[2], 10) : low };
+}
+const roundHalf = (w) => Math.round(w * 2) / 2;
+
+// The most recent PRIOR session for an exercise (completed sets only).
+function lastSession(exName, beforeDate) {
+  const prior = state.logs.filter((l) => l.exercise === exName && l.date < beforeDate && isCompleted(l) && (l.weight || l.reps));
+  if (!prior.length) return null;
+  const date = prior.reduce((m, l) => (l.date > m ? l.date : m), '0000-00-00');
+  const sets = prior.filter((l) => l.date === date).sort((a, b) => a.setIndex - b.setIndex)
+    .map((l) => ({ weight: l.weight || 0, reps: l.reps || 0 }));
+  const top = sets.filter((s) => s.weight > 0 && s.reps > 0)
+    .reduce((b, s) => (!b || e1rm(s.weight, s.reps) > e1rm(b.weight, b.reps) ? s : b), null);
+  return { date, sets, top };
+}
+
+// Double-progression: hit the top of the rep range on your best set → add
+// weight; otherwise keep the weight and chase reps.
+function suggestNext(exName, reps, beforeDate) {
+  const ls = lastSession(exName, beforeDate);
+  if (!ls || !ls.top) return null;
+  const rr = parseRepRange(reps);
+  const inc = unit() === 'kg' ? 2.5 : 5;
+  const W = ls.top.weight, R = ls.top.reps;
+  if (W <= 0) return null;
+  if (rr && R >= rr.high) return { weight: roundHalf(W + inc), hint: `${rr.low}–${rr.high} reps`, up: true };
+  if (rr) return { weight: W, hint: `aim ${Math.min(R + 1, rr.high)}–${rr.high} reps`, up: false };
+  return { weight: W, hint: `beat ${R} reps`, up: false };
+}
+
+function restForExercise(exName) {
+  const day = state.split.find((d) => d.id === state.selectedDayId);
+  const planned = day && day.exercises.find((x) => x.name === exName);
+  const rr = planned ? parseRepRange(planned.reps) : null;
+  const high = rr ? rr.high : 10;
+  return high <= 6 ? 180 : high <= 8 ? 150 : high <= 10 ? 120 : high <= 12 ? 90 : 60;
+}
+
 // Returns { html, done, target } for one exercise's set rows.
 function exerciseBlock(date, name, muscle, targetSets, reps, adhoc) {
   const logs = setsFor(date, name);
@@ -499,12 +542,25 @@ function exerciseBlock(date, name, muscle, targetSets, reps, adhoc) {
   const badge = targetSets > 0
     ? `<span class="progress-badge ${badgeDone ? 'done' : ''}" data-prog="${esc(name)}">${doneCount}/${targetSets}</span>`
     : `<span class="progress-badge ${doneCount ? 'done' : ''}" data-prog="${esc(name)}">${doneCount} done</span>`;
+  const ls = lastSession(name, date);
+  const sug = suggestNext(name, reps, date);
+  let meta = '';
+  if (ls || sug) {
+    const histLine = ls
+      ? `Last · ${ls.sets.map((s) => `${fmtNum(s.weight)}×${s.reps}`).join(', ')} <span class="faint">${fmtShort(ls.date)}</span>`
+      : '<span class="faint">First time — log your working weight</span>';
+    const nextChip = sug
+      ? `<button class="ex-next ${sug.up ? 'up' : ''}" data-act="today:prefill" data-ex="${esc(name)}" data-muscle="${esc(muscle)}" data-weight="${sug.weight}" title="${esc(sug.hint)}">${sug.up ? '▲ ' : ''}${fmtNum(sug.weight)} ${unit()}</button>`
+      : '';
+    meta = `<div class="ex-meta"><div class="ex-hist">${histLine}</div>${nextChip}</div>`;
+  }
   const html = `
     <div class="exercise" data-exwrap="${esc(name)}">
       <div class="ex-head">
         <div><div class="ex-name">${esc(name)}</div><div class="ex-target">${targetLabel}</div></div>
         ${badge}
       </div>
+      ${meta}
       <div class="setrows" data-setrows="${esc(name)}">${rowsHtml}</div>
       <button class="subtle-link" data-act="today:addset" data-ex="${esc(name)}" data-muscle="${esc(muscle)}">+ Add set</button>
     </div>`;
@@ -1216,6 +1272,7 @@ function openAccountSheet() {
       <button class="btn sm ${u === 'kg' ? 'gold' : ''}" data-act="account:unit" data-unit="kg">kg</button>
     </div>
     <label class="row-check"><input type="checkbox" id="ac-public" ${p.is_public !== false ? 'checked' : ''} /> <span>Public — others can find me in People</span></label>
+    <label class="row-check"><input type="checkbox" data-act="rest:toggle" ${restEnabled() ? 'checked' : ''} /> <span>Rest timer after each set</span></label>
     <div class="btn-row" style="margin:14px 0"><button class="btn sm" data-act="data:export">Export backup</button></div>
     <div class="sheet-actions"><button class="btn gold" data-act="account:save">Save</button></div>
     <div class="sheet-actions" style="margin-top:8px"><button class="btn danger" data-act="account:signout">Sign out</button></div>
@@ -1314,6 +1371,7 @@ function openProfileSheet() {
       <button class="btn sm ${u === 'kg' ? 'gold' : ''}" data-act="profile:unit" data-unit="kg">kg</button>
       <button class="btn sm" data-act="profile:rename">Rename</button>
     </div>
+    <label class="row-check" style="margin-bottom:12px"><input type="checkbox" data-act="rest:toggle" ${restEnabled() ? 'checked' : ''} /> <span>Rest timer after each set</span></label>
     <div class="btn-row" style="margin-bottom:16px">
       <button class="btn sm" data-act="data:export">Export backup</button>
       <button class="btn sm" data-act="data:import">Import backup</button>
@@ -1465,6 +1523,45 @@ function updateDayBadge() {
 function cssEsc(s) { return (window.CSS && CSS.escape) ? CSS.escape(s) : s.replace(/["\\]/g, '\\$&'); }
 
 /* --------------------------------------------------------------------------
+   Rest timer — auto-starts when you check a set; duration from the rep range.
+   Lives on <body> so it survives view re-renders.
+   -------------------------------------------------------------------------- */
+let restInt = null, restLeft = 0;
+function restEnabled() { try { return localStorage.getItem('ironlog.restOff') !== '1'; } catch (e) { return true; } }
+function startRest(sec) {
+  if (!restEnabled() || !sec) return;
+  restLeft = sec; clearInterval(restInt); renderRest();
+  restInt = setInterval(() => { restLeft--; renderRest(); if (restLeft <= 0) { clearInterval(restInt); restDone(); } }, 1000);
+}
+function renderRest() {
+  let el = document.getElementById('rest');
+  if (!el) { el = document.createElement('div'); el.id = 'rest'; el.className = 'rest-bar'; document.body.appendChild(el); }
+  const m = Math.floor(Math.max(0, restLeft) / 60), s = Math.max(0, restLeft) % 60;
+  el.innerHTML = `<div class="rest-time">${m}:${String(s).padStart(2, '0')}</div>
+    <div class="rest-btns">
+      <button data-act="rest:adj" data-d="-15">−15</button>
+      <button data-act="rest:adj" data-d="15">+15</button>
+      <button class="rest-skip" data-act="rest:stop">Skip</button>
+    </div>`;
+}
+function restDone() {
+  try { if (navigator.vibrate) navigator.vibrate([140, 70, 140]); } catch (e) {}
+  restBeep();
+  const el = document.getElementById('rest');
+  if (el) { el.classList.add('done'); const t = el.querySelector('.rest-time'); if (t) t.textContent = 'Rest done'; }
+  setTimeout(stopRest, 2500);
+}
+function stopRest() { clearInterval(restInt); restLeft = 0; const el = document.getElementById('rest'); if (el) el.remove(); }
+function restBeep() {
+  try {
+    const Ac = window.AudioContext || window.webkitAudioContext; if (!Ac) return;
+    const a = new Ac(), o = a.createOscillator(), g = a.createGain();
+    o.connect(g); g.connect(a.destination); o.type = 'sine'; o.frequency.value = 880; g.gain.value = 0.06;
+    o.start(); setTimeout(() => { o.stop(); a.close(); }, 200);
+  } catch (e) {}
+}
+
+/* --------------------------------------------------------------------------
    Event handling (delegated)
    -------------------------------------------------------------------------- */
 let saveTimer = null;
@@ -1494,6 +1591,7 @@ document.addEventListener('change', (e) => {
   else if (act === 'today:daychange') { state.selectedDayId = t.value; render(); }
   else if (act === 'prog:exercise') { state.progExercise = t.value; render(); }
   else if (act === 'ranks:lift') { state.ranksLift = t.value; render(); }
+  else if (act === 'rest:toggle') { try { localStorage.setItem('ironlog.restOff', t.checked ? '0' : '1'); } catch (e) {} if (!t.checked) stopRest(); }
   else if (act === 'split:weekday') {
     const d = state.split.find((x) => x.id === t.dataset.day);
     if (d) { d.weekday = t.value === '' ? null : parseInt(t.value, 10); saveSplit().then(render); }
@@ -1628,7 +1726,28 @@ document.addEventListener('click', async (e) => {
     const row = t.closest('.setrow');
     if (row) { row.classList.toggle('done', rec.done); t.classList.toggle('on', rec.done); }
     updateExerciseBadge(D.ex);
-    if (rec.done) checkPB(D.ex, rec);
+    if (rec.done) { checkPB(D.ex, rec); startRest(restForExercise(D.ex)); } else stopRest();
+    return;
+  }
+  if (a === 'rest:adj') { restLeft = Math.max(5, restLeft + parseInt(D.d, 10)); renderRest(); return; }
+  if (a === 'rest:stop') { stopRest(); return; }
+  if (a === 'today:prefill') {
+    const date = state.selectedDate, ex = D.ex, muscle = D.muscle, w = num(D.weight);
+    const day = state.split.find((d) => d.id === state.selectedDayId);
+    const planned = day && day.exercises.find((x) => x.name === ex);
+    const target = planned ? planned.sets : 0;
+    const cur = setsFor(date, ex);
+    const rows = Math.max(target, cur.reduce((m, l) => Math.max(m, l.setIndex + 1), 0), 1);
+    for (let i = 0; i < rows; i++) { const l = cur.find((x) => x.setIndex === i); if (!l || l.weight == null) await upsertSet(date, ex, muscle, i, { weight: w }); }
+    const container = document.querySelector(`[data-setrows="${cssEsc(ex)}"]`);
+    if (container) {
+      const updated = setsFor(date, ex);
+      const r = Math.max(target, updated.reduce((m, l) => Math.max(m, l.setIndex + 1), 0));
+      let html = '';
+      for (let i = 0; i < r; i++) { const l = updated.find((x) => x.setIndex === i) || {}; html += setRow(ex, muscle, i, l, i >= target); }
+      container.innerHTML = html;
+    }
+    showToast(`Filled ${fmtNum(w)} ${unit()}`);
     return;
   }
   if (a === 'today:addset') {

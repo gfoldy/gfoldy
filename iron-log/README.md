@@ -20,6 +20,12 @@ own profile, builds her own split from scratch — same app, separate data.
   (override anytime). Exercises grouped by muscle, one row per target set with
   weight + reps + a big done checkbox. Live "X/Y sets" per exercise and per day.
   Add an extra unplanned set, or a whole ad-hoc exercise, on the fly.
+  - **Last-time history & auto-progression** — each exercise shows what you did
+    last session and a one-tap suggested next weight (double progression: hit the
+    top of your rep range → add weight, otherwise chase reps). Tap it to prefill.
+  - **Rest timer** — auto-starts when you check a set, with its length set from
+    the lift's rep range (heavier/low-rep = longer). Adjustable ±15s; toggle off
+    in settings.
 - **Progress** — total sessions / sets / volume with an 8-week volume trend,
   a habit-tracker grid (weeks × split days), and per-exercise personal bests
   (heaviest weight + best weight×reps, with the date each was hit). A toast

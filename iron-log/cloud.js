@@ -262,6 +262,22 @@ const Cloud = (() => {
     const { data } = await sb.from('profiles').select('id,username,display_name,unit,is_public,stats,top_lifts,lifts').in('id', ids);
     return data || [];
   }
+  async function groupMessages(groupId) {
+    if (!enabled) return [];
+    const { data, error } = await sb.from('group_messages').select('*').eq('group_id', groupId)
+      .order('created_at', { ascending: true }).limit(200);
+    if (error) throw new Error(error.message);
+    return data || [];
+  }
+  async function sendGroupMessage({ groupId, body, username, display_name }) {
+    if (!enabled || !session) throw new Error('Not signed in');
+    const row = { id: cid(), group_id: groupId, user_id: session.user.id, username: username || null,
+      display_name: display_name || null, body, created_at: new Date().toISOString() };
+    const { error } = await sb.from('group_messages').insert(row);
+    if (error) throw new Error(error.message);
+    return row;
+  }
+  async function deleteGroupMessage(id) { if (enabled) await sb.from('group_messages').delete().eq('id', id); }
 
   async function listUsers() {
     if (!enabled) return [];
@@ -319,5 +335,6 @@ const Cloud = (() => {
     myFollows, follow, unfollow, followInfo, pushActivity, deleteActivity, feed,
     commentCounts, comments, addComment, deleteComment,
     createGroup, joinGroup, leaveGroup, deleteGroup, myGroups, publicGroups,
-    groupByCode, groupById, groupMembers, memberCounts, usersByIds };
+    groupByCode, groupById, groupMembers, memberCounts, usersByIds,
+    groupMessages, sendGroupMessage, deleteGroupMessage };
 })();

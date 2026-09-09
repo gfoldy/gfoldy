@@ -62,8 +62,8 @@ the device. You can optionally connect a free **Supabase** backend to turn on:
 - An **activity feed** (People → Feed) — sessions, PRs and joins from you and
   the people you follow, newest first, with **comment threads** on each item.
 - **Groups** (People → Groups) — create a crew (public and browsable, or private
-  with a shareable invite code); each group has its own member-scoped feed,
-  leaderboard, and member list.
+  via a shareable **invite link**). Each group has its own member-scoped feed,
+  leaderboard, member list, and **group chat**.
 
 It's additive: leave `config.js` blank and the app behaves exactly as before.
 Full walkthrough (about 5 minutes, one time): **[SETUP.md](./SETUP.md)**.

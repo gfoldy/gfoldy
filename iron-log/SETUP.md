@@ -23,10 +23,11 @@ Until you do this, the app keeps working exactly as before in local-only mode.
    into the editor, and click **Run**. You should see "Success".
 
 This creates the `profiles`, `splits`, `logs`, `follows`, `activity`,
-`comments`, `groups`, and `group_members` tables plus the security rules that
-make profiles public-to-members but writable only by their owner. It's **safe to
-re-run** — if you set up an earlier version, run `schema.sql` again to add any
-new tables/columns (follows, leaderboards, feed, comments, groups).
+`comments`, `groups`, `group_members`, and `group_messages` tables plus the
+security rules that make profiles public-to-members but writable only by their
+owner. It's **safe to re-run** — if you set up an earlier version, run
+`schema.sql` again to add any new tables/columns (follows, leaderboards, feed,
+comments, groups, chat).
 
 ## 3. Turn OFF email confirmation (important)
 

@@ -224,7 +224,8 @@ const state = {
   groupMembers: null,   // member rows of the open group
   groupProfiles: null,  // profile rows of members (for the board)
   groupFeed: null,      // activity from group members
-  groupTab: 'feed',     // group detail: 'feed' | 'board' | 'members'
+  groupMessages: null,  // group chat messages
+  groupTab: 'feed',     // group detail: 'feed' | 'board' | 'chat' | 'members'
   viewUserId: null,     // People tab: which user is being viewed
   viewUser: null,       // People tab: loaded {profile, days, logs}
   viewFollow: null,     // People tab: {followers, following, followsMe} for viewed user
@@ -391,6 +392,51 @@ function render() {
     </div>
     <div id="modal"></div>`;
   window.scrollTo(0, y);
+  // Group chat: keep the message list live while the Chat tab is open.
+  if (state.tab === 'people' && state.groupId && state.groupTab === 'chat') {
+    const el = document.getElementById('chat-list'); if (el) el.scrollTop = el.scrollHeight;
+    startChatPoll();
+  } else stopChatPoll();
+}
+
+let chatTimer = null;
+function renderChatList() {
+  const el = document.getElementById('chat-list'); if (!el) return;
+  const msgs = state.groupMessages || [];
+  el.innerHTML = msgs.length ? msgs.map(chatBubble).join('') : '<p class="muted" style="padding:10px 2px">No messages yet. Say hey 👋</p>';
+  el.scrollTop = el.scrollHeight;
+}
+function startChatPoll() {
+  if (chatTimer) return;
+  chatTimer = setInterval(async () => {
+    if (!(state.tab === 'people' && state.groupId && state.groupTab === 'chat')) { stopChatPoll(); return; }
+    try {
+      const msgs = await Cloud.groupMessages(state.groupId);
+      const hasTemp = (state.groupMessages || []).some((m) => String(m.id).startsWith('tmp'));
+      const lastId = msgs.length ? msgs[msgs.length - 1].id : null;
+      const cur = state.groupMessages || [];
+      const curLast = cur.length ? cur[cur.length - 1].id : null;
+      if (!hasTemp && (lastId !== curLast || msgs.length !== cur.length)) { state.groupMessages = msgs; renderChatList(); }
+    } catch (e) { /* keep trying */ }
+  }, 4000);
+}
+function stopChatPoll() { if (chatTimer) { clearInterval(chatTimer); chatTimer = null; } }
+
+// Invite links: ?join=<token> joins + opens that group after sign-in.
+let pendingJoin = (() => { try { return new URLSearchParams(location.search).get('join'); } catch (e) { return null; } })();
+if (pendingJoin) { try { history.replaceState({}, '', location.pathname); } catch (e) {} }
+async function processPendingJoin() {
+  if (!pendingJoin || !Cloud.enabled || !Cloud.user()) return false;
+  const tok = pendingJoin; pendingJoin = null;
+  try {
+    const g = await Cloud.groupByCode(tok);
+    if (g) {
+      await Cloud.joinGroup({ groupId: g.id, username: state.profile.username, display_name: state.profile.name });
+      state.tab = 'people'; state.peopleMode = 'groups';
+      await loadGroups(); loadGroup(g.id); return true;
+    }
+  } catch (e) { /* ignore */ }
+  return false;
 }
 
 function appbar() {
@@ -1062,8 +1108,9 @@ async function authSubmit() {
       await Cloud.signIn({ username, password });
     }
     await enterCloudUser();
-    state.tab = 'today'; state.selectedDate = todayStr(); state.selectedDayId = null; state.authErr = null;
-    render();
+    state.authErr = null;
+    const joined = await processPendingJoin();
+    if (!joined) { state.tab = 'today'; state.selectedDate = todayStr(); state.selectedDayId = null; render(); }
   } catch (e) { state.authErr = e.message || 'Something went wrong.'; renderAuth(); }
 }
 
@@ -1389,10 +1436,7 @@ function groupsListHtml() {
   const mineIds = new Set((state.groupsMine || []).map((g) => g.id));
   const discover = (state.groupsPublic || []).filter((g) => !mineIds.has(g.id));
   return `
-    <div class="btn-row" style="margin-bottom:14px">
-      <button class="btn gold sm" data-act="group:create">+ Create group</button>
-      <button class="btn sm" data-act="group:joincode">Join by code</button>
-    </div>
+    <button class="btn gold block" data-act="group:create" style="margin-bottom:14px">+ Create a group</button>
     <h2 class="section" style="margin-top:6px">Your groups</h2>
     ${state.groupsMine.length ? `<div class="people-list">${state.groupsMine.map((g) => gcard(g, true)).join('')}</div>`
       : '<div class="card"><p class="muted">You’re not in any groups yet. Create one or join with a code.</p></div>'}
@@ -1408,10 +1452,14 @@ function groupDetailView() {
   if (state.groupMembers === null && !g) return `<div class="people-head">${back}</div><div class="card"><p class="muted">Loading…</p></div>`;
   if (!g) return `<div class="people-head">${back}</div>` + emptyState('🔒', 'Group unavailable', 'This group may have been deleted.', '');
   const isMember = groupIsMember(), isOwner = g.owner_id === state.profileId;
+  const canChat = isMember || isOwner;
   const count = (state.groupMembers || []).length;
-  const tab = state.groupTab;
-  const seg = `<div class="seg">${['feed', 'board', 'members'].map((t) =>
-    `<button class="${tab === t ? 'on' : ''}" data-act="group:tab" data-t="${t}">${t === 'feed' ? 'Feed' : t === 'board' ? 'Board' : 'Members'}</button>`).join('')}</div>`;
+  let tab = state.groupTab;
+  if (tab === 'chat' && !canChat) tab = 'feed';
+  const tabs = canChat ? ['feed', 'board', 'chat', 'members'] : ['feed', 'board', 'members'];
+  const label = { feed: 'Feed', board: 'Board', chat: 'Chat', members: 'Members' };
+  const seg = `<div class="seg${tabs.length === 4 ? ' seg-4' : ''}">${tabs.map((t) =>
+    `<button class="${tab === t ? 'on' : ''}" data-act="group:tab" data-t="${t}">${label[t]}</button>`).join('')}</div>`;
   let body = '';
   if (state.groupMembers === null) body = '<div class="card"><p class="muted">Loading…</p></div>';
   else if (tab === 'feed') {
@@ -1420,29 +1468,62 @@ function groupDetailView() {
       : emptyState('📣', 'Quiet in here', 'When members log workouts and PRs, they show up here.', '');
   } else if (tab === 'board') {
     body = state.groupProfiles ? leaderboardBody(state.groupProfiles) : '<div class="card"><p class="muted">Loading…</p></div>';
+  } else if (tab === 'chat') {
+    body = chatBody();
   } else {
     body = `<div class="people-list">${(state.groupMembers || []).map((m) => `<button class="user-card" data-act="people:view" data-id="${m.user_id}">
       <div class="ava">${esc((m.display_name || m.username || '?').slice(0, 1).toUpperCase())}</div>
       <div class="uc-main"><div class="uc-name">${esc(m.display_name || m.username)}${m.role === 'owner' ? ' <span class="pill muscle">owner</span>' : ''}${m.user_id === state.profileId ? ' <span class="pill follow">you</span>' : ''}</div>
         <div class="uc-sub">@${esc(m.username || '')}</div></div><span class="chev">›</span></button>`).join('')}</div>`;
   }
-  const action = isOwner ? `<button class="btn sm danger" data-act="group:delete" data-id="${g.id}">Delete</button>`
-    : isMember ? `<button class="btn sm" data-act="group:leave" data-id="${g.id}">Leave</button>`
+  const actions = (isOwner || isMember)
+    ? `<div class="gh-actions"><button class="btn sm" data-act="group:invite" data-id="${g.id}">🔗 Invite</button>${isOwner ? `<button class="btn sm danger" data-act="group:delete" data-id="${g.id}">Delete</button>` : `<button class="btn sm" data-act="group:leave" data-id="${g.id}">Leave</button>`}</div>`
     : `<button class="btn gold sm" data-act="group:join" data-id="${g.id}">Join</button>`;
-  const codeCard = (!g.is_public && (isMember || isOwner))
-    ? `<div class="card code-card"><div class="faint" style="font-size:11px;text-transform:uppercase;letter-spacing:1px">Invite code</div><div class="code-val">${esc(g.invite_code)}</div></div>` : '';
   return `
-    <div class="people-head">${back}${action}</div>
+    <div class="people-head">${back}${actions}</div>
     <div class="profile-hero">
       <div class="ava lg sq">${esc((g.name || '?').slice(0, 1).toUpperCase())}</div>
       <div style="flex:1"><div class="ph-name">${esc(g.name)}</div>
         <div class="ph-sub">${count} member${count === 1 ? '' : 's'}${g.is_public ? '' : ' · private'}</div>
         ${g.description ? `<div class="ph-follow">${esc(g.description)}</div>` : ''}</div>
     </div>
-    ${codeCard}
     ${seg}
     ${body}
   `;
+}
+
+function inviteLink(g) { return location.origin + location.pathname + '?join=' + g.invite_code; }
+
+/* ---- Group chat ---------------------------------------------------------- */
+function chatBody() {
+  const msgs = state.groupMessages;
+  const list = msgs === null ? '<p class="muted" style="padding:10px 2px">Loading…</p>'
+    : msgs.length === 0 ? '<p class="muted" style="padding:10px 2px">No messages yet. Say hey 👋</p>'
+    : msgs.map(chatBubble).join('');
+  return `<div class="chat">
+    <div class="chat-list" id="chat-list">${list}</div>
+    <div class="chat-add">
+      <input type="text" id="chat-input" maxlength="1000" placeholder="Message the group…" autocomplete="off" />
+      <button class="btn gold sm" data-act="chat:send">Send</button>
+    </div>
+  </div>`;
+}
+
+function chatBubble(m) {
+  const mine = m.user_id === state.profileId;
+  if (mine) {
+    return `<div class="msg me"><div class="bubble" data-act="chat:del" data-id="${m.id}" title="Tap to delete">${esc(m.body)}<span class="msg-time">${relTime(m.created_at)}</span></div></div>`;
+  }
+  return `<div class="msg">
+    <button class="ava sm" data-act="people:view" data-id="${m.user_id}">${esc((m.display_name || m.username || '?').slice(0, 1).toUpperCase())}</button>
+    <div><div class="msg-name">${esc(m.display_name || m.username || 'Someone')}</div>
+      <div class="bubble">${esc(m.body)}<span class="msg-time">${relTime(m.created_at)}</span></div></div>
+  </div>`;
+}
+
+async function loadGroupMessages(groupId) {
+  try { state.groupMessages = await Cloud.groupMessages(groupId); }
+  catch (e) { state.groupMessages = []; }
 }
 
 function openCreateGroupSheet() {
@@ -1456,17 +1537,6 @@ function openCreateGroupSheet() {
     <div class="sheet-actions" style="margin-top:8px"><button class="btn ghost" data-act="sheet:close">Cancel</button></div>
   `);
   const n = document.getElementById('grp-name'); if (n) n.focus();
-}
-
-function openJoinGroupSheet() {
-  openSheet(`
-    <h3>Join by code</h3>
-    <p class="muted" style="margin-top:-6px">Enter the invite code a friend shared.</p>
-    <label class="field"><span>Invite code</span><input type="text" id="grp-code" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="e.g. 7QK2AB" /></label>
-    <div class="sheet-actions"><button class="btn gold" data-act="group:joinsave">Join</button></div>
-    <div class="sheet-actions" style="margin-top:8px"><button class="btn ghost" data-act="sheet:close">Cancel</button></div>
-  `);
-  const n = document.getElementById('grp-code'); if (n) n.focus();
 }
 
 function ranksView() {
@@ -1775,6 +1845,10 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     const btn = document.querySelector('[data-act="comment:add"]'); if (btn) btn.click();
   }
+  if (e.key === 'Enter' && e.target && e.target.id === 'chat-input') {
+    e.preventDefault();
+    const btn = document.querySelector('[data-act="chat:send"]'); if (btn) btn.click();
+  }
 });
 
 document.addEventListener('input', (e) => {
@@ -1876,9 +1950,43 @@ document.addEventListener('click', async (e) => {
   if (a === 'people:refreshGroups') return loadGroups();
   if (a === 'group:open') return loadGroup(D.id);
   if (a === 'group:back') { state.groupId = null; state.group = null; render(); return; }
-  if (a === 'group:tab') { state.groupTab = D.t; render(); return; }
+  if (a === 'group:tab') {
+    state.groupTab = D.t;
+    if (D.t === 'chat') { state.groupMessages = null; render(); await loadGroupMessages(state.groupId); render(); return; }
+    render(); return;
+  }
+  if (a === 'group:invite') {
+    const g = state.group; if (!g) return;
+    const url = inviteLink(g);
+    if (navigator.share) { try { await navigator.share({ title: `Join ${g.name} on Iron Log`, url }); return; } catch (e) { /* fall through to copy */ } }
+    try { await navigator.clipboard.writeText(url); showToast('Invite link copied'); }
+    catch (e) { prompt('Copy this invite link:', url); }
+    return;
+  }
+  if (a === 'chat:send') {
+    const inp = document.getElementById('chat-input');
+    const body = (inp && inp.value || '').trim();
+    if (!body) return;
+    if (inp) inp.value = '';
+    const optimistic = { id: 'tmp' + uid(), group_id: state.groupId, user_id: state.profileId,
+      username: state.profile.username, display_name: state.profile.name, body, created_at: new Date().toISOString() };
+    state.groupMessages = [...(state.groupMessages || []), optimistic];
+    renderChatList();
+    try {
+      const saved = await Cloud.sendGroupMessage({ groupId: state.groupId, body, username: state.profile.username, display_name: state.profile.name });
+      const i = state.groupMessages.findIndex((m) => m.id === optimistic.id);
+      if (i >= 0) { state.groupMessages[i] = saved; }
+    } catch (e) { state.groupMessages = state.groupMessages.filter((m) => m.id !== optimistic.id); showToast('Message failed'); renderChatList(); }
+    return;
+  }
+  if (a === 'chat:del') {
+    if (!confirm('Delete this message?')) return;
+    state.groupMessages = (state.groupMessages || []).filter((m) => m.id !== D.id);
+    renderChatList();
+    try { await Cloud.deleteGroupMessage(D.id); } catch (e) {}
+    return;
+  }
   if (a === 'group:create') return openCreateGroupSheet();
-  if (a === 'group:joincode') return openJoinGroupSheet();
   if (a === 'group:createsave') {
     const name = ((document.getElementById('grp-name') || {}).value || '').trim();
     if (!name) { const el = document.getElementById('grp-name'); if (el) el.focus(); return; }
@@ -1888,17 +1996,6 @@ document.addEventListener('click', async (e) => {
       const g = await Cloud.createGroup({ name, description, is_public, username: state.profile.username, display_name: state.profile.name });
       closeSheet(); await loadGroups(); loadGroup(g.id);
     } catch (e) { showToast('Couldn’t create group'); }
-    return;
-  }
-  if (a === 'group:joinsave') {
-    const code = ((document.getElementById('grp-code') || {}).value || '').trim();
-    if (!code) return;
-    try {
-      const g = await Cloud.groupByCode(code);
-      if (!g) { showToast('No group with that code'); return; }
-      await Cloud.joinGroup({ groupId: g.id, username: state.profile.username, display_name: state.profile.name });
-      closeSheet(); await loadGroups(); loadGroup(g.id);
-    } catch (e) { showToast('Couldn’t join'); }
     return;
   }
   if (a === 'group:join') {
@@ -2180,7 +2277,10 @@ async function boot() {
   if (Cloud.enabled) {
     state.mode = 'cloud';
     try { await Cloud.init(); } catch (e) { /* ignore */ }
-    if (Cloud.user()) { try { await enterCloudUser(); } catch (e) { /* offline */ } }
+    if (Cloud.user()) {
+      try { await enterCloudUser(); } catch (e) { /* offline */ }
+      await processPendingJoin();
+    }
     render(); // renders auth screen when there is no session
   } else {
     await loadProfiles();

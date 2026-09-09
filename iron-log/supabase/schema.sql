@@ -109,6 +109,18 @@ create table if not exists public.group_members (
 create index if not exists group_members_user_idx on public.group_members (user_id);
 create index if not exists group_members_group_idx on public.group_members (group_id);
 
+-- Group chat messages. Only members can read/write their group's chat.
+create table if not exists public.group_messages (
+  id           text primary key,
+  group_id     text not null references public.groups(id) on delete cascade,
+  user_id      uuid not null references auth.users on delete cascade,
+  username     citext,
+  display_name text,
+  body         text not null,
+  created_at   timestamptz not null default now()
+);
+create index if not exists group_messages_idx on public.group_messages (group_id, created_at);
+
 -- ---- Row-level security --------------------------------------------------
 alter table public.profiles enable row level security;
 alter table public.splits   enable row level security;
@@ -118,6 +130,7 @@ alter table public.activity enable row level security;
 alter table public.comments enable row level security;
 alter table public.groups   enable row level security;
 alter table public.group_members enable row level security;
+alter table public.group_messages enable row level security;
 
 -- profiles: read public ones (and always your own); write only your own.
 drop policy if exists profiles_read on public.profiles;
@@ -222,3 +235,17 @@ drop policy if exists gm_delete on public.group_members;
 create policy gm_delete on public.group_members for delete to authenticated
   using (user_id = auth.uid()
          or exists (select 1 from public.groups g where g.id = group_members.group_id and g.owner_id = auth.uid()));
+
+-- group_messages: only members of the group can read or post; delete your own.
+drop policy if exists gmsg_read on public.group_messages;
+create policy gmsg_read on public.group_messages for select to authenticated
+  using (exists (select 1 from public.group_members m
+                 where m.group_id = group_messages.group_id and m.user_id = auth.uid()));
+drop policy if exists gmsg_insert on public.group_messages;
+create policy gmsg_insert on public.group_messages for insert to authenticated
+  with check (user_id = auth.uid()
+              and exists (select 1 from public.group_members m
+                          where m.group_id = group_messages.group_id and m.user_id = auth.uid()));
+drop policy if exists gmsg_delete on public.group_messages;
+create policy gmsg_delete on public.group_messages for delete to authenticated
+  using (user_id = auth.uid());

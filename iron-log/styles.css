@@ -475,8 +475,28 @@ table.habit td.wk { font-size: 11px; color: var(--text-faint); white-space: nowr
 .seg.seg-4 button { font-size: 13px; padding: 0 2px; }
 .ava.sq { border-radius: 13px; }
 .ava.lg.sq { border-radius: 16px; }
-.code-card { text-align: center; }
-.code-val { font-size: 24px; font-weight: 800; letter-spacing: 5px; margin-top: 4px; background: var(--gold-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.gh-actions { display: flex; gap: 8px; }
+
+/* Group chat */
+.chat { display: flex; flex-direction: column; }
+.chat-list { display: flex; flex-direction: column; gap: 8px; max-height: 58vh; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 4px 2px 8px; }
+.msg { display: flex; gap: 8px; align-items: flex-end; max-width: 100%; }
+.msg .ava.sm { flex: 0 0 auto; border: none; align-self: flex-end; }
+.msg-name { font-size: 11px; color: var(--text-faint); margin: 0 0 3px 2px; }
+.bubble {
+  position: relative; max-width: 78vw; padding: 9px 12px; border-radius: 15px; border-bottom-left-radius: 5px;
+  background: linear-gradient(180deg, var(--bg-elev3), var(--bg-elev2)); border: 1px solid var(--border);
+  color: var(--text); font-size: 14px; line-height: 1.35; word-wrap: break-word; overflow-wrap: anywhere;
+  box-shadow: var(--shadow-1);
+}
+.msg.me { flex-direction: row-reverse; }
+.msg.me .bubble {
+  border-radius: 15px; border-bottom-right-radius: 5px;
+  background: linear-gradient(180deg, rgba(203,171,83,0.22), rgba(203,171,83,0.1)); border-color: rgba(203,171,83,0.35);
+}
+.msg-time { display: inline-block; font-size: 10px; color: var(--text-faint); margin-left: 8px; vertical-align: baseline; }
+.chat-add { display: flex; gap: 8px; align-items: stretch; border-top: 1px solid var(--border); padding-top: 12px; margin-top: 6px; }
+.chat-add input { flex: 1; }
 
 .chip-row { display: flex; gap: 8px; margin: 0 2px 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .chip-row .chip { flex: 0 0 auto; min-height: 38px; padding: 0 15px; border-radius: 11px; border: 1px solid var(--border); background: linear-gradient(180deg, var(--bg-elev3), var(--bg-elev2)); color: var(--text-dim); font-weight: 700; font-size: 14px; box-shadow: var(--shadow-1); }

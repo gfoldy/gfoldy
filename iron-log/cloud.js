@@ -202,6 +202,67 @@ const Cloud = (() => {
   }
   async function deleteComment(id) { if (enabled) await sb.from('comments').delete().eq('id', id); }
 
+  // ---- groups -------------------------------------------------------------
+  const gcode = () => Math.random().toString(36).slice(2, 8).toUpperCase();
+  async function createGroup({ name, description, is_public, username, display_name }) {
+    if (!enabled || !session) throw new Error('Not signed in');
+    const g = { id: cid(), name, description: description || '', owner_id: session.user.id,
+      is_public: is_public !== false, invite_code: gcode(), created_at: new Date().toISOString() };
+    const { error } = await sb.from('groups').insert(g);
+    if (error) throw new Error(error.message);
+    await sb.from('group_members').insert({ group_id: g.id, user_id: session.user.id, username, display_name, role: 'owner' });
+    return g;
+  }
+  async function joinGroup({ groupId, username, display_name }) {
+    if (!enabled || !session) throw new Error('Not signed in');
+    const { error } = await sb.from('group_members').insert({ group_id: groupId, user_id: session.user.id, username, display_name, role: 'member' });
+    if (error && !/duplicate|unique/i.test(error.message)) throw new Error(error.message);
+  }
+  async function leaveGroup(groupId) {
+    if (!enabled || !session) return;
+    await sb.from('group_members').delete().eq('group_id', groupId).eq('user_id', session.user.id);
+  }
+  async function deleteGroup(groupId) { if (enabled) await sb.from('groups').delete().eq('id', groupId); }
+  async function myGroups() {
+    if (!enabled || !session) return [];
+    const { data: mem } = await sb.from('group_members').select('group_id').eq('user_id', session.user.id);
+    const ids = (mem || []).map((m) => m.group_id);
+    if (!ids.length) return [];
+    const { data } = await sb.from('groups').select('*').in('id', ids);
+    return data || [];
+  }
+  async function publicGroups() {
+    if (!enabled) return [];
+    const { data } = await sb.from('groups').select('*').eq('is_public', true).order('created_at', { ascending: false }).limit(100);
+    return data || [];
+  }
+  async function groupByCode(code) {
+    if (!enabled) return null;
+    const { data } = await sb.from('groups').select('*').eq('invite_code', String(code).trim().toUpperCase()).maybeSingle();
+    return data || null;
+  }
+  async function groupById(id) {
+    if (!enabled) return null;
+    const { data } = await sb.from('groups').select('*').eq('id', id).maybeSingle();
+    return data || null;
+  }
+  async function groupMembers(groupId) {
+    if (!enabled) return [];
+    const { data } = await sb.from('group_members').select('*').eq('group_id', groupId).order('created_at', { ascending: true });
+    return data || [];
+  }
+  async function memberCounts(ids) {
+    if (!enabled || !ids || !ids.length) return {};
+    const { data } = await sb.from('group_members').select('group_id').in('group_id', ids);
+    const c = {}; (data || []).forEach((r) => { c[r.group_id] = (c[r.group_id] || 0) + 1; });
+    return c;
+  }
+  async function usersByIds(ids) {
+    if (!enabled || !ids || !ids.length) return [];
+    const { data } = await sb.from('profiles').select('id,username,display_name,unit,is_public,stats,top_lifts,lifts').in('id', ids);
+    return data || [];
+  }
+
   async function listUsers() {
     if (!enabled) return [];
     const { data, error } = await sb.from('profiles')
@@ -256,5 +317,7 @@ const Cloud = (() => {
   return { enabled, init, user, signUp, signIn, signOut, pullMine,
     pushLog, deleteLog, pushSplit, pushProfile, listUsers, getUser, flush,
     myFollows, follow, unfollow, followInfo, pushActivity, deleteActivity, feed,
-    commentCounts, comments, addComment, deleteComment };
+    commentCounts, comments, addComment, deleteComment,
+    createGroup, joinGroup, leaveGroup, deleteGroup, myGroups, publicGroups,
+    groupByCode, groupById, groupMembers, memberCounts, usersByIds };
 })();

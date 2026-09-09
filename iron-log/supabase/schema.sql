@@ -86,6 +86,29 @@ create table if not exists public.comments (
 );
 create index if not exists comments_activity_idx on public.comments (activity_id, created_at);
 
+-- Groups (crews). Public groups are browsable + open-join; private groups are
+-- joined with the invite_code. Membership lives in group_members.
+create table if not exists public.groups (
+  id          text primary key,
+  name        text not null,
+  description text not null default '',
+  owner_id    uuid not null references auth.users on delete cascade,
+  is_public   boolean not null default true,
+  invite_code text unique not null,
+  created_at  timestamptz not null default now()
+);
+create table if not exists public.group_members (
+  group_id     text not null references public.groups(id) on delete cascade,
+  user_id      uuid not null references auth.users on delete cascade,
+  username     citext,
+  display_name text,
+  role         text not null default 'member',
+  created_at   timestamptz not null default now(),
+  primary key (group_id, user_id)
+);
+create index if not exists group_members_user_idx on public.group_members (user_id);
+create index if not exists group_members_group_idx on public.group_members (group_id);
+
 -- ---- Row-level security --------------------------------------------------
 alter table public.profiles enable row level security;
 alter table public.splits   enable row level security;
@@ -93,6 +116,8 @@ alter table public.logs     enable row level security;
 alter table public.follows  enable row level security;
 alter table public.activity enable row level security;
 alter table public.comments enable row level security;
+alter table public.groups   enable row level security;
+alter table public.group_members enable row level security;
 
 -- profiles: read public ones (and always your own); write only your own.
 drop policy if exists profiles_read on public.profiles;
@@ -171,3 +196,29 @@ create policy comments_insert on public.comments for insert to authenticated
 drop policy if exists comments_delete on public.comments;
 create policy comments_delete on public.comments for delete to authenticated
   using (user_id = auth.uid());
+
+-- groups: metadata readable by any member (so invite-code lookup works);
+-- only the owner writes the group row.
+drop policy if exists groups_read on public.groups;
+create policy groups_read on public.groups for select to authenticated using (true);
+drop policy if exists groups_insert on public.groups;
+create policy groups_insert on public.groups for insert to authenticated
+  with check (owner_id = auth.uid());
+drop policy if exists groups_update on public.groups;
+create policy groups_update on public.groups for update to authenticated
+  using (owner_id = auth.uid()) with check (owner_id = auth.uid());
+drop policy if exists groups_delete on public.groups;
+create policy groups_delete on public.groups for delete to authenticated
+  using (owner_id = auth.uid());
+
+-- group_members: rows readable by members; you add only yourself (join); you
+-- may remove yourself, and a group owner may remove anyone from their group.
+drop policy if exists gm_read on public.group_members;
+create policy gm_read on public.group_members for select to authenticated using (true);
+drop policy if exists gm_insert on public.group_members;
+create policy gm_insert on public.group_members for insert to authenticated
+  with check (user_id = auth.uid());
+drop policy if exists gm_delete on public.group_members;
+create policy gm_delete on public.group_members for delete to authenticated
+  using (user_id = auth.uid()
+         or exists (select 1 from public.groups g where g.id = group_members.group_id and g.owner_id = auth.uid()));

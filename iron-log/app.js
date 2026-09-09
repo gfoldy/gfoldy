@@ -215,6 +215,16 @@ const state = {
   threadId: null,       // People tab: open comment thread (activity id)
   thread: null,         // the activity object for the open thread
   threadComments: null, // loaded comments for the open thread
+  groupsMine: null,     // groups the user belongs to
+  groupsPublic: null,   // public groups to discover
+  groupCounts: {},      // groupId -> member count
+  groupsErr: null,
+  groupId: null,        // open group detail
+  group: null,          // the open group row
+  groupMembers: null,   // member rows of the open group
+  groupProfiles: null,  // profile rows of members (for the board)
+  groupFeed: null,      // activity from group members
+  groupTab: 'feed',     // group detail: 'feed' | 'board' | 'members'
   viewUserId: null,     // People tab: which user is being viewed
   viewUser: null,       // People tab: loaded {profile, days, logs}
   viewFollow: null,     // People tab: {followers, following, followsMe} for viewed user
@@ -1124,17 +1134,20 @@ async function loadUser(id) {
 function peopleView() {
   if (state.viewUserId) return userDetailView();
   if (state.threadId) return threadView();
+  if (state.groupId) return groupDetailView();
   const mode = state.peopleMode;
-  const seg = `<div class="seg">
+  const seg = `<div class="seg seg-4">
     <button class="${mode === 'feed' ? 'on' : ''}" data-act="people:mode" data-m="feed">Feed</button>
-    <button class="${mode === 'discover' ? 'on' : ''}" data-act="people:mode" data-m="discover">Discover</button>
-    <button class="${mode === 'following' ? 'on' : ''}" data-act="people:mode" data-m="following">Following</button>
+    <button class="${mode === 'discover' ? 'on' : ''}" data-act="people:mode" data-m="discover">Find</button>
+    <button class="${mode === 'following' ? 'on' : ''}" data-act="people:mode" data-m="following">Follows</button>
+    <button class="${mode === 'groups' ? 'on' : ''}" data-act="people:mode" data-m="groups">Groups</button>
   </div>`;
-  const refresh = mode === 'feed' ? 'people:refreshFeed' : 'people:refresh';
+  const refresh = mode === 'feed' ? 'people:refreshFeed' : mode === 'groups' ? 'people:refreshGroups' : 'people:refresh';
   const head = `<div class="people-head"><h1 class="view-title" style="margin:2px">People</h1>
       <button class="btn sm ghost" data-act="${refresh}">↻</button></div>`;
 
   if (mode === 'feed') return head + seg + feedHtml();
+  if (mode === 'groups') return head + seg + groupsListHtml();
 
   let list = state.people;
   if (list && mode === 'following') { const f = state.follows || new Set(); list = list.filter((p) => f.has(p.id)); }
@@ -1293,33 +1306,20 @@ function userDetailView() {
 }
 
 /* ---- Ranks (leaderboards) ------------------------------------------------ */
-function ranksView() {
-  if (state.peopleErr) return `<h1 class="view-title">Ranks</h1><div class="card"><p class="muted">Couldn't load: ${esc(state.peopleErr)}</p></div>`;
-  if (state.people === null) return `<h1 class="view-title">Ranks</h1><div class="card"><p class="muted">Loading…</p></div>`;
-
-  const scope = state.ranksScope, metric = state.ranksMetric;
-  let users = state.people.slice();
-  if (scope === 'following') {
-    const f = state.follows || new Set();
-    users = users.filter((u) => f.has(u.id) || u.id === state.profileId);
-  }
-
-  const scopeSeg = `<div class="seg">
-    <button class="${scope === 'all' ? 'on' : ''}" data-act="ranks:scope" data-s="all">Everyone</button>
-    <button class="${scope === 'following' ? 'on' : ''}" data-act="ranks:scope" data-s="following">You + Following</button>
-  </div>`;
+// Shared leaderboard body (metric chips + optional lift picker + ranked rows)
+// used by both the Ranks tab and a group's Board. `users` are profile rows.
+function leaderboardBody(users) {
+  const metric = state.ranksMetric;
   const metricChips = [['lift', 'Top lift'], ['volume', 'Volume'], ['sessions', 'Sessions'], ['sets', 'Sets']]
     .map(([m, label]) => `<button class="chip ${metric === m ? 'on' : ''}" data-act="ranks:metric" data-m="${m}">${label}</button>`).join('');
-
   let rows = [], valFmt, liftPicker = '';
   if (metric === 'lift') {
-    // gather available lifts across the visible users
     const counts = {};
     users.forEach((u) => Object.keys(u.lifts || {}).forEach((ex) => { counts[ex] = (counts[ex] || 0) + 1; }));
     const lifts = Object.keys(counts).sort((a, b) => counts[b] - counts[a] || a.localeCompare(b));
     if (lifts.length && (!state.ranksLift || !counts[state.ranksLift])) state.ranksLift = lifts[0];
     if (!lifts.length) {
-      return `<h1 class="view-title">Ranks</h1>${scopeSeg}<div class="chip-row">${metricChips}</div>` +
+      return `<div class="chip-row">${metricChips}</div>` +
         emptyState('🏋️', 'No lifts logged yet', 'Once people log some weighted sets, the per-lift leaderboard fills in.', '');
     }
     liftPicker = `<select class="prog-select" data-act="ranks:lift" style="margin-bottom:12px">${lifts.map((l) => `<option ${l === state.ranksLift ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
@@ -1332,7 +1332,6 @@ function ranksView() {
     valFmt = (r) => `${fmtNum(r.v)} <span class="rk-unit">${metric === 'volume' ? esc(r.u.unit || 'lb') : label}</span>`;
   }
   rows.sort((a, b) => b.v - a.v);
-
   const medals = ['🥇', '🥈', '🥉'];
   const list = rows.length ? rows.map((r, i) => {
     const me = r.u.id === state.profileId;
@@ -1344,14 +1343,143 @@ function ranksView() {
       <div class="rk-val">${valFmt(r)}</div>
     </button>`;
   }).join('') : '<div class="card"><p class="muted">No one to rank here yet.</p></div>';
+  return `<div class="chip-row">${metricChips}</div>${liftPicker}<div class="rank-list">${list}</div>`;
+}
 
+/* ---- Groups -------------------------------------------------------------- */
+async function loadGroups() {
+  state.groupsMine = null; state.groupsPublic = null; state.groupsErr = null; render();
+  try {
+    const [mine, pub] = await Promise.all([Cloud.myGroups(), Cloud.publicGroups()]);
+    state.groupsMine = mine; state.groupsPublic = pub;
+    const ids = [...new Set([...mine.map((g) => g.id), ...pub.map((g) => g.id)])];
+    state.groupCounts = await Cloud.memberCounts(ids);
+  } catch (e) { state.groupsErr = e.message; }
+  render();
+}
+
+async function loadGroup(id) {
+  state.groupId = id; state.group = null; state.groupMembers = null; state.groupProfiles = null; state.groupFeed = null; state.groupTab = 'feed'; render();
+  try {
+    state.group = (state.groupsMine || []).concat(state.groupsPublic || []).find((x) => x.id === id) || await Cloud.groupById(id);
+    const members = await Cloud.groupMembers(id);
+    state.groupMembers = members;
+    const ids = members.map((m) => m.user_id);
+    const [profiles, feed] = await Promise.all([Cloud.usersByIds(ids), Cloud.feed(ids)]);
+    state.groupProfiles = profiles; state.groupFeed = feed;
+    try { state.commentCounts = Object.assign(state.commentCounts || {}, await Cloud.commentCounts(feed.map((a) => a.id))); } catch (e) {}
+  } catch (e) { /* leave nulls -> loading/empty states */ }
+  render();
+}
+
+const groupIsMember = () => (state.groupMembers || []).some((m) => m.user_id === state.profileId);
+
+function groupsListHtml() {
+  if (state.groupsErr) return `<div class="card"><p class="muted">Couldn't load groups: ${esc(state.groupsErr)}</p></div>`;
+  if (state.groupsMine === null) return '<div class="card"><p class="muted">Loading…</p></div>';
+  const counts = state.groupCounts || {};
+  const gcard = (g, joined) => {
+    const n = counts[g.id] || 0;
+    return `<button class="user-card" data-act="group:open" data-id="${g.id}">
+      <div class="ava sq">${esc((g.name || '?').slice(0, 1).toUpperCase())}</div>
+      <div class="uc-main"><div class="uc-name">${esc(g.name)}${g.is_public ? '' : ' <span class="pill">private</span>'}${joined ? ' <span class="pill follow">joined</span>' : ''}</div>
+        <div class="uc-sub">${n} member${n === 1 ? '' : 's'}${g.description ? ' · ' + esc(g.description) : ''}</div></div>
+      <span class="chev">›</span></button>`;
+  };
+  const mineIds = new Set((state.groupsMine || []).map((g) => g.id));
+  const discover = (state.groupsPublic || []).filter((g) => !mineIds.has(g.id));
   return `
-    <h1 class="view-title">Ranks</h1>
-    ${scopeSeg}
-    <div class="chip-row">${metricChips}</div>
-    ${liftPicker}
-    <div class="rank-list">${list}</div>
+    <div class="btn-row" style="margin-bottom:14px">
+      <button class="btn gold sm" data-act="group:create">+ Create group</button>
+      <button class="btn sm" data-act="group:joincode">Join by code</button>
+    </div>
+    <h2 class="section" style="margin-top:6px">Your groups</h2>
+    ${state.groupsMine.length ? `<div class="people-list">${state.groupsMine.map((g) => gcard(g, true)).join('')}</div>`
+      : '<div class="card"><p class="muted">You’re not in any groups yet. Create one or join with a code.</p></div>'}
+    <h2 class="section">Discover</h2>
+    ${discover.length ? `<div class="people-list">${discover.map((g) => gcard(g, false)).join('')}</div>`
+      : '<p class="muted" style="margin:6px 2px">No public groups yet.</p>'}
   `;
+}
+
+function groupDetailView() {
+  const g = state.group;
+  const back = `<button class="btn sm ghost" data-act="group:back">‹ Groups</button>`;
+  if (state.groupMembers === null && !g) return `<div class="people-head">${back}</div><div class="card"><p class="muted">Loading…</p></div>`;
+  if (!g) return `<div class="people-head">${back}</div>` + emptyState('🔒', 'Group unavailable', 'This group may have been deleted.', '');
+  const isMember = groupIsMember(), isOwner = g.owner_id === state.profileId;
+  const count = (state.groupMembers || []).length;
+  const tab = state.groupTab;
+  const seg = `<div class="seg">${['feed', 'board', 'members'].map((t) =>
+    `<button class="${tab === t ? 'on' : ''}" data-act="group:tab" data-t="${t}">${t === 'feed' ? 'Feed' : t === 'board' ? 'Board' : 'Members'}</button>`).join('')}</div>`;
+  let body = '';
+  if (state.groupMembers === null) body = '<div class="card"><p class="muted">Loading…</p></div>';
+  else if (tab === 'feed') {
+    body = state.groupFeed === null ? '<div class="card"><p class="muted">Loading…</p></div>'
+      : state.groupFeed.length ? `<div class="feed">${state.groupFeed.map(feedCard).join('')}</div>`
+      : emptyState('📣', 'Quiet in here', 'When members log workouts and PRs, they show up here.', '');
+  } else if (tab === 'board') {
+    body = state.groupProfiles ? leaderboardBody(state.groupProfiles) : '<div class="card"><p class="muted">Loading…</p></div>';
+  } else {
+    body = `<div class="people-list">${(state.groupMembers || []).map((m) => `<button class="user-card" data-act="people:view" data-id="${m.user_id}">
+      <div class="ava">${esc((m.display_name || m.username || '?').slice(0, 1).toUpperCase())}</div>
+      <div class="uc-main"><div class="uc-name">${esc(m.display_name || m.username)}${m.role === 'owner' ? ' <span class="pill muscle">owner</span>' : ''}${m.user_id === state.profileId ? ' <span class="pill follow">you</span>' : ''}</div>
+        <div class="uc-sub">@${esc(m.username || '')}</div></div><span class="chev">›</span></button>`).join('')}</div>`;
+  }
+  const action = isOwner ? `<button class="btn sm danger" data-act="group:delete" data-id="${g.id}">Delete</button>`
+    : isMember ? `<button class="btn sm" data-act="group:leave" data-id="${g.id}">Leave</button>`
+    : `<button class="btn gold sm" data-act="group:join" data-id="${g.id}">Join</button>`;
+  const codeCard = (!g.is_public && (isMember || isOwner))
+    ? `<div class="card code-card"><div class="faint" style="font-size:11px;text-transform:uppercase;letter-spacing:1px">Invite code</div><div class="code-val">${esc(g.invite_code)}</div></div>` : '';
+  return `
+    <div class="people-head">${back}${action}</div>
+    <div class="profile-hero">
+      <div class="ava lg sq">${esc((g.name || '?').slice(0, 1).toUpperCase())}</div>
+      <div style="flex:1"><div class="ph-name">${esc(g.name)}</div>
+        <div class="ph-sub">${count} member${count === 1 ? '' : 's'}${g.is_public ? '' : ' · private'}</div>
+        ${g.description ? `<div class="ph-follow">${esc(g.description)}</div>` : ''}</div>
+    </div>
+    ${codeCard}
+    ${seg}
+    ${body}
+  `;
+}
+
+function openCreateGroupSheet() {
+  openSheet(`
+    <h3>Create a group</h3>
+    <label class="field"><span>Name</span><input type="text" id="grp-name" placeholder="e.g. Iron Brothers" /></label>
+    <label class="field"><span>Description (optional)</span><input type="text" id="grp-desc" placeholder="What's this crew about?" /></label>
+    <label class="row-check"><input type="checkbox" id="grp-public" checked /> <span>Public — anyone can find & join</span></label>
+    <p class="faint" style="font-size:12px;margin-top:-4px">Private groups are joined with an invite code you share.</p>
+    <div class="sheet-actions"><button class="btn gold" data-act="group:createsave">Create</button></div>
+    <div class="sheet-actions" style="margin-top:8px"><button class="btn ghost" data-act="sheet:close">Cancel</button></div>
+  `);
+  const n = document.getElementById('grp-name'); if (n) n.focus();
+}
+
+function openJoinGroupSheet() {
+  openSheet(`
+    <h3>Join by code</h3>
+    <p class="muted" style="margin-top:-6px">Enter the invite code a friend shared.</p>
+    <label class="field"><span>Invite code</span><input type="text" id="grp-code" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="e.g. 7QK2AB" /></label>
+    <div class="sheet-actions"><button class="btn gold" data-act="group:joinsave">Join</button></div>
+    <div class="sheet-actions" style="margin-top:8px"><button class="btn ghost" data-act="sheet:close">Cancel</button></div>
+  `);
+  const n = document.getElementById('grp-code'); if (n) n.focus();
+}
+
+function ranksView() {
+  if (state.peopleErr) return `<h1 class="view-title">Ranks</h1><div class="card"><p class="muted">Couldn't load: ${esc(state.peopleErr)}</p></div>`;
+  if (state.people === null) return `<h1 class="view-title">Ranks</h1><div class="card"><p class="muted">Loading…</p></div>`;
+  const scope = state.ranksScope;
+  let users = state.people.slice();
+  if (scope === 'following') { const f = state.follows || new Set(); users = users.filter((u) => f.has(u.id) || u.id === state.profileId); }
+  const scopeSeg = `<div class="seg">
+    <button class="${scope === 'all' ? 'on' : ''}" data-act="ranks:scope" data-s="all">Everyone</button>
+    <button class="${scope === 'following' ? 'on' : ''}" data-act="ranks:scope" data-s="following">You + Following</button>
+  </div>`;
+  return `<h1 class="view-title">Ranks</h1>${scopeSeg}${leaderboardBody(users)}`;
 }
 
 function readonlySplitHtml(days) {
@@ -1691,8 +1819,9 @@ document.addEventListener('click', async (e) => {
   if (a.startsWith('nav:')) {
     state.tab = a.slice(4);
     if (state.tab === 'people') {
-      state.viewUserId = null; state.viewUser = null;
+      state.viewUserId = null; state.viewUser = null; state.threadId = null; state.groupId = null;
       if (state.peopleMode === 'feed') { if (state.feed === null) { loadFeed(); return; } }
+      else if (state.peopleMode === 'groups') { if (state.groupsMine === null) { loadGroups(); return; } }
       else if (state.people === null) { loadPeople(); return; }
     }
     if (state.tab === 'ranks' && state.people === null) { loadPeople(); return; }
@@ -1740,8 +1869,51 @@ document.addEventListener('click', async (e) => {
   if (a === 'people:mode') {
     state.peopleMode = D.m;
     if (D.m === 'feed') { if (state.feed === null) return loadFeed(); }
+    else if (D.m === 'groups') { if (state.groupsMine === null) return loadGroups(); }
     else if (state.people === null) return loadPeople();
     render(); return;
+  }
+  if (a === 'people:refreshGroups') return loadGroups();
+  if (a === 'group:open') return loadGroup(D.id);
+  if (a === 'group:back') { state.groupId = null; state.group = null; render(); return; }
+  if (a === 'group:tab') { state.groupTab = D.t; render(); return; }
+  if (a === 'group:create') return openCreateGroupSheet();
+  if (a === 'group:joincode') return openJoinGroupSheet();
+  if (a === 'group:createsave') {
+    const name = ((document.getElementById('grp-name') || {}).value || '').trim();
+    if (!name) { const el = document.getElementById('grp-name'); if (el) el.focus(); return; }
+    const description = ((document.getElementById('grp-desc') || {}).value || '').trim();
+    const is_public = (document.getElementById('grp-public') || {}).checked;
+    try {
+      const g = await Cloud.createGroup({ name, description, is_public, username: state.profile.username, display_name: state.profile.name });
+      closeSheet(); await loadGroups(); loadGroup(g.id);
+    } catch (e) { showToast('Couldn’t create group'); }
+    return;
+  }
+  if (a === 'group:joinsave') {
+    const code = ((document.getElementById('grp-code') || {}).value || '').trim();
+    if (!code) return;
+    try {
+      const g = await Cloud.groupByCode(code);
+      if (!g) { showToast('No group with that code'); return; }
+      await Cloud.joinGroup({ groupId: g.id, username: state.profile.username, display_name: state.profile.name });
+      closeSheet(); await loadGroups(); loadGroup(g.id);
+    } catch (e) { showToast('Couldn’t join'); }
+    return;
+  }
+  if (a === 'group:join') {
+    try { await Cloud.joinGroup({ groupId: D.id, username: state.profile.username, display_name: state.profile.name }); } catch (e) {}
+    await loadGroups(); loadGroup(D.id); return;
+  }
+  if (a === 'group:leave') {
+    if (!confirm('Leave this group?')) return;
+    try { await Cloud.leaveGroup(D.id); } catch (e) {}
+    state.groupId = null; state.group = null; loadGroups(); return;
+  }
+  if (a === 'group:delete') {
+    if (!confirm('Delete this group for everyone? This cannot be undone.')) return;
+    try { await Cloud.deleteGroup(D.id); } catch (e) {}
+    state.groupId = null; state.group = null; loadGroups(); return;
   }
 
   // Ranks tab

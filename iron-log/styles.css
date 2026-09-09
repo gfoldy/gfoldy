@@ -472,6 +472,11 @@ table.habit td.wk { font-size: 11px; color: var(--text-faint); white-space: nowr
 .seg { display: flex; background: var(--bg-elev2); border: 1px solid var(--border); border-radius: 13px; padding: 4px; margin: 0 2px 14px; gap: 4px; box-shadow: var(--inset); }
 .seg button { flex: 1; min-height: 38px; border: none; background: none; color: var(--text-dim); font-weight: 700; font-size: 14px; border-radius: 10px; transition: all 0.14s; }
 .seg button.on { background: var(--gold-grad); color: var(--gold-ink); box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 4px 12px -6px rgba(203,171,83,0.5); }
+.seg.seg-4 button { font-size: 13px; padding: 0 2px; }
+.ava.sq { border-radius: 13px; }
+.ava.lg.sq { border-radius: 16px; }
+.code-card { text-align: center; }
+.code-val { font-size: 24px; font-weight: 800; letter-spacing: 5px; margin-top: 4px; background: var(--gold-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
 .chip-row { display: flex; gap: 8px; margin: 0 2px 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .chip-row .chip { flex: 0 0 auto; min-height: 38px; padding: 0 15px; border-radius: 11px; border: 1px solid var(--border); background: linear-gradient(180deg, var(--bg-elev3), var(--bg-elev2)); color: var(--text-dim); font-weight: 700; font-size: 14px; box-shadow: var(--shadow-1); }

@@ -140,13 +140,17 @@ const DB = (() => {
   function open() {
     if (dbp) return dbp;
     dbp = new Promise((resolve, reject) => {
-      const req = indexedDB.open('ironlog', 1);
+      const req = indexedDB.open('ironlog', 2);
       req.onupgradeneeded = (e) => {
         const db = e.target.result;
         if (!db.objectStoreNames.contains('profiles')) db.createObjectStore('profiles', { keyPath: 'id' });
         if (!db.objectStoreNames.contains('splits')) db.createObjectStore('splits', { keyPath: 'profileId' });
         if (!db.objectStoreNames.contains('logs')) {
           const s = db.createObjectStore('logs', { keyPath: 'id' });
+          s.createIndex('profileId', 'profileId', { unique: false });
+        }
+        if (!db.objectStoreNames.contains('meals')) {
+          const s = db.createObjectStore('meals', { keyPath: 'id' });
           s.createIndex('profileId', 'profileId', { unique: false });
         }
       };
@@ -173,6 +177,7 @@ const DB = (() => {
     put: (store, val) => tx(store, 'readwrite', (s) => reqP(s.put(val))),
     del: (store, key) => tx(store, 'readwrite', (s) => reqP(s.delete(key))),
     logsByProfile: (pid) => tx('logs', 'readonly', (s) => reqP(s.index('profileId').getAll(pid))),
+    mealsByProfile: (pid) => tx('meals', 'readonly', (s) => reqP(s.index('profileId').getAll(pid))),
     clearAll: () => tx('profiles', 'readwrite', () => {}).then(() =>
       open().then((db) => new Promise((res, rej) => {
         const t = db.transaction(['profiles', 'splits', 'logs'], 'readwrite');
@@ -193,6 +198,7 @@ const state = {
   profile: null,
   split: [],            // array of day objects for current profile
   logs: [],             // all log records for current profile
+  meals: [],            // nutrition entries for current profile (device-local)
   tab: 'today',
   selectedDate: todayStr(),
   selectedDayId: null,  // which split day is shown on Today
@@ -229,6 +235,7 @@ async function loadProfileData(pid) {
   const splitRec = await DB.get('splits', pid);
   state.split = splitRec ? splitRec.days : [];
   state.logs = await DB.logsByProfile(pid);
+  state.meals = await DB.mealsByProfile(pid);
   localStorage.setItem(CUR_KEY, pid);
 }
 
@@ -479,7 +486,68 @@ function todayView() {
     ${body}
     ${adhocHtml}
     <button class="btn ghost block" data-act="today:addex" style="margin-top:6px">+ Add exercise</button>
+    ${nutritionCard(date)}
   `;
+}
+
+/* ---- Nutrition (simple daily calorie + protein targets, device-local) ---- */
+function getGoals() { try { return JSON.parse(localStorage.getItem('ironlog.goals.' + state.profileId)) || {}; } catch (e) { return {}; } }
+function setGoals(cal, prot) { try { localStorage.setItem('ironlog.goals.' + state.profileId, JSON.stringify({ cal, prot })); } catch (e) {} }
+function proteinOn(dateStr) { return state.meals.filter((m) => m.date === dateStr).reduce((a, m) => a + (m.protein || 0), 0); }
+
+function nutritionCard(date) {
+  const meals = state.meals.filter((m) => m.date === date).sort((a, b) => a.createdAt - b.createdAt);
+  const kcal = meals.reduce((a, m) => a + (m.kcal || 0), 0);
+  const prot = meals.reduce((a, m) => a + (m.protein || 0), 0);
+  const g = getGoals(), calGoal = g.cal || 0, protGoal = g.prot || 0;
+  const goalsSet = calGoal > 0 || protGoal > 0;
+  const bar = (val, goal, cls) => {
+    const pct = goal > 0 ? Math.min(100, Math.round((val / goal) * 100)) : 0;
+    const over = goal > 0 && val > goal;
+    return `<div class="nb"><div class="nb-fill ${over ? 'over' : cls}" style="width:${pct}%"></div></div>`;
+  };
+  // protein streak: consecutive days ending today that hit the protein goal
+  let streak = 0;
+  if (protGoal > 0) { let d = parseDate(date); while (proteinOn(dateToStr(d)) >= protGoal && streak <= 400) { streak++; d = addDays(d, -1); } }
+  // 7-day protein sparkline
+  const days = [];
+  for (let i = 6; i >= 0; i--) { const ds = dateToStr(addDays(parseDate(date), -i)); days.push({ ds, p: proteinOn(ds) }); }
+  const maxP = Math.max(protGoal || 0, ...days.map((d) => d.p), 1);
+  const spark = days.map((d) => `<div class="np-bar ${protGoal && d.p >= protGoal ? 'hit' : ''}" style="height:${Math.max(3, (d.p / maxP) * 100)}%" data-tip="${d.ds}: ${fmtNum(d.p)}g protein"></div>`).join('');
+  const list = meals.map((m) => `<div class="meal-row">
+      <span class="meal-lbl">${esc(m.label || 'Entry')}</span>
+      <span class="meal-macros">${m.kcal ? fmtNum(m.kcal) + ' kcal' : ''}${m.kcal && m.protein ? ' · ' : ''}${m.protein ? fmtNum(m.protein) + 'g P' : ''}</span>
+      <button class="meal-x" data-act="nut:del" data-id="${m.id}" aria-label="Delete entry">✕</button>
+    </div>`).join('');
+  return `
+    <h2 class="section">Nutrition${streak > 1 ? ` <span class="nstreak">🔥 ${streak}-day protein</span>` : ''}</h2>
+    <div class="card">
+      <div class="nrow"><div class="nlab">Calories <b>${fmtNum(kcal)}</b>${calGoal ? ` <span class="faint">/ ${fmtNum(calGoal)}</span>` : ''}</div>${calGoal ? bar(kcal, calGoal, 'cal') : ''}</div>
+      <div class="nrow"><div class="nlab">Protein <b>${fmtNum(prot)}g</b>${protGoal ? ` <span class="faint">/ ${fmtNum(protGoal)}g</span>` : ''}</div>${protGoal ? bar(prot, protGoal, 'prot') : ''}</div>
+      <div class="nadd">
+        <input type="number" id="nut-kcal" inputmode="numeric" min="0" placeholder="kcal" />
+        <input type="number" id="nut-protein" inputmode="numeric" min="0" placeholder="protein g" />
+        <input type="text" id="nut-label" placeholder="label (optional)" />
+        <button class="btn gold sm" data-act="nut:add">Add</button>
+      </div>
+      ${list ? `<div class="meal-list">${list}</div>` : ''}
+      ${goalsSet ? `<div class="nspark">${spark}</div><div class="faint" style="font-size:11px;text-align:right;margin-top:2px">protein · last 7 days</div>` : ''}
+      <button class="subtle-link" data-act="nut:goals">${goalsSet ? 'Edit daily goals' : 'Set daily calorie & protein goals'}</button>
+    </div>`;
+}
+
+function openGoalSheet() {
+  const g = getGoals();
+  openSheet(`
+    <h3>Daily goals</h3>
+    <p class="muted" style="margin-top:-6px">Kept on this device.</p>
+    <div class="btn-row">
+      <label class="field" style="flex:1"><span>Calories</span><input type="number" id="g-cal" inputmode="numeric" value="${g.cal || ''}" placeholder="e.g. 2600" /></label>
+      <label class="field" style="flex:1"><span>Protein (g)</span><input type="number" id="g-prot" inputmode="numeric" value="${g.prot || ''}" placeholder="e.g. 180" /></label>
+    </div>
+    <div class="sheet-actions"><button class="btn gold" data-act="nut:savegoals">Save goals</button></div>
+    <div class="sheet-actions" style="margin-top:8px"><button class="btn ghost" data-act="sheet:close">Cancel</button></div>
+  `);
 }
 
 /* ---- Exercise history + auto progression -------------------------------- */
@@ -515,14 +583,6 @@ function suggestNext(exName, reps, beforeDate) {
   if (rr && R >= rr.high) return { weight: roundHalf(W + inc), hint: `${rr.low}–${rr.high} reps`, up: true };
   if (rr) return { weight: W, hint: `aim ${Math.min(R + 1, rr.high)}–${rr.high} reps`, up: false };
   return { weight: W, hint: `beat ${R} reps`, up: false };
-}
-
-function restForExercise(exName) {
-  const day = state.split.find((d) => d.id === state.selectedDayId);
-  const planned = day && day.exercises.find((x) => x.name === exName);
-  const rr = planned ? parseRepRange(planned.reps) : null;
-  const high = rr ? rr.high : 10;
-  return high <= 6 ? 180 : high <= 8 ? 150 : high <= 10 ? 120 : high <= 12 ? 90 : 60;
 }
 
 // Returns { html, done, target } for one exercise's set rows.
@@ -1011,6 +1071,7 @@ async function enterCloudUser() {
     if (!state.profile) state.profile = { id: uid, name: 'Me', unit: 'lb', username: '' };
   }
   localStorage.setItem(CUR_KEY, uid);
+  state.meals = await DB.mealsByProfile(uid); // nutrition stays device-local for now
   try { state.follows = await Cloud.myFollows(); } catch (e) { state.follows = new Set(); }
   syncStats();
 }
@@ -1272,7 +1333,6 @@ function openAccountSheet() {
       <button class="btn sm ${u === 'kg' ? 'gold' : ''}" data-act="account:unit" data-unit="kg">kg</button>
     </div>
     <label class="row-check"><input type="checkbox" id="ac-public" ${p.is_public !== false ? 'checked' : ''} /> <span>Public — others can find me in People</span></label>
-    <label class="row-check"><input type="checkbox" data-act="rest:toggle" ${restEnabled() ? 'checked' : ''} /> <span>Rest timer after each set</span></label>
     <div class="btn-row" style="margin:14px 0"><button class="btn sm" data-act="data:export">Export backup</button></div>
     <div class="sheet-actions"><button class="btn gold" data-act="account:save">Save</button></div>
     <div class="sheet-actions" style="margin-top:8px"><button class="btn danger" data-act="account:signout">Sign out</button></div>
@@ -1371,7 +1431,6 @@ function openProfileSheet() {
       <button class="btn sm ${u === 'kg' ? 'gold' : ''}" data-act="profile:unit" data-unit="kg">kg</button>
       <button class="btn sm" data-act="profile:rename">Rename</button>
     </div>
-    <label class="row-check" style="margin-bottom:12px"><input type="checkbox" data-act="rest:toggle" ${restEnabled() ? 'checked' : ''} /> <span>Rest timer after each set</span></label>
     <div class="btn-row" style="margin-bottom:16px">
       <button class="btn sm" data-act="data:export">Export backup</button>
       <button class="btn sm" data-act="data:import">Import backup</button>
@@ -1523,45 +1582,6 @@ function updateDayBadge() {
 function cssEsc(s) { return (window.CSS && CSS.escape) ? CSS.escape(s) : s.replace(/["\\]/g, '\\$&'); }
 
 /* --------------------------------------------------------------------------
-   Rest timer — auto-starts when you check a set; duration from the rep range.
-   Lives on <body> so it survives view re-renders.
-   -------------------------------------------------------------------------- */
-let restInt = null, restLeft = 0;
-function restEnabled() { try { return localStorage.getItem('ironlog.restOff') !== '1'; } catch (e) { return true; } }
-function startRest(sec) {
-  if (!restEnabled() || !sec) return;
-  restLeft = sec; clearInterval(restInt); renderRest();
-  restInt = setInterval(() => { restLeft--; renderRest(); if (restLeft <= 0) { clearInterval(restInt); restDone(); } }, 1000);
-}
-function renderRest() {
-  let el = document.getElementById('rest');
-  if (!el) { el = document.createElement('div'); el.id = 'rest'; el.className = 'rest-bar'; document.body.appendChild(el); }
-  const m = Math.floor(Math.max(0, restLeft) / 60), s = Math.max(0, restLeft) % 60;
-  el.innerHTML = `<div class="rest-time">${m}:${String(s).padStart(2, '0')}</div>
-    <div class="rest-btns">
-      <button data-act="rest:adj" data-d="-15">−15</button>
-      <button data-act="rest:adj" data-d="15">+15</button>
-      <button class="rest-skip" data-act="rest:stop">Skip</button>
-    </div>`;
-}
-function restDone() {
-  try { if (navigator.vibrate) navigator.vibrate([140, 70, 140]); } catch (e) {}
-  restBeep();
-  const el = document.getElementById('rest');
-  if (el) { el.classList.add('done'); const t = el.querySelector('.rest-time'); if (t) t.textContent = 'Rest done'; }
-  setTimeout(stopRest, 2500);
-}
-function stopRest() { clearInterval(restInt); restLeft = 0; const el = document.getElementById('rest'); if (el) el.remove(); }
-function restBeep() {
-  try {
-    const Ac = window.AudioContext || window.webkitAudioContext; if (!Ac) return;
-    const a = new Ac(), o = a.createOscillator(), g = a.createGain();
-    o.connect(g); g.connect(a.destination); o.type = 'sine'; o.frequency.value = 880; g.gain.value = 0.06;
-    o.start(); setTimeout(() => { o.stop(); a.close(); }, 200);
-  } catch (e) {}
-}
-
-/* --------------------------------------------------------------------------
    Event handling (delegated)
    -------------------------------------------------------------------------- */
 let saveTimer = null;
@@ -1591,7 +1611,6 @@ document.addEventListener('change', (e) => {
   else if (act === 'today:daychange') { state.selectedDayId = t.value; render(); }
   else if (act === 'prog:exercise') { state.progExercise = t.value; render(); }
   else if (act === 'ranks:lift') { state.ranksLift = t.value; render(); }
-  else if (act === 'rest:toggle') { try { localStorage.setItem('ironlog.restOff', t.checked ? '0' : '1'); } catch (e) {} if (!t.checked) stopRest(); }
   else if (act === 'split:weekday') {
     const d = state.split.find((x) => x.id === t.dataset.day);
     if (d) { d.weekday = t.value === '' ? null : parseInt(t.value, 10); saveSplit().then(render); }
@@ -1726,11 +1745,9 @@ document.addEventListener('click', async (e) => {
     const row = t.closest('.setrow');
     if (row) { row.classList.toggle('done', rec.done); t.classList.toggle('on', rec.done); }
     updateExerciseBadge(D.ex);
-    if (rec.done) { checkPB(D.ex, rec); startRest(restForExercise(D.ex)); } else stopRest();
+    if (rec.done) checkPB(D.ex, rec);
     return;
   }
-  if (a === 'rest:adj') { restLeft = Math.max(5, restLeft + parseInt(D.d, 10)); renderRest(); return; }
-  if (a === 'rest:stop') { stopRest(); return; }
   if (a === 'today:prefill') {
     const date = state.selectedDate, ex = D.ex, muscle = D.muscle, w = num(D.weight);
     const day = state.split.find((d) => d.id === state.selectedDayId);
@@ -1770,6 +1787,22 @@ document.addEventListener('click', async (e) => {
     return;
   }
   if (a === 'today:addex') return openAddAdhocSheet();
+
+  // nutrition
+  if (a === 'nut:add') {
+    const kcal = num((document.getElementById('nut-kcal') || {}).value);
+    const protein = num((document.getElementById('nut-protein') || {}).value);
+    const label = ((document.getElementById('nut-label') || {}).value || '').trim();
+    if (!kcal && !protein) { const k = document.getElementById('nut-kcal'); if (k) k.focus(); return; }
+    const m = { id: uid(), profileId: state.profileId, date: state.selectedDate, kcal: kcal || 0, protein: protein || 0, label, createdAt: Date.now() };
+    state.meals.push(m); await DB.put('meals', m); render(); return;
+  }
+  if (a === 'nut:del') { state.meals = state.meals.filter((m) => m.id !== D.id); await DB.del('meals', D.id); render(); return; }
+  if (a === 'nut:goals') return openGoalSheet();
+  if (a === 'nut:savegoals') {
+    setGoals(num((document.getElementById('g-cal') || {}).value) || 0, num((document.getElementById('g-prot') || {}).value) || 0);
+    closeSheet(); render(); return;
+  }
   if (a === 'adhoc:save') {
     const name = document.getElementById('ad-name').value.trim();
     const muscle = document.getElementById('ad-muscle').value;

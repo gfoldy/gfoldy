@@ -211,6 +211,10 @@ const state = {
   peopleMode: 'feed',   // People tab: 'feed' | 'discover' | 'following'
   feed: null,           // People tab: cached activity feed
   feedErr: null,
+  commentCounts: {},    // activityId -> comment count
+  threadId: null,       // People tab: open comment thread (activity id)
+  thread: null,         // the activity object for the open thread
+  threadComments: null, // loaded comments for the open thread
   viewUserId: null,     // People tab: which user is being viewed
   viewUser: null,       // People tab: loaded {profile, days, logs}
   viewFollow: null,     // People tab: {followers, following, followsMe} for viewed user
@@ -1119,6 +1123,7 @@ async function loadUser(id) {
 
 function peopleView() {
   if (state.viewUserId) return userDetailView();
+  if (state.threadId) return threadView();
   const mode = state.peopleMode;
   const seg = `<div class="seg">
     <button class="${mode === 'feed' ? 'on' : ''}" data-act="people:mode" data-m="feed">Feed</button>
@@ -1164,9 +1169,11 @@ function feedCard(a) {
   } else if (a.type === 'joined') {
     line = `🎉 ${name} joined Iron Log`; sub = 'Say hi 👋';
   }
-  return `<button class="feed-card ${cls}" data-act="people:view" data-id="${a.user_id}">
+  const n = state.commentCounts[a.id] || 0;
+  return `<button class="feed-card ${cls}" data-act="feed:open" data-id="${a.id}">
     <div class="ava">${ini}</div>
-    <div class="fc-main"><div class="fc-line">${line}</div>${sub ? `<div class="fc-sub">${sub}</div>` : ''}</div>
+    <div class="fc-main"><div class="fc-line">${line}</div>${sub ? `<div class="fc-sub">${sub}</div>` : ''}
+      <div class="fc-cmt">💬 ${n ? n + (n === 1 ? ' comment' : ' comments') : 'Comment'}</div></div>
     <div class="fc-time">${relTime(a.created_at)}</div>
   </button>`;
 }
@@ -1176,8 +1183,58 @@ async function loadFeed() {
   try {
     const ids = [...(state.follows || new Set()), state.profileId].filter(Boolean);
     state.feed = await Cloud.feed(ids);
+    try { state.commentCounts = await Cloud.commentCounts(state.feed.map((a) => a.id)); } catch (e) { /* counts optional */ }
   } catch (e) { state.feedErr = e.message; }
   render();
+}
+
+async function loadThread(activityId) {
+  state.threadId = activityId;
+  state.thread = (state.feed || []).find((a) => a.id === activityId) || null;
+  state.threadComments = null; render();
+  try { state.threadComments = await Cloud.comments(activityId); }
+  catch (e) { state.threadComments = []; }
+  render();
+}
+
+function threadView() {
+  const a = state.thread;
+  const back = `<button class="btn sm ghost" data-act="feed:closethread">‹ Feed</button>`;
+  const cs = state.threadComments;
+  const rows = cs === null ? '<p class="muted" style="padding:8px 2px">Loading…</p>'
+    : cs.length === 0 ? '<p class="muted" style="padding:8px 2px">No comments yet. Be the first.</p>'
+    : cs.map((c) => `<div class="cmt">
+        <button class="ava sm" data-act="people:view" data-id="${c.user_id}">${esc((c.display_name || c.username || '?').slice(0, 1).toUpperCase())}</button>
+        <div class="cmt-body"><div class="cmt-head"><b>${esc(c.display_name || c.username || 'Someone')}</b> <span class="faint">${relTime(c.created_at)}</span></div>
+          <div class="cmt-text">${esc(c.body)}</div></div>
+        ${c.user_id === state.profileId ? `<button class="cmt-x" data-act="comment:del" data-id="${c.id}" aria-label="Delete">✕</button>` : ''}
+      </div>`).join('');
+  return `
+    <div class="people-head">${back}</div>
+    ${a ? `<div class="feed-card ${a.type} static">${feedCardInner(a)}</div>` : ''}
+    <h2 class="section">Comments</h2>
+    <div class="card">
+      <div class="cmt-list">${rows}</div>
+      <div class="cmt-add">
+        <input type="text" id="cmt-input" maxlength="500" placeholder="Add a comment…" autocomplete="off" />
+        <button class="btn gold sm" data-act="comment:add">Post</button>
+      </div>
+    </div>`;
+}
+
+// The inner content of a feed card (without the wrapping button), for the
+// static header shown above a comment thread.
+function feedCardInner(a) {
+  const name = esc(a.display_name || a.username || 'Someone');
+  const ini = esc((a.display_name || a.username || '?').slice(0, 1).toUpperCase());
+  const d = a.data || {}, unitL = esc(d.unit || 'lb');
+  let line = name, sub = '';
+  if (a.type === 'pr') { line = `🏆 ${name} hit a PR`; sub = `${esc(d.exercise || '')} ${fmtNum(d.weight)}×${d.reps} · est ${fmtNum(d.e1rm)} ${unitL}`; }
+  else if (a.type === 'session') { line = `${name} trained${d.dayName ? ' ' + esc(d.dayName) : ''}`; sub = `${d.sets} set${d.sets === 1 ? '' : 's'} · ${fmtNum(d.volume)} ${unitL}${d.muscles && d.muscles.length ? ' · ' + esc(d.muscles.slice(0, 4).join(', ')) : ''}`; }
+  else if (a.type === 'joined') { line = `🎉 ${name} joined Iron Log`; sub = ''; }
+  return `<button class="ava" data-act="people:view" data-id="${a.user_id}">${ini}</button>
+    <div class="fc-main"><div class="fc-line">${line}</div>${sub ? `<div class="fc-sub">${sub}</div>` : ''}</div>
+    <div class="fc-time">${relTime(a.created_at)}</div>`;
 }
 
 function userCard(p) {
@@ -1585,6 +1642,13 @@ function cssEsc(s) { return (window.CSS && CSS.escape) ? CSS.escape(s) : s.repla
    Event handling (delegated)
    -------------------------------------------------------------------------- */
 let saveTimer = null;
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.target && e.target.id === 'cmt-input') {
+    e.preventDefault();
+    const btn = document.querySelector('[data-act="comment:add"]'); if (btn) btn.click();
+  }
+});
+
 document.addEventListener('input', (e) => {
   const t = e.target.closest('[data-act]');
   if (!t) return;
@@ -1644,6 +1708,35 @@ document.addEventListener('click', async (e) => {
   if (a === 'people:view') return loadUser(D.id);
   if (a === 'people:back') { state.viewUserId = null; state.viewUser = null; render(); return; }
   if (a === 'people:refreshFeed') return loadFeed();
+  if (a === 'feed:open') return loadThread(D.id);
+  if (a === 'feed:closethread') { state.threadId = null; state.thread = null; state.threadComments = null; render(); return; }
+  if (a === 'comment:add') {
+    const inp = document.getElementById('cmt-input');
+    const body = (inp && inp.value || '').trim();
+    if (!body) { if (inp) inp.focus(); return; }
+    const optimistic = { id: 'tmp' + uid(), activity_id: state.threadId, user_id: state.profileId,
+      username: state.profile.username, display_name: state.profile.name, body, created_at: new Date().toISOString() };
+    state.threadComments = [...(state.threadComments || []), optimistic];
+    state.commentCounts[state.threadId] = (state.commentCounts[state.threadId] || 0) + 1;
+    render();
+    try {
+      const saved = await Cloud.addComment({ activityId: state.threadId, body, username: state.profile.username, display_name: state.profile.name });
+      const i = state.threadComments.findIndex((c) => c.id === optimistic.id);
+      if (i >= 0) { state.threadComments[i] = saved; render(); }
+    } catch (e) {
+      state.threadComments = state.threadComments.filter((c) => c.id !== optimistic.id);
+      state.commentCounts[state.threadId] = Math.max(0, (state.commentCounts[state.threadId] || 1) - 1);
+      showToast('Comment failed'); render();
+    }
+    return;
+  }
+  if (a === 'comment:del') {
+    state.threadComments = (state.threadComments || []).filter((c) => c.id !== D.id);
+    state.commentCounts[state.threadId] = Math.max(0, (state.commentCounts[state.threadId] || 1) - 1);
+    render();
+    try { await Cloud.deleteComment(D.id); } catch (e) {}
+    return;
+  }
   if (a === 'people:mode') {
     state.peopleMode = D.m;
     if (D.m === 'feed') { if (state.feed === null) return loadFeed(); }

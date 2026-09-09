@@ -74,12 +74,25 @@ create table if not exists public.activity (
 create index if not exists activity_created_idx on public.activity (created_at desc);
 create index if not exists activity_user_idx on public.activity (user_id);
 
+-- Comments on feed activity. Actor name denormalised for join-free rendering.
+create table if not exists public.comments (
+  id           text primary key,
+  activity_id  text not null references public.activity(id) on delete cascade,
+  user_id      uuid not null references auth.users on delete cascade,
+  username     citext,
+  display_name text,
+  body         text not null,
+  created_at   timestamptz not null default now()
+);
+create index if not exists comments_activity_idx on public.comments (activity_id, created_at);
+
 -- ---- Row-level security --------------------------------------------------
 alter table public.profiles enable row level security;
 alter table public.splits   enable row level security;
 alter table public.logs     enable row level security;
 alter table public.follows  enable row level security;
 alter table public.activity enable row level security;
+alter table public.comments enable row level security;
 
 -- profiles: read public ones (and always your own); write only your own.
 drop policy if exists profiles_read on public.profiles;
@@ -145,4 +158,16 @@ create policy activity_update on public.activity for update to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 drop policy if exists activity_delete on public.activity;
 create policy activity_delete on public.activity for delete to authenticated
+  using (user_id = auth.uid());
+
+-- comments: readable when the underlying activity is visible; write your own.
+drop policy if exists comments_read on public.comments;
+create policy comments_read on public.comments for select to authenticated
+  using (exists (select 1 from public.activity a join public.profiles p on p.id = a.user_id
+                 where a.id = comments.activity_id and (p.is_public or p.id = auth.uid())));
+drop policy if exists comments_insert on public.comments;
+create policy comments_insert on public.comments for insert to authenticated
+  with check (user_id = auth.uid());
+drop policy if exists comments_delete on public.comments;
+create policy comments_delete on public.comments for delete to authenticated
   using (user_id = auth.uid());

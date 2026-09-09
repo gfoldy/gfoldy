@@ -364,6 +364,21 @@ table.habit td.wk { font-size: 11px; color: var(--text-faint); white-space: nowr
 .fc-line { font-weight: 700; font-size: 14px; }
 .fc-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fc-time { font-size: 11px; color: var(--text-faint); flex: 0 0 auto; align-self: flex-start; font-variant-numeric: tabular-nums; }
+.fc-cmt { font-size: 12px; color: var(--text-faint); margin-top: 6px; font-weight: 600; }
+.feed-card.static { cursor: default; }
+.feed-card.static:active { transform: none; }
+
+/* Comment thread */
+.cmt-list { display: flex; flex-direction: column; gap: 14px; margin-bottom: 12px; }
+.cmt { display: flex; gap: 10px; align-items: flex-start; }
+.cmt .ava.sm { flex: 0 0 auto; border: none; }
+.cmt-body { flex: 1; min-width: 0; }
+.cmt-head { font-size: 13px; }
+.cmt-head b { font-weight: 700; }
+.cmt-text { font-size: 14px; color: var(--text); margin-top: 2px; word-wrap: break-word; overflow-wrap: anywhere; }
+.cmt-x { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-elev2); color: var(--text-faint); padding: 0; flex: 0 0 auto; }
+.cmt-add { display: flex; gap: 8px; align-items: stretch; border-top: 1px solid var(--border); padding-top: 12px; }
+.cmt-add input { flex: 1; }
 
 .profile-hero { display: flex; align-items: center; gap: 14px; margin: 6px 2px 16px; }
 .ph-name { font-size: 20px; font-weight: 800; }

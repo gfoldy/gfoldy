@@ -60,7 +60,7 @@ the device. You can optionally connect a free **Supabase** backend to turn on:
 - A **Ranks tab** — leaderboards by estimated 1RM per lift, total volume,
   sessions or sets, scoped to everyone or just the people you follow.
 - An **activity feed** (People → Feed) — sessions, PRs and joins from you and
-  the people you follow, newest first.
+  the people you follow, newest first, with **comment threads** on each item.
 
 It's additive: leave `config.js` blank and the app behaves exactly as before.
 Full walkthrough (about 5 minutes, one time): **[SETUP.md](./SETUP.md)**.

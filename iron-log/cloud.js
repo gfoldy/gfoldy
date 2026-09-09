@@ -176,6 +176,32 @@ const Cloud = (() => {
     return data || [];
   }
 
+  // ---- comments -----------------------------------------------------------
+  const cid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  async function commentCounts(ids) {
+    if (!enabled || !ids || !ids.length) return {};
+    const { data, error } = await sb.from('comments').select('activity_id').in('activity_id', ids);
+    if (error) return {};
+    const c = {}; (data || []).forEach((r) => { c[r.activity_id] = (c[r.activity_id] || 0) + 1; });
+    return c;
+  }
+  async function comments(activityId) {
+    if (!enabled) return [];
+    const { data, error } = await sb.from('comments').select('*').eq('activity_id', activityId)
+      .order('created_at', { ascending: true });
+    if (error) throw new Error(error.message);
+    return data || [];
+  }
+  async function addComment({ activityId, body, username, display_name }) {
+    if (!enabled || !session) throw new Error('Not signed in');
+    const row = { id: cid(), activity_id: activityId, user_id: session.user.id, username: username || null,
+      display_name: display_name || null, body, created_at: new Date().toISOString() };
+    const { error } = await sb.from('comments').insert(row);
+    if (error) throw new Error(error.message);
+    return row;
+  }
+  async function deleteComment(id) { if (enabled) await sb.from('comments').delete().eq('id', id); }
+
   async function listUsers() {
     if (!enabled) return [];
     const { data, error } = await sb.from('profiles')
@@ -229,5 +255,6 @@ const Cloud = (() => {
 
   return { enabled, init, user, signUp, signIn, signOut, pullMine,
     pushLog, deleteLog, pushSplit, pushProfile, listUsers, getUser, flush,
-    myFollows, follow, unfollow, followInfo, pushActivity, deleteActivity, feed };
+    myFollows, follow, unfollow, followInfo, pushActivity, deleteActivity, feed,
+    commentCounts, comments, addComment, deleteComment };
 })();

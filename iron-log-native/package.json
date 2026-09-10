@@ -1,0 +1,19 @@
+{
+  "name": "iron-log-native",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Iron Log — fully native iOS app (Expo/React Native) + Next.js API, one codebase.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "test": "node --test packages/core/test/*.test.ts",
+    "typecheck": "npm run -w @ironlog/core typecheck && npm run -w @ironlog/mobile typecheck && npm run -w @ironlog/api typecheck",
+    "mobile": "npm run -w @ironlog/mobile start",
+    "api": "npm run -w @ironlog/api dev"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

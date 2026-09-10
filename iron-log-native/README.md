@@ -83,8 +83,15 @@ Ranks, feed and groups light up once the API is deployed and you sign in.
 | Today (logging, set types, progression, meso banner) | ✅ ported |
 | Progress (stats, mesocycle, weekly targets, progression plan, lagging, body, top lifts) | ✅ ported |
 | Split editor (days, movement-library picker) | ✅ ported |
+| Nutrition (Today) + Body logging (Progress) | ✅ ported |
 | On-device storage (SQLite) | ✅ |
 | App icon / splash | ✅ generated |
-| API (health, auth, people, ranks, logs sync) | ✅ scaffolded |
-| Nutrition, Body logging UI, full social (feed/comments/groups/chat) | ⏳ next |
+| Cloud accounts + session (sign in / create, token in AsyncStorage) | ✅ |
+| People tab: Feed + comments, Directory + follow, Groups + chat | ✅ |
+| Ranks (volume / sets / sessions leaderboards) | ✅ |
+| API (auth, me, split/log sync, users, follows, activity, comments, groups, messages) | ✅ |
 | HealthKit, push, iOS build | ⏳ (build runs on your Mac / EAS) |
+
+Every screen compiles and the app **bundles for iOS** (`expo export`); the
+social features light up once the API is deployed and you sign in. What's left
+is native polish (HealthKit, push) and the actual device build on your Mac/EAS.

@@ -4,6 +4,7 @@ import { Slot } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StoreProvider, useStore } from '../src/db/store';
+import { CloudProvider } from '../src/lib/cloud';
 import { Onboarding } from '../src/components/Onboarding';
 import { T } from '../src/theme';
 
@@ -24,9 +25,11 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
-      <StoreProvider>
-        <Gate />
-      </StoreProvider>
+      <CloudProvider>
+        <StoreProvider>
+          <Gate />
+        </StoreProvider>
+      </CloudProvider>
     </SafeAreaProvider>
   );
 }

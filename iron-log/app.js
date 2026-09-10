@@ -140,7 +140,7 @@ const DB = (() => {
   function open() {
     if (dbp) return dbp;
     dbp = new Promise((resolve, reject) => {
-      const req = indexedDB.open('ironlog', 2);
+      const req = indexedDB.open('ironlog', 3);
       req.onupgradeneeded = (e) => {
         const db = e.target.result;
         if (!db.objectStoreNames.contains('profiles')) db.createObjectStore('profiles', { keyPath: 'id' });
@@ -151,6 +151,10 @@ const DB = (() => {
         }
         if (!db.objectStoreNames.contains('meals')) {
           const s = db.createObjectStore('meals', { keyPath: 'id' });
+          s.createIndex('profileId', 'profileId', { unique: false });
+        }
+        if (!db.objectStoreNames.contains('body')) {
+          const s = db.createObjectStore('body', { keyPath: 'id' });
           s.createIndex('profileId', 'profileId', { unique: false });
         }
       };
@@ -178,6 +182,7 @@ const DB = (() => {
     del: (store, key) => tx(store, 'readwrite', (s) => reqP(s.delete(key))),
     logsByProfile: (pid) => tx('logs', 'readonly', (s) => reqP(s.index('profileId').getAll(pid))),
     mealsByProfile: (pid) => tx('meals', 'readonly', (s) => reqP(s.index('profileId').getAll(pid))),
+    bodyByProfile: (pid) => tx('body', 'readonly', (s) => reqP(s.index('profileId').getAll(pid))),
     clearAll: () => tx('profiles', 'readwrite', () => {}).then(() =>
       open().then((db) => new Promise((res, rej) => {
         const t = db.transaction(['profiles', 'splits', 'logs'], 'readwrite');
@@ -199,6 +204,8 @@ const state = {
   split: [],            // array of day objects for current profile
   logs: [],             // all log records for current profile
   meals: [],            // nutrition entries for current profile (device-local)
+  body: [],             // body weight + measurement entries (device-local)
+  bodyMetric: 'weight', // selected metric for the Body chart
   tab: 'today',
   selectedDate: todayStr(),
   selectedDayId: null,  // which split day is shown on Today
@@ -251,6 +258,7 @@ async function loadProfileData(pid) {
   state.split = splitRec ? splitRec.days : [];
   state.logs = await DB.logsByProfile(pid);
   state.meals = await DB.mealsByProfile(pid);
+  state.body = await DB.bodyByProfile(pid);
   localStorage.setItem(CUR_KEY, pid);
 }
 
@@ -266,7 +274,7 @@ const e1rm = (w, r) => Math.round(w * (1 + r / 30));
 // Summary denormalised onto the cloud profile so the People and Ranks tabs can
 // show metrics/leaderboards without pulling everyone's full log history.
 function computeSummary() {
-  const c = state.logs.filter(isCompleted);
+  const c = state.logs.filter(isWorking);
   const sessions = new Set(c.map((l) => l.date)).size;
   const sets = c.length;
   const volume = Math.round(c.reduce((a, l) => a + (l.weight || 0) * (l.reps || 0), 0));
@@ -307,7 +315,7 @@ function syncSessionActivity(date) {
   clearTimeout(sessTimer);
   sessTimer = setTimeout(() => {
     const uid = state.profileId, id = 'sess_' + uid + '_' + date;
-    const sets = state.logs.filter((l) => l.date === date && isCompleted(l));
+    const sets = state.logs.filter((l) => l.date === date && isWorking(l));
     if (!sets.length) { Cloud.deleteActivity(id); return; }
     const volume = Math.round(sets.reduce((a, l) => a + (l.weight || 0) * (l.reps || 0), 0));
     const muscles = [...new Set(sets.map((l) => muscleBucket(l.muscle)))];
@@ -334,7 +342,7 @@ function memSet(dateStr, exName, muscle, setIndex) {
   let rec = state.logs.find((l) => l.date === dateStr && l.exercise === exName && l.setIndex === setIndex);
   if (!rec) {
     rec = { id: uid(), profileId: state.profileId, date: dateStr, exercise: exName,
-      muscle: muscle || 'Other', setIndex, weight: null, reps: null, done: false };
+      muscle: muscle || 'Other', setIndex, weight: null, reps: null, done: false, type: 'work', rir: null };
     state.logs.push(rec);
   }
   if (muscle) rec.muscle = muscle;
@@ -362,7 +370,21 @@ function setsFor(dateStr, exName) {
     .sort((a, b) => a.setIndex - b.setIndex);
 }
 const isCompleted = (l) => !!l.done;
+// A "working set" — what hypertrophy analytics count. Warm-ups are excluded.
+const isWorking = (l) => !!l.done && l.type !== 'warmup';
 const unit = () => (state.profile && state.profile.unit) || 'lb';
+
+// Set types: [key, label, short badge]. 'work' is the default.
+const SET_TYPES = [
+  ['work', 'Working set', ''], ['warmup', 'Warm-up', 'WU'], ['drop', 'Drop set', 'DROP'],
+  ['failure', 'To failure', 'F'], ['restpause', 'Rest-pause', 'RP'], ['myo', 'Myo-reps', 'MYO'],
+];
+const setTagShort = (l) => {
+  const t = l.type && l.type !== 'work' ? (SET_TYPES.find((s) => s[0] === l.type) || [, , ''])[2] : '';
+  if (t) return t;
+  return l.rir != null && l.rir !== '' ? '@' + l.rir : '·';
+};
+let setTagPick = null; // in-sheet set-type selection
 
 /* --------------------------------------------------------------------------
    SVG icon snippets
@@ -610,6 +632,69 @@ function openGoalSheet() {
   `);
 }
 
+/* ---- Body: weight + measurements (device-local) -------------------------- */
+const BODY_METRICS = [
+  { key: 'weight', label: 'Bodyweight', unit: () => unit() },
+  { key: 'bodyfat', label: 'Body fat', unit: () => '%' },
+  { key: 'chest', label: 'Chest', unit: () => 'in' },
+  { key: 'shoulders', label: 'Shoulders', unit: () => 'in' },
+  { key: 'arm', label: 'Arms', unit: () => 'in' },
+  { key: 'waist', label: 'Waist', unit: () => 'in' },
+  { key: 'thigh', label: 'Thighs', unit: () => 'in' },
+  { key: 'calf', label: 'Calves', unit: () => 'in' },
+];
+const bodyMeta = (k) => BODY_METRICS.find((m) => m.key === k) || BODY_METRICS[0];
+function bodyEntries(metric) {
+  return state.body.filter((b) => b.metric === metric && b.value != null).sort((a, b) => (a.date < b.date ? -1 : 1));
+}
+function bodyLatest(metric) { const e = bodyEntries(metric); return e.length ? e[e.length - 1] : null; }
+
+function bodyCard() {
+  const metric = state.bodyMetric;
+  const meta = bodyMeta(metric), u = meta.unit();
+  const entries = bodyEntries(metric);
+  const latest = entries.length ? entries[entries.length - 1] : null;
+  const first = entries.length ? entries[0] : null;
+  const delta = latest && first && entries.length > 1 ? latest.value - first.value : null;
+  const picker = `<select class="prog-select" data-act="body:metric">${BODY_METRICS.map((m) => `<option value="${m.key}" ${m.key === metric ? 'selected' : ''}>${m.label}</option>`).join('')}</select>`;
+  let chart;
+  if (entries.length >= 2) {
+    const pts = entries.slice(-16).map((e) => ({ label: fmtShort(e.date), y: e.value }));
+    const dtxt = delta == null ? '' : `${delta > 0 ? '+' : ''}${fmtNum(Math.round(delta * 10) / 10)} ${u}`;
+    const dcls = metric === 'weight' || metric === 'bodyfat' || metric === 'waist' ? (delta <= 0 ? 'green' : 'faint') : (delta >= 0 ? 'green' : 'faint');
+    chart = `<div class="faint" style="font-size:12px;margin:2px 0 2px"><b class="gold">${fmtNum(latest.value)} ${u}</b> · latest${dtxt ? ` · <span class="${dcls}">${dtxt}</span>` : ''}</div>${svgLine(pts, 'var(--gold)')}`;
+  } else if (latest) {
+    chart = `<div class="faint" style="font-size:13px;margin-top:8px"><b class="gold">${fmtNum(latest.value)} ${u}</b> logged ${fmtShort(latest.date)}. Log again to see a trend.</div>`;
+  } else {
+    chart = `<p class="muted" style="margin-top:8px">No ${meta.label.toLowerCase()} entries yet.</p>`;
+  }
+  return `<h2 class="section">Body</h2>
+    <div class="card">
+      ${picker}
+      <div style="margin-top:10px">${chart}</div>
+      <button class="btn ghost block" data-act="body:log" style="margin-top:12px">+ Log measurements</button>
+    </div>`;
+}
+
+function openBodySheet() {
+  const today = todayStr();
+  const fields = BODY_METRICS.map((m) => {
+    const last = bodyLatest(m.key);
+    const todayRec = state.body.find((b) => b.date === today && b.metric === m.key);
+    const val = todayRec ? todayRec.value : '';
+    return `<label class="field" style="flex:1 1 44%"><span>${m.label} (${m.unit()})</span>
+      <input type="number" inputmode="decimal" step="0.1" id="body-${m.key}" value="${val}" placeholder="${last ? fmtNum(last.value) : ''}" /></label>`;
+  }).join('');
+  openSheet(`
+    <h3>Log measurements</h3>
+    <label class="field"><span>Date</span><input type="date" id="body-date" value="${today}" /></label>
+    <div class="body-grid">${fields}</div>
+    <p class="faint" style="font-size:12px">Leave any blank — only filled fields are saved. Placeholders show your last entry.</p>
+    <div class="sheet-actions"><button class="btn gold" data-act="body:save">Save</button></div>
+    <div class="sheet-actions" style="margin-top:8px"><button class="btn ghost" data-act="sheet:close">Cancel</button></div>
+  `);
+}
+
 /* ---- Exercise history + auto progression -------------------------------- */
 function parseRepRange(reps) {
   const m = String(reps || '').match(/(\d+)\s*(?:[-–]\s*(\d+))?/);
@@ -621,7 +706,7 @@ const roundHalf = (w) => Math.round(w * 2) / 2;
 
 // The most recent PRIOR session for an exercise (completed sets only).
 function lastSession(exName, beforeDate) {
-  const prior = state.logs.filter((l) => l.exercise === exName && l.date < beforeDate && isCompleted(l) && (l.weight || l.reps));
+  const prior = state.logs.filter((l) => l.exercise === exName && l.date < beforeDate && isWorking(l) && (l.weight || l.reps));
   if (!prior.length) return null;
   const date = prior.reduce((m, l) => (l.date > m ? l.date : m), '0000-00-00');
   const sets = prior.filter((l) => l.date === date).sort((a, b) => a.setIndex - b.setIndex)
@@ -691,7 +776,8 @@ function setRow(name, muscle, i, l, extra) {
   const w = l.weight != null ? l.weight : '';
   const r = l.reps != null ? l.reps : '';
   const done = !!l.done;
-  return `<div class="setrow ${done ? 'done' : ''} ${extra ? 'extra' : ''}" data-row="${esc(name)}:${i}">
+  const tcls = l.type && l.type !== 'work' ? l.type : (l.rir != null && l.rir !== '' ? 'rir' : 'plain');
+  return `<div class="setrow ${done ? 'done' : ''} ${extra ? 'extra' : ''} ${l.type === 'warmup' ? 'warm' : ''}" data-row="${esc(name)}:${i}">
     <div class="snum">${i + 1}</div>
     <div class="unit-wrap">
       <input type="number" inputmode="decimal" step="0.5" min="0" placeholder="0" value="${w}"
@@ -703,8 +789,24 @@ function setRow(name, muscle, i, l, extra) {
         data-act="today:input" data-kind="reps" data-ex="${esc(name)}" data-muscle="${esc(muscle)}" data-set="${i}" aria-label="Reps set ${i + 1}" />
       <span class="unit">reps</span>
     </div>
+    <button class="settag ${tcls}" data-act="today:settag" data-ex="${esc(name)}" data-muscle="${esc(muscle)}" data-set="${i}" aria-label="Set type / RIR">${setTagShort(l)}</button>
     <button class="check ${done ? 'on' : ''}" data-act="today:check" data-ex="${esc(name)}" data-muscle="${esc(muscle)}" data-set="${i}" aria-label="Mark set ${i + 1} done">${I.check}</button>
   </div>`;
+}
+
+function openSetTagSheet(ex, muscle, idx) {
+  const rec = state.logs.find((x) => x.date === state.selectedDate && x.exercise === ex && x.setIndex === idx) || {};
+  const cur = rec.type || 'work';
+  const chips = SET_TYPES.map(([k, label]) => `<button class="chip ${k === cur ? 'on' : ''}" data-act="settag:type" data-t="${k}">${esc(label)}</button>`).join('');
+  openSheet(`
+    <h3>Set ${idx + 1} · ${esc(ex)}</h3>
+    <h2 class="section" style="margin-top:0">Type</h2>
+    <div class="chip-wrap" id="settag-chips">${chips}</div>
+    <label class="field" style="margin-top:14px"><span>Reps in reserve (RIR) — optional</span>
+      <input type="number" id="settag-rir" inputmode="numeric" min="0" max="10" value="${rec.rir != null ? rec.rir : ''}" placeholder="e.g. 2" /></label>
+    <div class="sheet-actions"><button class="btn gold" data-act="settag:save" data-ex="${esc(ex)}" data-muscle="${esc(muscle)}" data-set="${idx}">Save</button></div>
+    <div class="sheet-actions" style="margin-top:8px"><button class="btn ghost" data-act="sheet:close">Cancel</button></div>
+  `);
 }
 
 /* ---- Progress: muscle palette + chart helpers ---------------------------- */
@@ -720,6 +822,19 @@ const MUSCLE_COLORS = {
 const OTHER_COLOR = '#8a8a94';
 const muscleBucket = (m) => (MUSCLE_COLORS[m] ? m : 'Other');
 const muscleColor = (m) => MUSCLE_COLORS[m] || OTHER_COLOR;
+
+// Weekly working-set volume landmarks per muscle [low, high] (sets/week).
+// Below low = under-stimulus, low..high = productive zone, above high = high.
+const MUSCLE_TARGETS = {
+  Chest: [10, 20], Back: [10, 20], Shoulders: [8, 20], Legs: [12, 22],
+  Biceps: [8, 16], Triceps: [8, 16], Calves: [8, 16], Glutes: [8, 16],
+  Core: [6, 14], Traps: [6, 14], Forearms: [6, 14], Other: [8, 18],
+};
+const targetFor = (m) => MUSCLE_TARGETS[m] || [8, 18];
+function volumeZone(sets, m) {
+  const [lo, hi] = targetFor(m);
+  return sets < lo ? 'under' : sets > hi ? 'high' : 'optimal';
+}
 
 function niceMax(v) {
   if (v <= 5) return Math.max(1, Math.ceil(v));
@@ -860,9 +975,27 @@ function hBarsHtml(items, total) {
   }).join('')}</div>`;
 }
 
+// Current-week working sets per muscle vs the hypertrophy landmark band.
+function weeklyTargetsHtml(week, buckets) {
+  const zoneLabel = { under: 'below', optimal: 'in zone', high: 'high' };
+  const rows = buckets.map((m) => {
+    const sets = (week.byMuscle && week.byMuscle[m]) || 0;
+    const [lo, hi] = targetFor(m);
+    const zone = volumeZone(sets, m);
+    const pct = Math.min(100, (sets / hi) * 100);
+    return `<div class="hbar-row wt-${zone}" data-tip="${esc(m)} · ${sets} sets this week · target ${lo}–${hi} · ${zoneLabel[zone]}">
+      <span class="hbar-l">${esc(m)}</span>
+      <span class="hbar-track"><span class="wt-lo" style="left:${(lo / hi) * 100}%"></span><span class="hbar-fill wt-fill" style="width:${pct.toFixed(1)}%"></span></span>
+      <span class="hbar-v">${sets}<span class="hbar-pct"> /${lo}–${hi}</span></span>
+    </div>`;
+  }).join('');
+  return `<div class="hbars">${rows}</div>
+    <div class="wt-legend"><span class="wt-key under">below</span><span class="wt-key optimal">in&nbsp;zone</span><span class="wt-key high">high</span><span class="faint">· target sets/week</span></div>`;
+}
+
 /* ---- Progress view ------------------------------------------------------- */
 function progressView() {
-  const completed = state.logs.filter(isCompleted);
+  const completed = state.logs.filter(isWorking);
   if (completed.length === 0) {
     return `<h1 class="view-title">Progress</h1>` + emptyState('📈', 'Nothing logged yet',
       'Once you complete a few sets on the Today tab, your stats, charts, personal bests and habit grid will appear here.',
@@ -980,6 +1113,9 @@ function progressView() {
       ${legendHtml(buckets)}
     </div>
 
+    <h2 class="section">Weekly volume vs target</h2>
+    <div class="card">${buckets.length ? weeklyTargetsHtml(weeks[weeks.length - 1], buckets) : '<p class="muted">Log some sets to see your weekly volume against hypertrophy targets.</p>'}</div>
+
     <h2 class="section">Muscle balance · ${rangeLabel}</h2>
     <div class="card">${balItems.length ? hBarsHtml(balItems, rSets) : '<p class="muted">No sets in this range.</p>'}</div>
 
@@ -989,6 +1125,8 @@ function progressView() {
     </div>
 
     ${exNames.length ? `<h2 class="section">Strength progression</h2><div class="card">${progChart}</div>` : ''}
+
+    ${bodyCard()}
 
     <h2 class="section">Weekly consistency</h2>
     <div class="card">${habit}</div>
@@ -1133,6 +1271,7 @@ async function enterCloudUser() {
   }
   localStorage.setItem(CUR_KEY, uid);
   state.meals = await DB.mealsByProfile(uid); // nutrition stays device-local for now
+  state.body = await DB.bodyByProfile(uid);   // body metrics device-local for now
   try { state.follows = await Cloud.myFollows(); } catch (e) { state.follows = new Set(); }
   syncStats();
 }
@@ -1321,7 +1460,7 @@ function userDetailView() {
   if (u === 'private') return `<div class="people-head">${back}</div>` + emptyState('🔒', 'Private profile', 'This member keeps their workouts private.', '');
   const p = u.profile, unitL = p.unit || 'lb', logs = u.logs || [];
   const me = p.id === state.profileId;
-  const completed = logs.filter(isCompleted);
+  const completed = logs.filter(isWorking);
   const sessions = new Set(completed.map((l) => l.date)).size;
   const vol = Math.round(completed.reduce((a, l) => a + (l.weight || 0) * (l.reps || 0), 0));
   const fi = state.viewFollow || { followers: 0, following: 0, followsMe: false };
@@ -1562,7 +1701,7 @@ function readonlySplitHtml(days) {
 
 function pbListHtml(logs, unitL) {
   const byEx = {};
-  logs.filter((l) => isCompleted(l) && l.weight > 0 && l.reps > 0).forEach((l) => { (byEx[l.exercise] = byEx[l.exercise] || []).push(l); });
+  logs.filter((l) => isWorking(l) && l.weight > 0 && l.reps > 0).forEach((l) => { (byEx[l.exercise] = byEx[l.exercise] || []).push(l); });
   const names = Object.keys(byEx).sort((a, b) => a.localeCompare(b));
   if (!names.length) return '';
   return names.map((n) => {
@@ -1786,7 +1925,7 @@ function renderExSheet() {
    -------------------------------------------------------------------------- */
 function checkPB(exName, rec) {
   if (!(rec.weight > 0 && rec.reps > 0)) return;
-  const others = state.logs.filter((l) => l.exercise === exName && l.id !== rec.id && isCompleted(l) && l.weight > 0 && l.reps > 0);
+  const others = state.logs.filter((l) => l.exercise === exName && l.id !== rec.id && isWorking(l) && l.weight > 0 && l.reps > 0);
   const maxW = others.reduce((m, l) => Math.max(m, l.weight), 0);
   const maxVol = others.reduce((m, l) => Math.max(m, l.weight * l.reps), 0);
   if (rec.weight > maxW) showToast(`🏆 New PB — ${fmtNum(rec.weight)} ${unit()}!`, true);
@@ -1877,6 +2016,7 @@ document.addEventListener('change', (e) => {
   else if (act === 'today:daychange') { state.selectedDayId = t.value; render(); }
   else if (act === 'prog:exercise') { state.progExercise = t.value; render(); }
   else if (act === 'ranks:lift') { state.ranksLift = t.value; render(); }
+  else if (act === 'body:metric') { state.bodyMetric = t.value; render(); }
   else if (act === 'split:weekday') {
     const d = state.split.find((x) => x.id === t.dataset.day);
     if (d) { d.weekday = t.value === '' ? null : parseInt(t.value, 10); saveSplit().then(render); }
@@ -2148,6 +2288,22 @@ document.addEventListener('click', async (e) => {
     } else render();
     return;
   }
+  if (a === 'today:settag') { setTagPick = null; return openSetTagSheet(D.ex, D.muscle, parseInt(D.set, 10)); }
+  if (a === 'settag:type') {
+    setTagPick = D.t;
+    document.querySelectorAll('#settag-chips .chip').forEach((c) => c.classList.remove('on'));
+    t.classList.add('on');
+    return;
+  }
+  if (a === 'settag:save') {
+    const idx = parseInt(D.set, 10);
+    const existing = state.logs.find((l) => l.date === state.selectedDate && l.exercise === D.ex && l.setIndex === idx) || {};
+    const type = setTagPick || existing.type || 'work';
+    const rirRaw = (document.getElementById('settag-rir') || {}).value;
+    const rir = rirRaw === '' || rirRaw == null ? null : num(rirRaw);
+    await upsertSet(state.selectedDate, D.ex, D.muscle, idx, { type, rir });
+    closeSheet(); render(); return;
+  }
   if (a === 'today:addex') return openAddAdhocSheet();
 
   // nutrition
@@ -2164,6 +2320,25 @@ document.addEventListener('click', async (e) => {
   if (a === 'nut:savegoals') {
     setGoals(num((document.getElementById('g-cal') || {}).value) || 0, num((document.getElementById('g-prot') || {}).value) || 0);
     closeSheet(); render(); return;
+  }
+
+  // body metrics
+  if (a === 'body:log') return openBodySheet();
+  if (a === 'body:save') {
+    const date = (document.getElementById('body-date') || {}).value || todayStr();
+    let added = 0;
+    for (const m of BODY_METRICS) {
+      const raw = (document.getElementById('body-' + m.key) || {}).value;
+      if (raw === '' || raw == null) continue;
+      const value = num(raw); if (value == null) continue;
+      let rec = state.body.find((b) => b.date === date && b.metric === m.key);
+      if (rec) rec.value = value;
+      else { rec = { id: uid(), profileId: state.profileId, date, metric: m.key, value, createdAt: Date.now() }; state.body.push(rec); }
+      await DB.put('body', rec); added++;
+    }
+    closeSheet();
+    if (added) showToast('Measurements saved');
+    render(); return;
   }
   if (a === 'adhoc:save') {
     const name = document.getElementById('ad-name').value.trim();

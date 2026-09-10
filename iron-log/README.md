@@ -26,10 +26,17 @@ own profile, builds her own split from scratch — same app, separate data.
   - **Nutrition** — set a daily calorie + protein goal and log entries against it,
     with progress bars, a 7-day protein sparkline, and a protein-goal streak.
     Device-local for now.
+  - **Set types & RIR** — tag each set (working / warm-up / drop / failure /
+    rest-pause / myo-reps) and record reps-in-reserve. Warm-ups are excluded from
+    all the hypertrophy analytics; every other set counts.
 - **Progress** — total sessions / sets / volume with an 8-week volume trend,
   a habit-tracker grid (weeks × split days), and per-exercise personal bests
   (heaviest weight + best weight×reps, with the date each was hit). A toast
   fires when you beat a PR mid-workout.
+  - **Weekly volume vs target** — current-week working sets per muscle against
+    hypertrophy landmark bands (below / in-zone / high), color-coded.
+  - **Body** — track bodyweight, body-fat %, and measurements (chest, shoulders,
+    arms, waist, thighs, calves) with a trend line per metric. Device-local.
 - **Split** — add / rename / reorder / delete training days and the exercises
   inside them. Exercises are picked from a **built-in movement library** (~90
   common lifts, each pre-tagged with its muscle group) so names stay consistent

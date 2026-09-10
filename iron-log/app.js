@@ -555,6 +555,7 @@ function todayView() {
   const complete = dayTarget > 0 && dayDone >= dayTarget;
 
   return `
+    ${mesoBanner(date)}
     <div class="day-head">
       <div class="daysel">
         <label class="field" style="margin-bottom:8px">
@@ -993,6 +994,154 @@ function weeklyTargetsHtml(week, buckets) {
     <div class="wt-legend"><span class="wt-key under">below</span><span class="wt-key optimal">in&nbsp;zone</span><span class="wt-key high">high</span><span class="faint">· target sets/week</span></div>`;
 }
 
+/* ---- Mesocycle / deload tracking (device-local) -------------------------- */
+// A training block of hard weeks ending in a deload. Stored per profile:
+// { start: "YYYY-MM-DD" (any day; snapped to its Monday), weeks: total incl. deload }.
+const MESO_KEY = () => 'ironlog.meso.' + state.profileId;
+function getMeso() { try { return JSON.parse(localStorage.getItem(MESO_KEY())) || null; } catch (e) { return null; } }
+function setMeso(cfg) {
+  try { if (cfg) localStorage.setItem(MESO_KEY(), JSON.stringify(cfg)); else localStorage.removeItem(MESO_KEY()); } catch (e) {}
+}
+// Where are we in the current block, relative to a date? null if not tracking.
+function mesoStatus(dateStr) {
+  const cfg = getMeso();
+  if (!cfg || !cfg.start) return null;
+  const weeks = Math.max(2, Math.min(12, cfg.weeks || 5));
+  const startMon = mondayOf(parseDate(cfg.start));
+  const curMon = mondayOf(parseDate(dateStr || todayStr()));
+  const wIdx = Math.round((curMon.getTime() - startMon.getTime()) / (7 * 86400000)) + 1; // 1-based
+  const done = wIdx > weeks;
+  const before = wIdx < 1;
+  const week = before ? 0 : done ? weeks : wIdx;
+  const deloadDue = !done && !before && week === weeks;
+  const phase = before ? 'Starts soon' : done ? 'Block complete' : deloadDue ? 'Deload' : 'Accumulation';
+  return { start: cfg.start, weeks, week, deloadDue, done, before, phase, wIdx };
+}
+
+// Slim block banner for the Today tab (tap to edit). '' when not tracking.
+function mesoBanner(dateStr) {
+  const m = mesoStatus(dateStr);
+  if (!m) return '';
+  const cls = m.done || m.before ? 'idle' : m.deloadDue ? 'deload' : 'accum';
+  const dots = Array.from({ length: m.weeks }, (_, i) => {
+    const n = i + 1, de = n === m.weeks;
+    const stateCls = m.done ? 'past' : n < m.week ? 'past' : n === m.week ? 'now' : '';
+    return `<i class="mdot ${stateCls} ${de ? 'de' : ''}"></i>`;
+  }).join('');
+  const label = m.done ? 'Block complete — start a new one'
+    : m.before ? `Block starts ${fmtShort(dateToStr(mondayOf(parseDate(m.start))))}`
+    : `Week ${m.week} of ${m.weeks} · ${m.phase}`;
+  const icon = m.deloadDue ? '🌀' : m.done ? '✅' : '🗓️';
+  return `<div class="meso-banner ${cls}" data-act="meso:edit" role="button" tabindex="0">
+    <span class="meso-line"><span class="meso-icon">${icon}</span><span class="meso-phase">${esc(label)}</span></span>
+    <span class="mdots">${dots}</span>
+  </div>`;
+}
+
+function mesoCard() {
+  const m = mesoStatus(todayStr());
+  if (!m) {
+    return `<div class="card">
+      <p class="muted" style="margin:2px 0 12px">Train in blocks: a run of hard weeks ending in a deload. Track which week you're in and get a nudge when it's time to back off.</p>
+      <button class="btn gold block" data-act="meso:edit">Start a mesocycle</button>
+    </div>`;
+  }
+  const dots = Array.from({ length: m.weeks }, (_, i) => {
+    const n = i + 1, de = n === m.weeks;
+    const stateCls = m.done ? 'past' : n < m.week ? 'past' : n === m.week ? 'now' : '';
+    return `<i class="mdot ${stateCls} ${de ? 'de' : ''}"></i>`;
+  }).join('');
+  let msg;
+  if (m.done) msg = `<span class="deload">This block is finished.</span> Start a fresh mesocycle to keep progressing.`;
+  else if (m.deloadDue) msg = `<span class="deload">Deload week.</span> Cut working sets ~40–50% and leave 3–4 reps in reserve to shed fatigue before the next block.`;
+  else if (m.before) msg = `Your block begins the week of ${esc(fmtShort(dateToStr(mondayOf(parseDate(m.start)))))}.`;
+  else msg = `Push volume and intensity — the last week (week ${m.weeks}) is your deload.`;
+  return `<div class="card">
+    <div class="meso-head"><b class="gold">${m.done || m.before ? m.phase : `Week ${m.week} of ${m.weeks}`}</b>${!m.done && !m.before ? ` · ${esc(m.phase)}` : ''}</div>
+    <div class="mdots big" style="margin:10px 0">${dots}</div>
+    <p class="faint" style="font-size:13px;margin:6px 0 12px">${msg}</p>
+    <div class="btn-row">
+      ${m.done ? `<button class="btn gold" data-act="meso:new" style="flex:1">Start new block</button>` : ''}
+      <button class="btn ghost" data-act="meso:edit" style="flex:1">${m.done ? 'Edit' : 'Edit block'}</button>
+    </div>
+  </div>`;
+}
+
+function openMesoSheet() {
+  const cfg = getMeso() || {};
+  const start = cfg.start || dateToStr(mondayOf(new Date()));
+  openSheet(`
+    <h3>Mesocycle</h3>
+    <p class="muted" style="margin-top:-6px">A block of progressively harder weeks ending in a deload. The final week is the deload. Kept on this device.</p>
+    <label class="field"><span>Block start</span><input type="date" id="meso-start" value="${start}" /></label>
+    <label class="field" style="margin-top:12px"><span>Length — weeks, including the deload</span>
+      <input type="number" id="meso-weeks" inputmode="numeric" min="2" max="12" value="${cfg.weeks || 5}" /></label>
+    <div class="sheet-actions"><button class="btn gold" data-act="meso:save">Save</button></div>
+    ${cfg.start ? `<div class="sheet-actions" style="margin-top:8px"><button class="btn ghost" data-act="meso:clear">Stop tracking</button></div>` : ''}
+    <div class="sheet-actions" style="margin-top:8px"><button class="btn ghost" data-act="sheet:close">Cancel</button></div>
+  `);
+}
+
+/* ---- Progression plan + lagging body-part flags -------------------------- */
+// Per-muscle recommendation from the last 3 weeks of working-set volume vs the
+// hypertrophy landmark band, plateau-aware and deload-aware. This is the
+// "add a set when a muscle plateaus" engine.
+function progressionPlan(weeks, buckets) {
+  const deload = !!(mesoStatus(todayStr()) || {}).deloadDue;
+  const last = weeks[weeks.length - 1];
+  const prev = weeks[weeks.length - 2];
+  const prev2 = weeks[weeks.length - 3];
+  const setsIn = (w, m) => (w && w.byMuscle[m]) || 0;
+  return buckets.map((m) => {
+    const [lo, hi] = targetFor(m);
+    const cur = setsIn(last, m), p1 = setsIn(prev, m), p2 = setsIn(prev2, m);
+    // Flat or declining across the recent weeks we have data for.
+    const flat = cur <= p1 && (prev2 ? p1 <= p2 : true);
+    let rec, cls, next;
+    if (deload) { rec = 'Deload — pull volume back'; cls = 'de'; next = Math.max(2, Math.round(lo / 2)); }
+    else if (cur > hi) { rec = 'High volume — hold & recover'; cls = 'high'; next = hi; }
+    else if (cur < lo) { rec = 'Below minimum — build up'; cls = 'under'; next = Math.min(cur + 2, lo); }
+    else if (cur >= hi) { rec = 'Near the ceiling — hold, then deload'; cls = 'high'; next = hi; }
+    else if (flat) { rec = 'Plateaued — add a set'; cls = 'add'; next = Math.min(cur + 1, hi); }
+    else { rec = 'Progressing — hold this volume'; cls = 'ok'; next = cur; }
+    const nextTxt = next === cur ? `keep ${cur}/wk` : `${next > cur ? '→ ' : '↓ '}${next}/wk`;
+    return { m, cur, lo, hi, rec, cls, nextTxt };
+  });
+}
+
+// Muscles trained recently but averaging below their weekly minimum.
+function laggingMuscles(weeks, buckets) {
+  const recent = weeks.slice(-3);
+  if (!recent.length) return [];
+  return buckets.map((m) => {
+    const vals = recent.map((w) => (w.byMuscle[m] || 0));
+    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+    const [lo] = targetFor(m);
+    return { m, avg: Math.round(avg * 10) / 10, lo, gap: lo - avg };
+  }).filter((x) => x.gap > 0.5).sort((a, b) => b.gap - a.gap);
+}
+
+function progressionCard(weeks, buckets) {
+  if (!buckets.length) return `<div class="card"><p class="muted">Log a couple of weeks of working sets to get progression suggestions.</p></div>`;
+  const deload = !!(mesoStatus(todayStr()) || {}).deloadDue;
+  const plan = progressionPlan(weeks, buckets);
+  const lag = laggingMuscles(weeks, buckets);
+  const lagLine = lag.length
+    ? `<div class="lag-flag">⚠️ <b>Lagging:</b> ${lag.map((x) => `${esc(x.m)}`).join(', ')} — under the weekly minimum lately. Add sets here first.</div>`
+    : `<div class="lag-flag ok">✓ No lagging muscles — every trained group is at or above its weekly minimum.</div>`;
+  const rows = plan.map((p) => `
+    <div class="plan-row">
+      <span class="plan-m">${esc(p.m)}</span>
+      <span class="plan-rec pr-${p.cls}">${esc(p.rec)}</span>
+      <span class="plan-next">${esc(p.nextTxt)}</span>
+    </div>`).join('');
+  return `<div class="card">
+    ${lagLine}
+    <div class="plan">${rows}</div>
+    <div class="wt-legend"><span class="faint">From your last 3 weeks of working sets vs hypertrophy landmarks${deload ? ' · deload week' : ''}.</span></div>
+  </div>`;
+}
+
 /* ---- Progress view ------------------------------------------------------- */
 function progressView() {
   const completed = state.logs.filter(isWorking);
@@ -1107,6 +1256,9 @@ function progressView() {
       <div class="stat"><div class="v">${fmtNum(Math.round(rVol))}</div><div class="l">Vol ${unit()}</div></div>
     </div>
 
+    <h2 class="section">Mesocycle</h2>
+    ${mesoCard()}
+
     <h2 class="section">Sets per muscle · per week</h2>
     <div class="card">
       ${svgStackedBars(weeks, buckets)}
@@ -1115,6 +1267,9 @@ function progressView() {
 
     <h2 class="section">Weekly volume vs target</h2>
     <div class="card">${buckets.length ? weeklyTargetsHtml(weeks[weeks.length - 1], buckets) : '<p class="muted">Log some sets to see your weekly volume against hypertrophy targets.</p>'}</div>
+
+    <h2 class="section">Progression plan</h2>
+    ${progressionCard(weeks, buckets)}
 
     <h2 class="section">Muscle balance · ${rangeLabel}</h2>
     <div class="card">${balItems.length ? hBarsHtml(balItems, rSets) : '<p class="muted">No sets in this range.</p>'}</div>
@@ -2320,6 +2475,21 @@ document.addEventListener('click', async (e) => {
   if (a === 'nut:savegoals') {
     setGoals(num((document.getElementById('g-cal') || {}).value) || 0, num((document.getElementById('g-prot') || {}).value) || 0);
     closeSheet(); render(); return;
+  }
+
+  // mesocycle / deload
+  if (a === 'meso:edit') return openMesoSheet();
+  if (a === 'meso:save') {
+    const start = (document.getElementById('meso-start') || {}).value || dateToStr(mondayOf(new Date()));
+    const weeks = Math.max(2, Math.min(12, parseInt((document.getElementById('meso-weeks') || {}).value, 10) || 5));
+    setMeso({ start, weeks });
+    closeSheet(); showToast('Mesocycle saved'); render(); return;
+  }
+  if (a === 'meso:clear') { setMeso(null); closeSheet(); render(); return; }
+  if (a === 'meso:new') {
+    const prev = getMeso() || {};
+    setMeso({ start: dateToStr(mondayOf(new Date())), weeks: prev.weeks || 5 });
+    showToast('New block started'); render(); return;
   }
 
   // body metrics

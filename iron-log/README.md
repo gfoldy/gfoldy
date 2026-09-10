@@ -29,12 +29,22 @@ own profile, builds her own split from scratch — same app, separate data.
   - **Set types & RIR** — tag each set (working / warm-up / drop / failure /
     rest-pause / myo-reps) and record reps-in-reserve. Warm-ups are excluded from
     all the hypertrophy analytics; every other set counts.
+  - **Mesocycle banner** — when you're running a training block, Today shows which
+    week you're in (with a dot-per-week strip) and flips to a deload callout on the
+    final week. Tap to set up or edit the block.
 - **Progress** — total sessions / sets / volume with an 8-week volume trend,
   a habit-tracker grid (weeks × split days), and per-exercise personal bests
   (heaviest weight + best weight×reps, with the date each was hit). A toast
   fires when you beat a PR mid-workout.
   - **Weekly volume vs target** — current-week working sets per muscle against
     hypertrophy landmark bands (below / in-zone / high), color-coded.
+  - **Mesocycle & deload tracking** — run training in blocks: set a start week and
+    a length, and Progress shows the current week, a deload nudge when you reach the
+    last week, and a one-tap "start new block" when one finishes.
+  - **Progression plan** — per-muscle, data-driven advice from your last three
+    weeks of working sets: *add a set* when a muscle plateaus in its productive
+    zone, *build up* when it's below the minimum, *hold/recover* near the ceiling,
+    and *pull back* during a deload — with lagging body parts flagged up top.
   - **Body** — track bodyweight, body-fat %, and measurements (chest, shoulders,
     arms, waist, thighs, calves) with a trend line per metric. Device-local.
 - **Split** — add / rename / reorder / delete training days and the exercises

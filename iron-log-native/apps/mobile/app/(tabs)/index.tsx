@@ -10,6 +10,7 @@ import {
 import { useStore } from '../../src/db/store';
 import { T, radii } from '../../src/theme';
 import { fmtNum } from '../../src/lib/format';
+import { Nutrition } from '../../src/components/Nutrition';
 
 const SET_TYPE_CYCLE: SetType[] = ['work', 'warmup', 'drop', 'failure', 'restpause', 'myo'];
 
@@ -99,6 +100,8 @@ export default function TodayScreen() {
           <Text style={styles.muted}>No training day matches this date. Build your split in the Split tab.</Text>
         </View>
       )}
+
+      <Nutrition date={date} />
     </ScrollView>
   );
 }

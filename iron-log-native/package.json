@@ -15,5 +15,9 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "//": "expo-router is declared here so npm hoists it to the root node_modules; babel-preset-expo resolves it from there to enable the router transform. Keep the range in sync with apps/mobile.",
+  "dependencies": {
+    "expo-router": "~6.0.0"
   }
 }

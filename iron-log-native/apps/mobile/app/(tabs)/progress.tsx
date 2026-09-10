@@ -10,6 +10,7 @@ import { useStore } from '../../src/db/store';
 import { T, radii, PLAN_COLORS } from '../../src/theme';
 import { fmtNum } from '../../src/lib/format';
 import { LineChart } from '../../src/components/LineChart';
+import { BodySheet } from '../../src/components/BodySheet';
 
 const RANGES: (number | 'all')[] = [4, 8, 12, 'all'];
 
@@ -43,6 +44,7 @@ export default function ProgressScreen() {
 
   // body chart
   const [metric, setMetric] = useState('weight');
+  const [bodyOpen, setBodyOpen] = useState(false);
   const bodyPts = store.body.filter((b) => b.metric === metric && b.value != null)
     .sort((a, b) => (a.date < b.date ? -1 : 1)).slice(-16)
     .map((b) => ({ label: fmtShort(b.date), y: b.value }));
@@ -141,21 +143,21 @@ export default function ProgressScreen() {
       </View>
 
       {/* Body */}
-      {store.body.length > 0 && (
-        <>
-          <Text style={styles.section}>Body</Text>
-          <View style={styles.card}>
-            <View style={styles.chips}>
-              {['weight', 'bodyfat', 'arm', 'waist'].map((k) => (
-                <Pressable key={k} onPress={() => setMetric(k)} style={[styles.chip, k === metric && styles.chipOn]}>
-                  <Text style={[styles.chipText, k === metric && styles.chipTextOn]}>{k}</Text>
-                </Pressable>
-              ))}
-            </View>
-            {bodyPts.length >= 2 ? <LineChart points={bodyPts} /> : <Text style={styles.muted}>Log this metric on two dates to see a trend.</Text>}
-          </View>
-        </>
-      )}
+      <Text style={styles.section}>Body</Text>
+      <View style={styles.card}>
+        <View style={styles.chips}>
+          {['weight', 'bodyfat', 'arm', 'waist'].map((k) => (
+            <Pressable key={k} onPress={() => setMetric(k)} style={[styles.chip, k === metric && styles.chipOn]}>
+              <Text style={[styles.chipText, k === metric && styles.chipTextOn]}>{k}</Text>
+            </Pressable>
+          ))}
+        </View>
+        {bodyPts.length >= 2
+          ? <LineChart points={bodyPts} />
+          : <Text style={styles.muted}>{store.body.length ? 'Log this metric on two dates to see a trend.' : 'Track bodyweight, body fat and measurements over time.'}</Text>}
+        <Pressable style={styles.btnGhost} onPress={() => setBodyOpen(true)}><Text style={styles.btnGhostText}>+ Log measurements</Text></Pressable>
+      </View>
+      <BodySheet visible={bodyOpen} onClose={() => setBodyOpen(false)} />
 
       {/* PB list */}
       <Text style={styles.section}>Top lifts (est. 1RM)</Text>

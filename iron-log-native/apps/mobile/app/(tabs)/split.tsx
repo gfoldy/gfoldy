@@ -3,7 +3,7 @@ import { ScrollView, View, Text, Pressable, StyleSheet, Modal, TextInput, FlatLi
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { type Split, type Day, MOVEMENTS, WEEKDAYS, uid, starterSplit } from '@ironlog/core';
 import { useStore } from '../../src/db/store';
-import { T, radii } from '../../src/theme';
+import { T, radii, shadow } from '../../src/theme';
 
 export default function SplitScreen() {
   const store = useStore();
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
   title: { color: T.text, fontSize: 26, fontWeight: '800', marginBottom: 12 },
   card: { backgroundColor: T.bgElev, borderRadius: radii.lg, borderWidth: 1, borderColor: T.border, padding: 16 },
   muted: { color: T.textFaint, fontSize: 14, marginBottom: 8 },
-  dayCard: { backgroundColor: T.bgElev, borderRadius: radii.lg, borderWidth: 1, borderColor: T.border, padding: 14, marginBottom: 12 },
+  dayCard: { backgroundColor: T.bgElev, borderRadius: radii.lg, borderWidth: 1, borderColor: T.border, padding: 14, marginBottom: 12, ...shadow },
   dayHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   dayName: { color: T.text, fontSize: 16, fontWeight: '800' },
   dayMeta: { color: T.textFaint, fontSize: 12 },

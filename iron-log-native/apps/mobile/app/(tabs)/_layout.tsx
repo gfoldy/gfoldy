@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { T } from '../../src/theme';
+import { T, shadow } from '../../src/theme';
 
 export default function TabsLayout() {
   return (
@@ -11,7 +11,7 @@ export default function TabsLayout() {
         headerTitleStyle: { color: T.text, fontWeight: '800' },
         headerShadowVisible: false,
         sceneStyle: { backgroundColor: T.bg },
-        tabBarStyle: { backgroundColor: T.bgElev, borderTopColor: T.border },
+        tabBarStyle: { backgroundColor: T.bgElev, borderTopColor: T.border, ...shadow },
         tabBarActiveTintColor: T.gold,
         tabBarInactiveTintColor: T.textFaint,
       }}

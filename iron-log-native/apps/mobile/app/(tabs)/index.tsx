@@ -8,7 +8,7 @@ import {
   mesoStatus, lastSession, suggestNext, setTagShort, isCompleted,
 } from '@ironlog/core';
 import { useStore } from '../../src/db/store';
-import { T, radii } from '../../src/theme';
+import { T, radii, shadow, shadowSm } from '../../src/theme';
 import { fmtNum } from '../../src/lib/format';
 import { Nutrition } from '../../src/components/Nutrition';
 
@@ -198,8 +198,8 @@ function SetRow(props: {
 
 const styles = StyleSheet.create({
   meso: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-    padding: 12, borderRadius: radii.md, backgroundColor: T.bgElev, borderWidth: 1, borderColor: T.border, marginBottom: 12 },
-  mesoDeload: { borderColor: 'rgba(203,171,83,0.4)', backgroundColor: T.goldSoft },
+    padding: 12, borderRadius: radii.md, backgroundColor: T.bgElev, borderWidth: 1, borderColor: T.border, marginBottom: 12, ...shadowSm },
+  mesoDeload: { borderColor: '#bcd3c2', backgroundColor: T.goldSoft },
   mesoText: { color: T.text, fontWeight: '700', fontSize: 13, flexShrink: 1 },
   dot: { width: 9, height: 9, borderRadius: 5, backgroundColor: T.bgElev2, borderWidth: 1, borderColor: T.borderStrong },
   dotOn: { backgroundColor: T.goldDim, borderColor: 'transparent' },
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
   date: { color: T.text, fontSize: 18, fontWeight: '700' },
   dayName: { color: T.gold, fontSize: 14, fontWeight: '600', textAlign: 'center', marginBottom: 4 },
   section: { color: T.textDim, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginTop: 22, marginBottom: 8 },
-  card: { backgroundColor: T.bgElev, borderRadius: radii.lg, borderWidth: 1, borderColor: T.border, padding: 12 },
+  card: { backgroundColor: T.bgElev, borderRadius: radii.lg, borderWidth: 1, borderColor: T.border, padding: 12, ...shadow },
   muted: { color: T.textFaint, fontSize: 14 },
   exercise: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: T.hairline },
   exHead: { flexDirection: 'row', alignItems: 'center' },

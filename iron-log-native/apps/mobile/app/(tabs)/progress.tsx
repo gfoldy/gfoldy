@@ -7,7 +7,7 @@ import {
   fmtShort, dateToStr,
 } from '@ironlog/core';
 import { useStore } from '../../src/db/store';
-import { T, radii, PLAN_COLORS } from '../../src/theme';
+import { T, radii, PLAN_COLORS, ZONE_COLORS, shadow, shadowSm } from '../../src/theme';
 import { fmtNum } from '../../src/lib/format';
 import { LineChart } from '../../src/components/LineChart';
 import { BodySheet } from '../../src/components/BodySheet';
@@ -106,7 +106,7 @@ export default function ProgressScreen() {
           const sets = lastWeek.byMuscle[m] ?? 0;
           const [lo, hi] = targetFor(m);
           const zone = volumeZone(sets, m);
-          const color = zone === 'optimal' ? T.green : zone === 'high' ? T.gold : '#cf9433';
+          const color = ZONE_COLORS[zone];
           return (
             <View key={m} style={styles.barRow}>
               <Text style={styles.barLabel}>{m}</Text>
@@ -185,7 +185,7 @@ function Stat({ v, l }: { v: React.ReactNode; l: string }) {
 const styles = StyleSheet.create({
   title: { color: T.text, fontSize: 26, fontWeight: '800', marginBottom: 12 },
   section: { color: T.textDim, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginTop: 22, marginBottom: 10 },
-  card: { backgroundColor: T.bgElev, borderRadius: radii.lg, borderWidth: 1, borderColor: T.border, padding: 14 },
+  card: { backgroundColor: T.bgElev, borderRadius: radii.lg, borderWidth: 1, borderColor: T.border, padding: 14, ...shadow },
   muted: { color: T.textFaint, fontSize: 14, lineHeight: 20 },
   chips: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: radii.pill, backgroundColor: T.bgElev2, borderWidth: 1, borderColor: T.border },
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
   chipText: { color: T.textDim, fontSize: 13, fontWeight: '600' },
   chipTextOn: { color: T.goldInk },
   stats: { flexDirection: 'row', gap: 8 },
-  stat: { flex: 1, backgroundColor: T.bgElev, borderRadius: radii.md, borderWidth: 1, borderColor: T.border, paddingVertical: 12, alignItems: 'center' },
+  stat: { flex: 1, backgroundColor: T.bgElev, borderRadius: radii.md, borderWidth: 1, borderColor: T.border, paddingVertical: 12, alignItems: 'center', ...shadowSm },
   statV: { color: T.text, fontSize: 18, fontWeight: '800' },
   statL: { color: T.textFaint, fontSize: 10, marginTop: 2 },
   mesoHead: { color: T.gold, fontSize: 16, fontWeight: '800' },
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
   barFill: { height: '100%', borderRadius: 6 },
   barVal: { color: T.text, fontSize: 13, fontWeight: '700', minWidth: 54, textAlign: 'right' },
   barPct: { color: T.textFaint, fontSize: 11, fontWeight: '600' },
-  lagFlag: { backgroundColor: T.goldSoft, borderWidth: 1, borderColor: 'rgba(203,171,83,0.28)', borderRadius: 9, padding: 10, marginBottom: 12 },
+  lagFlag: { backgroundColor: T.goldSoft, borderWidth: 1, borderColor: '#cfe0d4', borderRadius: 9, padding: 10, marginBottom: 12 },
   lagOk: { backgroundColor: T.greenSoft, borderColor: T.greenDim },
   lagText: { color: T.text, fontSize: 13, lineHeight: 18 },
   planRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 5 },

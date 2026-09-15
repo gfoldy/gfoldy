@@ -58,17 +58,17 @@ export default function PeopleScreen() {
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 8 },
-  title: { color: T.text, fontSize: 26, fontWeight: '800' },
+  title: { color: T.text, fontFamily: 'BricolageGrotesque_800ExtraBold', fontSize: 26, fontWeight: '800' },
   acct: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: T.border, borderRadius: radii.pill, paddingHorizontal: 12, paddingVertical: 6 },
-  acctText: { color: T.textDim, fontWeight: '700', fontSize: 13 },
+  acctText: { color: T.textDim, fontWeight: '700', fontFamily: 'Manrope_700Bold', fontSize: 13 },
   signedOut: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30, gap: 12 },
-  soTitle: { color: T.text, fontSize: 20, fontWeight: '800' },
-  soBody: { color: T.textDim, fontSize: 14, lineHeight: 21, textAlign: 'center' },
+  soTitle: { color: T.text, fontFamily: 'BricolageGrotesque_800ExtraBold', fontSize: 20, fontWeight: '800' },
+  soBody: { color: T.textDim, fontFamily: 'Manrope_400Regular', fontSize: 14, lineHeight: 21, textAlign: 'center' },
   gold_btn: { backgroundColor: T.gold, borderRadius: radii.md, paddingVertical: 13, paddingHorizontal: 20, alignItems: 'center', marginTop: 8 },
-  goldText: { color: T.goldInk, fontWeight: '800' },
+  goldText: { color: T.goldInk, fontFamily: 'Manrope_700Bold', fontWeight: '800' },
   seg: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingVertical: 10 },
   segBtn: { flex: 1, paddingVertical: 9, borderRadius: radii.pill, backgroundColor: T.bgElev2, alignItems: 'center' },
   segOn: { backgroundColor: T.gold },
-  segText: { color: T.textDim, fontWeight: '700', fontSize: 14 },
+  segText: { color: T.textDim, fontWeight: '700', fontFamily: 'Manrope_700Bold', fontSize: 14 },
   segTextOn: { color: T.goldInk },
 });

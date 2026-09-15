@@ -15,7 +15,7 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerStyle: { backgroundColor: T.bg } as any,
-        headerTitleStyle: { color: T.text, fontWeight: '800' } as any,
+        headerTitleStyle: { color: T.text, fontFamily: 'Manrope_700Bold', fontWeight: '800' } as any,
         headerShadowVisible: false,
         sceneStyle: { backgroundColor: T.bg } as any,
         tabBarStyle: { backgroundColor: T.bgElev, borderTopColor: T.border, ...shadow } as any,

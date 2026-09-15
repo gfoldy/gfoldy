@@ -40,16 +40,16 @@ export function Onboarding() {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: T.bg, padding: 24, justifyContent: 'center' },
-  brand: { color: T.text, fontSize: 30, fontWeight: '800', textAlign: 'center', marginBottom: 40 },
-  h: { color: T.text, fontSize: 24, fontWeight: '800', marginBottom: 6 },
-  sub: { color: T.textDim, fontSize: 14, marginBottom: 20 },
+  brand: { color: T.text, fontFamily: 'BricolageGrotesque_800ExtraBold', fontSize: 30, fontWeight: '800', textAlign: 'center', marginBottom: 40 },
+  h: { color: T.text, fontFamily: 'BricolageGrotesque_800ExtraBold', fontSize: 24, fontWeight: '800', marginBottom: 6 },
+  sub: { color: T.textDim, fontFamily: 'Manrope_400Regular', fontSize: 14, marginBottom: 20 },
   input: {
     backgroundColor: T.bgElev, color: T.text, borderRadius: radii.md, borderWidth: 1,
-    borderColor: T.border, paddingHorizontal: 14, paddingVertical: 14, fontSize: 16, marginBottom: 18,
+    borderColor: T.border, paddingHorizontal: 14, paddingVertical: 14, fontFamily: 'Manrope_400Regular', fontSize: 16, marginBottom: 18,
   },
   btn: { borderRadius: radii.md, paddingVertical: 15, alignItems: 'center', marginTop: 12 },
   gold: { backgroundColor: T.gold },
-  goldText: { color: T.goldInk, fontWeight: '800', fontSize: 15 },
+  goldText: { color: T.goldInk, fontWeight: '800', fontFamily: 'BricolageGrotesque_800ExtraBold', fontSize: 15 },
   ghost: { borderWidth: 1, borderColor: T.border, backgroundColor: T.bgElev },
-  ghostText: { color: T.text, fontWeight: '700', fontSize: 15 },
+  ghostText: { color: T.text, fontWeight: '700', fontFamily: 'Manrope_700Bold', fontSize: 15 },
 });

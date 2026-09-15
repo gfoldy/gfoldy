@@ -35,6 +35,16 @@ export const T = {
 export const radii = { sm: 8, md: 12, lg: 18, pill: 999 } as const;
 export const space = (n: number) => n * 4;
 
+// Font faces (loaded in the root layout). Manrope for body/UI, Bricolage
+// Grotesque for display titles + big numbers.
+export const font = {
+  regular: 'Manrope_400Regular',
+  medium: 'Manrope_500Medium',
+  semibold: 'Manrope_600SemiBold',
+  bold: 'Manrope_700Bold',
+  display: 'BricolageGrotesque_800ExtraBold',
+} as const;
+
 // Subtle depth for cards and the tab bar (spread into a style object).
 export const shadow = {
   shadowColor: '#171712',

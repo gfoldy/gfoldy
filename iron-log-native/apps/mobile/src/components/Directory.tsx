@@ -50,13 +50,13 @@ export function Directory() {
 }
 
 const styles = StyleSheet.create({
-  muted: { color: T.textFaint, fontSize: 14, padding: 8 },
+  muted: { color: T.textFaint, fontFamily: 'Manrope_400Regular', fontSize: 14, padding: 8 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: T.bgElev, borderRadius: radii.md, borderWidth: 1, borderColor: T.border, padding: 14, marginBottom: 10 },
-  name: { color: T.text, fontSize: 15, fontWeight: '700' },
-  user: { color: T.textFaint, fontWeight: '400' },
-  meta: { color: T.textDim, fontSize: 12, marginTop: 4 },
+  name: { color: T.text, fontFamily: 'Manrope_700Bold', fontSize: 15, fontWeight: '700' },
+  user: { color: T.textFaint, fontFamily: 'Manrope_400Regular', fontWeight: '400' },
+  meta: { color: T.textDim, fontFamily: 'Manrope_400Regular', fontSize: 12, marginTop: 4 },
   btn: { borderWidth: 1, borderColor: T.gold, borderRadius: radii.pill, paddingHorizontal: 14, paddingVertical: 7 },
   btnOn: { backgroundColor: T.gold, borderColor: 'transparent' },
-  btnText: { color: T.gold, fontWeight: '700', fontSize: 13 },
+  btnText: { color: T.gold, fontWeight: '700', fontFamily: 'Manrope_700Bold', fontSize: 13 },
   btnTextOn: { color: T.goldInk },
 });

@@ -56,18 +56,18 @@ export default function RanksScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { color: T.text, fontSize: 26, fontWeight: '800', marginBottom: 12 },
+  title: { color: T.text, fontFamily: 'BricolageGrotesque_800ExtraBold', fontSize: 26, fontWeight: '800', marginBottom: 12 },
   chips: { flexDirection: 'row', gap: 8, marginBottom: 14 },
   chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: radii.pill, backgroundColor: T.bgElev2, borderWidth: 1, borderColor: T.border },
   chipOn: { backgroundColor: T.gold, borderColor: 'transparent' },
-  chipText: { color: T.textDim, fontSize: 13, fontWeight: '600' },
+  chipText: { color: T.textDim, fontFamily: 'Manrope_600SemiBold', fontSize: 13, fontWeight: '600' },
   chipTextOn: { color: T.goldInk },
   card: { backgroundColor: T.bgElev, borderRadius: radii.lg, borderWidth: 1, borderColor: T.border, padding: 16 },
-  muted: { color: T.textFaint, fontSize: 14, lineHeight: 20 },
+  muted: { color: T.textFaint, fontFamily: 'Manrope_400Regular', fontSize: 14, lineHeight: 20 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: T.bgElev, borderRadius: radii.md, borderWidth: 1, borderColor: T.border, padding: 14, marginBottom: 8 },
   rowMe: { borderColor: T.goldDim },
-  rank: { color: T.textDim, fontSize: 16, fontWeight: '800', width: 24 },
-  name: { color: T.text, fontSize: 15, flex: 1 },
-  user: { color: T.textFaint, fontSize: 12 },
-  val: { color: T.textDim, fontSize: 14, fontWeight: '700' },
+  rank: { color: T.textDim, fontFamily: 'BricolageGrotesque_800ExtraBold', fontSize: 16, fontWeight: '800', width: 24 },
+  name: { color: T.text, fontFamily: 'Manrope_400Regular', fontSize: 15, flex: 1 },
+  user: { color: T.textFaint, fontFamily: 'Manrope_400Regular', fontSize: 12 },
+  val: { color: T.textDim, fontFamily: 'Manrope_700Bold', fontSize: 14, fontWeight: '700' },
 });

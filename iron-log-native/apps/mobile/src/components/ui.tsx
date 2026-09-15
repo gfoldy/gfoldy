@@ -41,10 +41,10 @@ const styles = StyleSheet.create({
   section: {
     color: T.textDim,
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: 'Manrope_700Bold', fontWeight: '700',
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
-  title: { color: T.text, fontSize: 26, fontWeight: '800', marginTop: 4 },
-  muted: { color: T.textFaint, fontSize: 14, lineHeight: 20 },
+  title: { color: T.text, fontFamily: 'BricolageGrotesque_800ExtraBold', fontSize: 26, fontWeight: '800', marginTop: 4 },
+  muted: { color: T.textFaint, fontFamily: 'Manrope_400Regular', fontSize: 14, lineHeight: 20 },
 });

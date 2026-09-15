@@ -3,39 +3,31 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { T, shadow } from '../../src/theme';
 
+// expo-router v57 types the header/tab style options as Animated styles and the
+// icon `color` as a nullable ColorValue; cast at these boundaries (runtime is
+// unaffected).
+const icon = (name: React.ComponentProps<typeof Ionicons>['name']) =>
+  (p: { color: unknown; size: number }) =>
+    <Ionicons name={name} color={p.color as string} size={p.size} />;
+
 export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: T.bg },
-        headerTitleStyle: { color: T.text, fontWeight: '800' },
+        headerStyle: { backgroundColor: T.bg } as any,
+        headerTitleStyle: { color: T.text, fontWeight: '800' } as any,
         headerShadowVisible: false,
-        sceneStyle: { backgroundColor: T.bg },
-        tabBarStyle: { backgroundColor: T.bgElev, borderTopColor: T.border, ...shadow },
+        sceneStyle: { backgroundColor: T.bg } as any,
+        tabBarStyle: { backgroundColor: T.bgElev, borderTopColor: T.border, ...shadow } as any,
         tabBarActiveTintColor: T.gold,
         tabBarInactiveTintColor: T.textFaint,
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{ title: 'Today', tabBarIcon: ({ color, size }) => <Ionicons name="today-outline" color={color} size={size} /> }}
-      />
-      <Tabs.Screen
-        name="progress"
-        options={{ title: 'Progress', tabBarIcon: ({ color, size }) => <Ionicons name="stats-chart-outline" color={color} size={size} /> }}
-      />
-      <Tabs.Screen
-        name="split"
-        options={{ title: 'Split', tabBarIcon: ({ color, size }) => <Ionicons name="barbell-outline" color={color} size={size} /> }}
-      />
-      <Tabs.Screen
-        name="people"
-        options={{ title: 'People', tabBarIcon: ({ color, size }) => <Ionicons name="people-outline" color={color} size={size} /> }}
-      />
-      <Tabs.Screen
-        name="ranks"
-        options={{ title: 'Ranks', tabBarIcon: ({ color, size }) => <Ionicons name="trophy-outline" color={color} size={size} /> }}
-      />
+      <Tabs.Screen name="index" options={{ title: 'Today', tabBarIcon: icon('today-outline') }} />
+      <Tabs.Screen name="progress" options={{ title: 'Progress', tabBarIcon: icon('stats-chart-outline') }} />
+      <Tabs.Screen name="split" options={{ title: 'Split', tabBarIcon: icon('barbell-outline') }} />
+      <Tabs.Screen name="people" options={{ title: 'People', tabBarIcon: icon('people-outline') }} />
+      <Tabs.Screen name="ranks" options={{ title: 'Ranks', tabBarIcon: icon('trophy-outline') }} />
     </Tabs>
   );
 }

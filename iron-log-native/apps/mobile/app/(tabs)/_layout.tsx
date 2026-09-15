@@ -23,7 +23,7 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: T.textFaint,
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Today', tabBarIcon: icon('today-outline') }} />
+      <Tabs.Screen name="index" options={{ title: 'Today', headerShown: false, tabBarIcon: icon('today-outline') }} />
       <Tabs.Screen name="progress" options={{ title: 'Progress', tabBarIcon: icon('stats-chart-outline') }} />
       <Tabs.Screen name="split" options={{ title: 'Split', tabBarIcon: icon('barbell-outline') }} />
       <Tabs.Screen name="people" options={{ title: 'People', tabBarIcon: icon('people-outline') }} />

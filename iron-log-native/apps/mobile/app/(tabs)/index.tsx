@@ -1,16 +1,26 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import {
   type Day, type LogSet, type SetType,
-  todayStr, parseDate, weekdayOf, dateToStr, addDays, WEEKDAYS_LONG,
+  todayStr, parseDate, weekdayOf, dateToStr, addDays, WEEKDAYS_LONG, fmtShort,
   mesoStatus, lastSession, suggestNext, setTagShort, isCompleted,
 } from '@ironlog/core';
 import { useStore } from '../../src/db/store';
-import { T, radii, shadow, shadowSm } from '../../src/theme';
+import { T, radii, shadow, shadowSm, font } from '../../src/theme';
 import { fmtNum } from '../../src/lib/format';
 import { Nutrition } from '../../src/components/Nutrition';
+
+// Faint barbell motif drawn behind the hero card (stands in for a photo).
+function BarbellGlyph({ size = 190, color = '#ffffff', opacity = 0.12 }: { size?: number; color?: string; opacity?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.2} strokeLinecap="round" strokeLinejoin="round" opacity={opacity}>
+      <Path d="M6.5 6.5h11M6.5 4v5M17.5 4v5M2.5 6.5h2M19.5 6.5h2M6.5 17.5h11M6.5 15v5M17.5 15v5M2.5 17.5h2M19.5 17.5h2" />
+    </Svg>
+  );
+}
 
 const SET_TYPE_CYCLE: SetType[] = ['work', 'warmup', 'drop', 'failure', 'restpause', 'myo'];
 
@@ -43,35 +53,51 @@ export default function TodayScreen() {
 
   const shift = (n: number) => setDate(dateToStr(addDays(parseDate(date), n)));
 
+  const name = store.profile?.name ?? 'Athlete';
+  const isToday = date === todayStr();
+  const primaryMuscle = groups[0]?.muscle ?? null;
+  let dayDone = 0, dayTarget = 0;
+  if (day) day.exercises.forEach((e) => { dayTarget += e.sets; dayDone += Math.min(e.sets, setsFor(e.name).filter(isCompleted).length); });
+  const heroLabel = `${isToday ? 'Today' : WEEKDAYS_LONG[weekdayOf(date)]}${primaryMuscle ? ' · ' + primaryMuscle : ''}`;
+  const heroTitle = day ? day.name : 'Rest day';
+  const metaBits = [day ? `${day.exercises.length} exercises` : 'Nothing scheduled'];
+  if (dayTarget > 0) metaBits.push(`${dayDone}/${dayTarget} sets`);
+  if (meso && !meso.done && !meso.before) metaBits.push(`Week ${meso.week}/${meso.weeks}`);
+
   return (
-    <ScrollView style={{ backgroundColor: T.bg }} contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 32 }}>
-      {meso && (
-        <View style={[styles.meso, meso.deloadDue && styles.mesoDeload]}>
-          <Text style={styles.mesoText}>
-            {meso.deloadDue ? '🌀 ' : meso.done ? '✅ ' : '🗓️ '}
-            {meso.done ? 'Block complete' : meso.before ? 'Block starts soon' : `Week ${meso.week} of ${meso.weeks} · ${meso.phase}`}
-          </Text>
-          <View style={{ flexDirection: 'row', gap: 5 }}>
+    <ScrollView style={{ backgroundColor: T.bg }} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: insets.top + 8, paddingBottom: insets.bottom + 32 }}>
+      {/* greeting */}
+      <View style={styles.greet}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.kicker}>{WEEKDAYS_LONG[weekdayOf(date)]} · {fmtShort(date)}</Text>
+          <Text style={styles.hello}>Hi, {name}</Text>
+        </View>
+        <View style={styles.navRow}>
+          <Pressable onPress={() => shift(-1)} style={styles.navMini} hitSlop={8}><Text style={styles.navMiniText}>‹</Text></Pressable>
+          {!isToday && <Pressable onPress={() => setDate(todayStr())} style={styles.todayPill}><Text style={styles.todayPillText}>Today</Text></Pressable>}
+          <Pressable onPress={() => shift(1)} style={styles.navMini} hitSlop={8}><Text style={styles.navMiniText}>›</Text></Pressable>
+        </View>
+      </View>
+
+      {/* hero */}
+      <View style={styles.hero}>
+        <View style={styles.heroGlyph}><BarbellGlyph /></View>
+        <View style={styles.heroBlob} />
+        <View style={styles.heroScrim} />
+        <View style={styles.heroPill}><Text style={styles.heroPillText}>{heroLabel}</Text></View>
+        {meso && !meso.done && !meso.before && (
+          <View style={styles.heroDots}>
             {Array.from({ length: meso.weeks }, (_, i) => {
-              const n = i + 1;
-              const on = meso.done || n < meso.week;
-              const now = n === meso.week && !meso.done;
-              return <View key={i} style={[styles.dot, on && styles.dotOn, now && styles.dotNow, n === meso.weeks && styles.dotDe]} />;
+              const n = i + 1, on = n < meso.week, now = n === meso.week;
+              return <View key={i} style={[styles.hdot, on && styles.hdotOn, now && styles.hdotNow, n === meso.weeks && styles.hdotDe]} />;
             })}
           </View>
+        )}
+        <View style={styles.heroCap}>
+          <Text style={styles.heroTitle}>{heroTitle}</Text>
+          <Text style={styles.heroMeta}>{metaBits.join(' · ')}</Text>
         </View>
-      )}
-
-      {/* date nav */}
-      <View style={styles.dateRow}>
-        <Pressable onPress={() => shift(-1)} style={styles.navBtn}><Text style={styles.navBtnText}>‹</Text></Pressable>
-        <View style={{ alignItems: 'center' }}>
-          <Text style={styles.weekday}>{WEEKDAYS_LONG[weekdayOf(date)]}</Text>
-          <Text style={styles.date}>{date}</Text>
-        </View>
-        <Pressable onPress={() => shift(1)} style={styles.navBtn}><Text style={styles.navBtnText}>›</Text></Pressable>
       </View>
-      {day && <Text style={styles.dayName}>{day.name}</Text>}
 
       {groups.map((g) => (
         <View key={g.muscle}>
@@ -197,20 +223,28 @@ function SetRow(props: {
 }
 
 const styles = StyleSheet.create({
-  meso: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-    padding: 12, borderRadius: radii.md, backgroundColor: T.bgElev, borderWidth: 1, borderColor: T.border, marginBottom: 12, ...shadowSm },
-  mesoDeload: { borderColor: '#bcd3c2', backgroundColor: T.goldSoft },
-  mesoText: { color: T.text, fontWeight: '700', fontFamily: 'Manrope_700Bold', fontSize: 13, flexShrink: 1 },
-  dot: { width: 9, height: 9, borderRadius: 5, backgroundColor: T.bgElev2, borderWidth: 1, borderColor: T.borderStrong },
-  dotOn: { backgroundColor: T.goldDim, borderColor: 'transparent' },
-  dotNow: { backgroundColor: T.gold, borderColor: 'transparent' },
-  dotDe: { borderStyle: 'dashed', borderColor: T.goldDim },
-  dateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  navBtn: { paddingHorizontal: 18, paddingVertical: 6 },
-  navBtnText: { color: T.gold, fontFamily: 'Manrope_700Bold', fontSize: 28, fontWeight: '700' },
-  weekday: { color: T.textDim, fontFamily: 'Manrope_400Regular', fontSize: 13 },
-  date: { color: T.text, fontFamily: 'Manrope_700Bold', fontSize: 18, fontWeight: '700' },
-  dayName: { color: T.gold, fontFamily: 'Manrope_600SemiBold', fontSize: 14, fontWeight: '600', textAlign: 'center', marginBottom: 4 },
+  greet: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 },
+  kicker: { color: T.textFaint, fontFamily: font.semibold, fontSize: 11, letterSpacing: 1.4, textTransform: 'uppercase' },
+  hello: { color: T.text, fontFamily: font.display, fontSize: 26, marginTop: 4 },
+  navRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
+  navMini: { width: 38, height: 38, borderRadius: 12, backgroundColor: T.bgElev, borderWidth: 1, borderColor: T.border, alignItems: 'center', justifyContent: 'center', ...shadowSm },
+  navMiniText: { color: T.text, fontFamily: font.bold, fontSize: 20, marginTop: -2 },
+  todayPill: { paddingHorizontal: 12, height: 38, borderRadius: 12, backgroundColor: T.goldSoft, alignItems: 'center', justifyContent: 'center' },
+  todayPillText: { color: T.gold, fontFamily: font.bold, fontSize: 12 },
+  hero: { height: 188, borderRadius: 24, overflow: 'hidden', backgroundColor: '#232a24', ...shadow },
+  heroGlyph: { position: 'absolute', right: -16, top: 14 },
+  heroBlob: { position: 'absolute', right: -40, top: -50, width: 170, height: 170, borderRadius: 120, backgroundColor: 'rgba(74,129,88,0.28)' },
+  heroScrim: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 120, backgroundColor: 'rgba(12,20,14,0.42)' },
+  heroPill: { position: 'absolute', top: 15, left: 15, backgroundColor: '#ffffff', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
+  heroPillText: { color: '#1a1a1c', fontFamily: font.bold, fontSize: 11, letterSpacing: 0.6, textTransform: 'uppercase' },
+  heroDots: { position: 'absolute', top: 18, right: 16, flexDirection: 'row', gap: 5 },
+  hdot: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.25)' },
+  hdotOn: { backgroundColor: 'rgba(255,255,255,0.7)' },
+  hdotNow: { backgroundColor: '#ffffff' },
+  hdotDe: { backgroundColor: 'transparent', borderWidth: 1, borderColor: 'rgba(255,255,255,0.6)', borderStyle: 'dashed' },
+  heroCap: { position: 'absolute', left: 18, bottom: 16, right: 18 },
+  heroTitle: { color: '#ffffff', fontFamily: font.display, fontSize: 24 },
+  heroMeta: { color: 'rgba(255,255,255,0.82)', fontFamily: font.medium, fontSize: 13, marginTop: 5 },
   section: { color: T.textDim, fontFamily: 'Manrope_700Bold', fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginTop: 22, marginBottom: 8 },
   card: { backgroundColor: T.bgElev, borderRadius: radii.lg, borderWidth: 1, borderColor: T.border, padding: 12, ...shadow },
   muted: { color: T.textFaint, fontFamily: 'Manrope_400Regular', fontSize: 14 },

@@ -37,7 +37,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "apiBaseUrl": "https://iron-log-api.vercel.app"
+      "apiBaseUrl": "https://api-omega-dun-72.vercel.app"
     }
   }
 }

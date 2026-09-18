@@ -19,6 +19,7 @@ export interface Store {
   meso: MesoConfig | null;
   goals: { cal: number; prot: number } | null;
   createProfile: (name: string, seedStarter: boolean) => Promise<void>;
+  updateProfile: (patch: Partial<Pick<Profile, 'name' | 'unit'>>) => Promise<void>;
   switchProfile: (id: string) => Promise<void>;
   saveSplit: (days: Split) => Promise<void>;
   upsertSet: (date: string, exName: string, muscle: string, setIndex: number, patch: Partial<LogSet>) => Promise<void>;
@@ -77,6 +78,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const all = [...profiles, p];
     setProfiles(all);
     await loadProfile(p.id, all);
+  };
+
+  const updateProfile: Store['updateProfile'] = async (patch) => {
+    if (!profile) return;
+    const next: Profile = { ...profile, ...patch, name: (patch.name ?? profile.name).trim() || profile.name };
+    await DB.putProfile(next);
+    setProfile(next);
+    setProfiles((all) => all.map((p) => (p.id === next.id ? next : p)));
   };
 
   const switchProfile: Store['switchProfile'] = async (id) => { await loadProfile(id, profiles); };
@@ -146,7 +155,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const value: Store = {
     ready, profile, profiles, split, logs, meals, body, meso, goals,
-    createProfile, switchProfile, saveSplit, upsertSet, deleteSet,
+    createProfile, updateProfile, switchProfile, saveSplit, upsertSet, deleteSet,
     addMeal, deleteMeal, saveBody, saveGoals, saveMeso,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

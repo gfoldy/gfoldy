@@ -12,6 +12,10 @@ import { useStore } from '../../src/db/store';
 import { T, radii, shadow, shadowSm, font, HERO_GRADIENT } from '../../src/theme';
 import { fmtNum } from '../../src/lib/format';
 import { Nutrition } from '../../src/components/Nutrition';
+import { Profile } from '../../src/components/Profile';
+
+const initialsOf = (s: string) =>
+  s.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || 'A';
 
 // Deep-forest gradient + a corner glow, painted behind the hero content.
 function HeroBg() {
@@ -49,6 +53,7 @@ export default function TodayScreen() {
   const store = useStore();
   const insets = useSafeAreaInsets();
   const [date, setDate] = useState(todayStr());
+  const [showProfile, setShowProfile] = useState(false);
 
   const unit = store.profile?.unit ?? 'lb';
   const meso = mesoStatus(store.meso, date);
@@ -91,6 +96,9 @@ export default function TodayScreen() {
     <ScrollView style={{ backgroundColor: T.bg }} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: insets.top + 8, paddingBottom: insets.bottom + 36 }}>
       {/* greeting */}
       <View style={styles.greet}>
+        <Pressable onPress={() => setShowProfile(true)} style={styles.avatar} hitSlop={8}>
+          <Text style={styles.avatarText}>{initialsOf(name)}</Text>
+        </Pressable>
         <View style={{ flex: 1 }}>
           <Text style={styles.kicker}>{WEEKDAYS_LONG[weekdayOf(date)]} · {fmtShort(date)}</Text>
           <Text style={styles.hello}>Hi, {name}</Text>
@@ -162,6 +170,8 @@ export default function TodayScreen() {
       )}
 
       <Nutrition date={date} />
+
+      <Profile visible={showProfile} onClose={() => setShowProfile(false)} />
     </ScrollView>
   );
 }
@@ -269,7 +279,9 @@ function SetRow(props: {
 }
 
 const styles = StyleSheet.create({
-  greet: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 },
+  greet: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
+  avatar: { width: 42, height: 42, borderRadius: 14, backgroundColor: T.gold, alignItems: 'center', justifyContent: 'center', ...shadowSm },
+  avatarText: { color: T.goldInk, fontFamily: font.display, fontSize: 16 },
   kicker: { color: T.textFaint, fontFamily: font.semibold, fontSize: 11, letterSpacing: 1.4, textTransform: 'uppercase' },
   hello: { color: T.text, fontFamily: font.display, fontSize: 28, marginTop: 4 },
   navRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },

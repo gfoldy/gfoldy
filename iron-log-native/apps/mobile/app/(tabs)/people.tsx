@@ -3,7 +3,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useCloud } from '../../src/lib/cloud';
-import { AccountSheet } from '../../src/components/AccountSheet';
+import { Profile } from '../../src/components/Profile';
 import { Feed } from '../../src/components/Feed';
 import { Directory } from '../../src/components/Directory';
 import { Groups } from '../../src/components/Groups';
@@ -15,15 +15,15 @@ export default function PeopleScreen() {
   const cloud = useCloud();
   const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<Mode>('feed');
-  const [account, setAccount] = useState(false);
+  const [profile, setProfile] = useState(false);
 
   return (
     <View style={{ flex: 1, backgroundColor: T.bg, paddingTop: 8 }}>
       <View style={styles.header}>
         <Text style={styles.title}>People</Text>
-        <Pressable style={styles.acct} onPress={() => setAccount(true)}>
+        <Pressable style={styles.acct} onPress={() => setProfile(true)}>
           <Ionicons name="person-circle-outline" size={20} color={cloud.user ? T.gold : T.textDim} />
-          <Text style={[styles.acctText, cloud.user && { color: T.gold }]}>{cloud.user ? '@' + cloud.user.username : 'Sign in'}</Text>
+          <Text style={[styles.acctText, cloud.user && { color: T.gold }]}>{cloud.user ? '@' + cloud.user.username : 'Profile'}</Text>
         </Pressable>
       </View>
 
@@ -32,7 +32,7 @@ export default function PeopleScreen() {
           <Ionicons name="people-outline" size={44} color={T.textFaint} />
           <Text style={styles.soTitle}>Train with your crew</Text>
           <Text style={styles.soBody}>Create an account to follow friends, share your split and lifts, climb the leaderboards, and join groups with their own chat. Your training keeps working offline either way.</Text>
-          <Pressable style={styles.gold_btn} onPress={() => setAccount(true)}><Text style={styles.goldText}>Sign in or create an account</Text></Pressable>
+          <Pressable style={styles.gold_btn} onPress={() => setProfile(true)}><Text style={styles.goldText}>Open your profile</Text></Pressable>
         </View>
       ) : (
         <>
@@ -51,7 +51,7 @@ export default function PeopleScreen() {
         </>
       )}
 
-      <AccountSheet visible={account} onClose={() => setAccount(false)} />
+      <Profile visible={profile} onClose={() => setProfile(false)} />
     </View>
   );
 }

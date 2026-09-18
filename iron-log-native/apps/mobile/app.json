@@ -5,20 +5,20 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "ironlog",
-    "userInterfaceStyle": "light",
-    "backgroundColor": "#f6f5f2",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0a0c0b",
     "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0a0a0c"
+      "backgroundColor": "#0a0c0b"
     },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.foldyfamily.ironlog",
       "buildNumber": "1",
       "infoPlist": {
-        "UIUserInterfaceStyle": "Light",
+        "UIUserInterfaceStyle": "Dark",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -26,7 +26,7 @@
       "package": "com.foldyfamily.ironlog",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0a0a0c"
+        "backgroundColor": "#0a0c0b"
       }
     },
     "plugins": [

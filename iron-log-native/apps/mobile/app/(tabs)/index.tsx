@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, RadialGradient, Stop, Rect } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import {
   type Day, type LogSet, type SetType,
@@ -9,14 +9,35 @@ import {
   mesoStatus, lastSession, suggestNext, setTagShort, isCompleted,
 } from '@ironlog/core';
 import { useStore } from '../../src/db/store';
-import { T, radii, shadow, shadowSm, font } from '../../src/theme';
+import { T, radii, shadow, shadowSm, font, HERO_GRADIENT } from '../../src/theme';
 import { fmtNum } from '../../src/lib/format';
 import { Nutrition } from '../../src/components/Nutrition';
 
-// Faint barbell motif drawn behind the hero card (stands in for a photo).
-function BarbellGlyph({ size = 190, color = '#ffffff', opacity = 0.12 }: { size?: number; color?: string; opacity?: number }) {
+// Deep-forest gradient + a corner glow, painted behind the hero content.
+function HeroBg() {
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.2} strokeLinecap="round" strokeLinejoin="round" opacity={opacity}>
+    <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
+      <Defs>
+        <SvgLinearGradient id="hero" x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0" stopColor={HERO_GRADIENT[0]} />
+          <Stop offset="0.55" stopColor={HERO_GRADIENT[1]} />
+          <Stop offset="1" stopColor={HERO_GRADIENT[2]} />
+        </SvgLinearGradient>
+        <RadialGradient id="glow" cx="0.82" cy="0.1" r="0.75">
+          <Stop offset="0" stopColor="#4fe38f" stopOpacity="0.34" />
+          <Stop offset="1" stopColor="#4fe38f" stopOpacity="0" />
+        </RadialGradient>
+      </Defs>
+      <Rect x="0" y="0" width="100%" height="100%" fill="url(#hero)" />
+      <Rect x="0" y="0" width="100%" height="100%" fill="url(#glow)" />
+    </Svg>
+  );
+}
+
+// Faint barbell motif drawn over the gradient for texture.
+function BarbellGlyph({ size = 200, color = '#ffffff', opacity = 0.09 }: { size?: number; color?: string; opacity?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.1} strokeLinecap="round" strokeLinejoin="round" opacity={opacity}>
       <Path d="M6.5 6.5h11M6.5 4v5M17.5 4v5M2.5 6.5h2M19.5 6.5h2M6.5 17.5h11M6.5 15v5M17.5 15v5M2.5 17.5h2M19.5 17.5h2" />
     </Svg>
   );
@@ -56,16 +77,18 @@ export default function TodayScreen() {
   const name = store.profile?.name ?? 'Athlete';
   const isToday = date === todayStr();
   const primaryMuscle = groups[0]?.muscle ?? null;
-  let dayDone = 0, dayTarget = 0;
+
+  // Day progress + live totals for the stat row.
+  let dayDone = 0, dayTarget = 0, volume = 0;
   if (day) day.exercises.forEach((e) => { dayTarget += e.sets; dayDone += Math.min(e.sets, setsFor(e.name).filter(isCompleted).length); });
+  store.logs.forEach((l) => { if (l.date === date && isCompleted(l) && l.weight && l.reps) volume += l.weight * l.reps; });
+
   const heroLabel = `${isToday ? 'Today' : WEEKDAYS_LONG[weekdayOf(date)]}${primaryMuscle ? ' · ' + primaryMuscle : ''}`;
   const heroTitle = day ? day.name : 'Rest day';
-  const metaBits = [day ? `${day.exercises.length} exercises` : 'Nothing scheduled'];
-  if (dayTarget > 0) metaBits.push(`${dayDone}/${dayTarget} sets`);
-  if (meso && !meso.done && !meso.before) metaBits.push(`Week ${meso.week}/${meso.weeks}`);
+  const exerciseCount = day ? day.exercises.length : 0;
 
   return (
-    <ScrollView style={{ backgroundColor: T.bg }} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: insets.top + 8, paddingBottom: insets.bottom + 32 }}>
+    <ScrollView style={{ backgroundColor: T.bg }} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: insets.top + 8, paddingBottom: insets.bottom + 36 }}>
       {/* greeting */}
       <View style={styles.greet}>
         <View style={{ flex: 1 }}>
@@ -81,9 +104,8 @@ export default function TodayScreen() {
 
       {/* hero */}
       <View style={styles.hero}>
+        <HeroBg />
         <View style={styles.heroGlyph}><BarbellGlyph /></View>
-        <View style={styles.heroBlob} />
-        <View style={styles.heroScrim} />
         <View style={styles.heroPill}><Text style={styles.heroPillText}>{heroLabel}</Text></View>
         {meso && !meso.done && !meso.before && (
           <View style={styles.heroDots}>
@@ -95,8 +117,20 @@ export default function TodayScreen() {
         )}
         <View style={styles.heroCap}>
           <Text style={styles.heroTitle}>{heroTitle}</Text>
-          <Text style={styles.heroMeta}>{metaBits.join(' · ')}</Text>
+          <Text style={styles.heroMeta}>
+            {day ? `${exerciseCount} exercise${exerciseCount === 1 ? '' : 's'}` : 'Nothing scheduled'}
+            {meso && !meso.done && !meso.before ? `  ·  ${meso.phase} · Week ${meso.week}/${meso.weeks}` : ''}
+          </Text>
         </View>
+      </View>
+
+      {/* stat row */}
+      <View style={styles.statRow}>
+        <Stat value={fmtNum(volume)} unit={unit} label="Volume" accent />
+        <View style={styles.statDivide} />
+        <Stat value={`${dayDone}/${dayTarget}`} label="Sets done" />
+        <View style={styles.statDivide} />
+        <Stat value={String(exerciseCount)} label="Exercises" />
       </View>
 
       {groups.map((g) => (
@@ -132,6 +166,17 @@ export default function TodayScreen() {
   );
 }
 
+function Stat({ value, unit, label, accent }: { value: string; unit?: string; label: string; accent?: boolean }) {
+  return (
+    <View style={styles.stat}>
+      <Text style={[styles.statVal, accent && { color: T.gold }]} numberOfLines={1} adjustsFontSizeToFit>
+        {value}{unit ? <Text style={styles.statUnit}> {unit}</Text> : null}
+      </Text>
+      <Text style={styles.statLab}>{label}</Text>
+    </View>
+  );
+}
+
 function ExerciseBlock(props: {
   name: string; muscle: string; targetSets: number; reps: string; unit: string;
   logs: LogSet[]; allLogs: LogSet[]; date: string;
@@ -141,6 +186,7 @@ function ExerciseBlock(props: {
   const maxIdx = logs.reduce((m, l) => Math.max(m, l.setIndex), -1);
   const rows = Math.max(targetSets, maxIdx + 1);
   const doneCount = logs.filter(isCompleted).length;
+  const complete = doneCount >= targetSets && targetSets > 0;
   const ls = lastSession(allLogs, name, date);
   const sug = suggestNext(allLogs, name, reps, date, unit as 'lb' | 'kg');
 
@@ -151,8 +197,8 @@ function ExerciseBlock(props: {
           <Text style={styles.exName}>{name}</Text>
           <Text style={styles.exTarget}>{targetSets} × {reps || '—'}</Text>
         </View>
-        <View style={[styles.badge, doneCount >= targetSets && targetSets > 0 && styles.badgeDone]}>
-          <Text style={[styles.badgeText, doneCount >= targetSets && targetSets > 0 && styles.badgeTextDone]}>{doneCount}/{targetSets}</Text>
+        <View style={[styles.badge, complete && styles.badgeDone]}>
+          <Text style={[styles.badgeText, complete && styles.badgeTextDone]}>{doneCount}/{targetSets}</Text>
         </View>
       </View>
 
@@ -225,51 +271,58 @@ function SetRow(props: {
 const styles = StyleSheet.create({
   greet: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 },
   kicker: { color: T.textFaint, fontFamily: font.semibold, fontSize: 11, letterSpacing: 1.4, textTransform: 'uppercase' },
-  hello: { color: T.text, fontFamily: font.display, fontSize: 26, marginTop: 4 },
+  hello: { color: T.text, fontFamily: font.display, fontSize: 28, marginTop: 4 },
   navRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
   navMini: { width: 38, height: 38, borderRadius: 12, backgroundColor: T.bgElev, borderWidth: 1, borderColor: T.border, alignItems: 'center', justifyContent: 'center', ...shadowSm },
   navMiniText: { color: T.text, fontFamily: font.bold, fontSize: 20, marginTop: -2 },
-  todayPill: { paddingHorizontal: 12, height: 38, borderRadius: 12, backgroundColor: T.goldSoft, alignItems: 'center', justifyContent: 'center' },
-  todayPillText: { color: T.gold, fontFamily: font.bold, fontSize: 12 },
-  hero: { height: 188, borderRadius: 24, overflow: 'hidden', backgroundColor: '#232a24', ...shadow },
-  heroGlyph: { position: 'absolute', right: -16, top: 14 },
-  heroBlob: { position: 'absolute', right: -40, top: -50, width: 170, height: 170, borderRadius: 120, backgroundColor: 'rgba(74,129,88,0.28)' },
-  heroScrim: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 120, backgroundColor: 'rgba(12,20,14,0.42)' },
-  heroPill: { position: 'absolute', top: 15, left: 15, backgroundColor: '#ffffff', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
-  heroPillText: { color: '#1a1a1c', fontFamily: font.bold, fontSize: 11, letterSpacing: 0.6, textTransform: 'uppercase' },
-  heroDots: { position: 'absolute', top: 18, right: 16, flexDirection: 'row', gap: 5 },
-  hdot: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.25)' },
-  hdotOn: { backgroundColor: 'rgba(255,255,255,0.7)' },
-  hdotNow: { backgroundColor: '#ffffff' },
-  hdotDe: { backgroundColor: 'transparent', borderWidth: 1, borderColor: 'rgba(255,255,255,0.6)', borderStyle: 'dashed' },
-  heroCap: { position: 'absolute', left: 18, bottom: 16, right: 18 },
-  heroTitle: { color: '#ffffff', fontFamily: font.display, fontSize: 24 },
-  heroMeta: { color: 'rgba(255,255,255,0.82)', fontFamily: font.medium, fontSize: 13, marginTop: 5 },
-  section: { color: T.textDim, fontFamily: 'Manrope_700Bold', fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginTop: 22, marginBottom: 8 },
+  todayPill: { paddingHorizontal: 12, height: 38, borderRadius: 12, backgroundColor: T.goldSoft, borderWidth: 1, borderColor: '#235233', alignItems: 'center', justifyContent: 'center' },
+  todayPillText: { color: T.goldLt, fontFamily: font.bold, fontSize: 12 },
+
+  hero: { height: 200, borderRadius: 26, overflow: 'hidden', backgroundColor: HERO_GRADIENT[1], borderWidth: 1, borderColor: '#24382b', ...shadow },
+  heroGlyph: { position: 'absolute', right: -18, top: 10 },
+  heroPill: { position: 'absolute', top: 16, left: 16, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
+  heroPillText: { color: '#eafff1', fontFamily: font.bold, fontSize: 11, letterSpacing: 0.7, textTransform: 'uppercase' },
+  heroDots: { position: 'absolute', top: 20, right: 16, flexDirection: 'row', gap: 5 },
+  hdot: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.22)' },
+  hdotOn: { backgroundColor: 'rgba(120,240,170,0.75)' },
+  hdotNow: { backgroundColor: '#5bff9e' },
+  hdotDe: { backgroundColor: 'transparent', borderWidth: 1, borderColor: 'rgba(255,255,255,0.55)', borderStyle: 'dashed' },
+  heroCap: { position: 'absolute', left: 20, bottom: 20, right: 20 },
+  heroTitle: { color: '#ffffff', fontFamily: font.display, fontSize: 30, letterSpacing: -0.3 },
+  heroMeta: { color: 'rgba(230,245,235,0.82)', fontFamily: font.medium, fontSize: 13, marginTop: 6 },
+
+  statRow: { flexDirection: 'row', alignItems: 'stretch', backgroundColor: T.bgElev, borderRadius: radii.lg, borderWidth: 1, borderColor: T.border, paddingVertical: 14, marginTop: 12, ...shadowSm },
+  stat: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  statDivide: { width: StyleSheet.hairlineWidth, backgroundColor: T.border, marginVertical: 4 },
+  statVal: { color: T.text, fontFamily: font.display, fontSize: 20 },
+  statUnit: { color: T.textFaint, fontFamily: font.semibold, fontSize: 11 },
+  statLab: { color: T.textFaint, fontFamily: font.semibold, fontSize: 10, letterSpacing: 0.8, textTransform: 'uppercase', marginTop: 4 },
+
+  section: { color: T.textDim, fontFamily: font.bold, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginTop: 24, marginBottom: 8 },
   card: { backgroundColor: T.bgElev, borderRadius: radii.lg, borderWidth: 1, borderColor: T.border, padding: 12, ...shadow },
-  muted: { color: T.textFaint, fontFamily: 'Manrope_400Regular', fontSize: 14 },
+  muted: { color: T.textFaint, fontFamily: font.regular, fontSize: 14 },
   exercise: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: T.hairline },
   exHead: { flexDirection: 'row', alignItems: 'center' },
-  exName: { color: T.text, fontFamily: 'Manrope_700Bold', fontSize: 16, fontWeight: '700' },
-  exTarget: { color: T.textFaint, fontFamily: 'Manrope_400Regular', fontSize: 12, marginTop: 2 },
+  exName: { color: T.text, fontFamily: font.bold, fontSize: 16, fontWeight: '700' },
+  exTarget: { color: T.textFaint, fontFamily: font.regular, fontSize: 12, marginTop: 2 },
   badge: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: radii.pill, backgroundColor: T.bgElev2 },
   badgeDone: { backgroundColor: T.greenSoft },
-  badgeText: { color: T.textDim, fontWeight: '700', fontFamily: 'Manrope_700Bold', fontSize: 12 },
-  badgeTextDone: { color: T.green },
+  badgeText: { color: T.textDim, fontWeight: '700', fontFamily: font.bold, fontSize: 12 },
+  badgeTextDone: { color: T.goldLt },
   metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginVertical: 6, gap: 8 },
-  hist: { color: T.textDim, fontFamily: 'Manrope_400Regular', fontSize: 12, flex: 1 },
-  nextChip: { borderWidth: 1, borderColor: T.border, borderRadius: radii.pill, paddingHorizontal: 10, paddingVertical: 4 },
+  hist: { color: T.textDim, fontFamily: font.regular, fontSize: 12, flex: 1 },
+  nextChip: { borderWidth: 1, borderColor: T.borderStrong, borderRadius: radii.pill, paddingHorizontal: 10, paddingVertical: 4 },
   nextChipUp: { backgroundColor: T.gold, borderColor: 'transparent' },
-  nextChipText: { color: T.gold, fontWeight: '700', fontFamily: 'Manrope_700Bold', fontSize: 12 },
+  nextChipText: { color: T.goldLt, fontWeight: '700', fontFamily: font.bold, fontSize: 12 },
   setRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 5 },
   setRowDone: { opacity: 1 },
-  snum: { color: T.textFaint, width: 18, textAlign: 'center', fontFamily: 'Manrope_400Regular', fontSize: 13 },
-  input: { backgroundColor: T.bgElev2, borderRadius: radii.sm, color: T.text, paddingHorizontal: 8, paddingVertical: 8, width: 58, textAlign: 'center', fontFamily: 'Manrope_400Regular', fontSize: 15 },
-  unit: { color: T.textFaint, fontFamily: 'Manrope_400Regular', fontSize: 11 },
+  snum: { color: T.textFaint, width: 18, textAlign: 'center', fontFamily: font.regular, fontSize: 13 },
+  input: { backgroundColor: T.bgElev2, borderRadius: radii.sm, color: T.text, paddingHorizontal: 8, paddingVertical: 8, width: 58, textAlign: 'center', fontFamily: font.regular, fontSize: 15 },
+  unit: { color: T.textFaint, fontFamily: font.regular, fontSize: 11 },
   tag: { width: 34, height: 34, borderRadius: radii.sm, borderWidth: 1, borderColor: T.border, alignItems: 'center', justifyContent: 'center' },
-  tagText: { color: T.textDim, fontFamily: 'Manrope_700Bold', fontSize: 11, fontWeight: '700' },
-  check: { width: 34, height: 34, borderRadius: radii.sm, borderWidth: 1, borderColor: T.border, alignItems: 'center', justifyContent: 'center', marginLeft: 'auto' },
+  tagText: { color: T.textDim, fontFamily: font.bold, fontSize: 11, fontWeight: '700' },
+  check: { width: 34, height: 34, borderRadius: radii.sm, borderWidth: 1, borderColor: T.borderStrong, alignItems: 'center', justifyContent: 'center', marginLeft: 'auto' },
   checkOn: { backgroundColor: T.gold, borderColor: 'transparent' },
-  checkText: { color: T.textFaint, fontFamily: 'BricolageGrotesque_800ExtraBold', fontSize: 16, fontWeight: '800' },
-  addSet: { color: T.gold, fontFamily: 'Manrope_600SemiBold', fontSize: 13, fontWeight: '600', marginTop: 8 },
+  checkText: { color: T.textFaint, fontFamily: font.display, fontSize: 16, fontWeight: '800' },
+  addSet: { color: T.goldLt, fontFamily: font.semibold, fontSize: 13, fontWeight: '600', marginTop: 8 },
 });

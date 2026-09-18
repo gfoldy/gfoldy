@@ -5,6 +5,7 @@
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
+    "go": "bash ../../scripts/refresh.sh",
     "ios": "expo run:ios",
     "android": "expo run:android",
     "typecheck": "tsc --noEmit"

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Range Ready Cleaning logo">
+  <defs>
+    <linearGradient id="steel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f2f4f7"/>
+      <stop offset="0.5" stop-color="#c3c8cf"/>
+      <stop offset="1" stop-color="#7d838c"/>
+    </linearGradient>
+    <linearGradient id="grn" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#a4e04a"/>
+      <stop offset="1" stop-color="#5f9210"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Outer crosshair ring -->
+  <circle cx="100" cy="100" r="88" fill="none" stroke="url(#steel)" stroke-width="9"/>
+  <circle cx="100" cy="100" r="88" fill="none" stroke="#3a4130" stroke-width="1.5"/>
+
+  <!-- Crosshair ticks -->
+  <g stroke="url(#steel)" stroke-width="7" stroke-linecap="round">
+    <line x1="100" y1="4"  x2="100" y2="30"/>
+    <line x1="100" y1="170" x2="100" y2="196"/>
+    <line x1="4"  y1="100" x2="30"  y2="100"/>
+    <line x1="170" y1="100" x2="196" y2="100"/>
+  </g>
+
+  <!-- RR monogram: left R silver, right R green -->
+  <g font-family="Oswald, Arial Black, sans-serif" font-weight="700" font-size="118" text-anchor="middle">
+    <text x="72" y="142" fill="url(#steel)">R</text>
+    <text x="130" y="142" fill="url(#grn)">R</text>
+  </g>
+</svg>

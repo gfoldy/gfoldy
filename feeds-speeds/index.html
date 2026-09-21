@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Feeds &amp; Speeds</title>
+  <meta name="description" content="A feeds & speeds calculator for milling, routing and drilling — pick your machine, tool and material and get spindle speed, feed rate and depth of cut. Works offline." />
+  <meta name="theme-color" content="#0d0d0f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Feeds & Speeds" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="wrap">
+      <h1>Feeds &amp; Speeds</h1>
+      <p class="tagline">Pick your machine, tool and material — get spindle speed, feed rate and depth of cut.</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <form id="calc-form" autocomplete="off">
+      <!-- Machine -->
+      <section class="card">
+        <h2>1 · Machine</h2>
+        <label class="field">
+          <span>Machine</span>
+          <select id="machine" name="machine"></select>
+        </label>
+        <div id="custom-rpm" class="row hidden">
+          <label class="field">
+            <span>Min spindle RPM</span>
+            <input type="number" id="rpmMin" min="1" step="1" value="100" />
+          </label>
+          <label class="field">
+            <span>Max spindle RPM</span>
+            <input type="number" id="rpmMax" min="1" step="1" value="10000" />
+          </label>
+        </div>
+      </section>
+
+      <!-- Tool -->
+      <section class="card">
+        <h2>2 · Tool</h2>
+        <div class="row">
+          <label class="field">
+            <span>Type</span>
+            <select id="toolType" name="toolType"></select>
+          </label>
+          <label class="field">
+            <span>Cutter material</span>
+            <select id="toolMaterial" name="toolMaterial"></select>
+          </label>
+        </div>
+        <div class="row">
+          <label class="field">
+            <span>Diameter</span>
+            <input type="number" id="diameter" min="0" step="0.001" value="0.25" inputmode="decimal" />
+          </label>
+          <label class="field" id="flutes-field">
+            <span>Flutes</span>
+            <input type="number" id="flutes" min="1" max="12" step="1" value="2" inputmode="numeric" />
+          </label>
+        </div>
+        <div class="unit-toggle" role="radiogroup" aria-label="Units">
+          <button type="button" data-unit="in" class="active">inch</button>
+          <button type="button" data-unit="mm">mm</button>
+        </div>
+      </section>
+
+      <!-- Material + cut -->
+      <section class="card">
+        <h2>3 · Material &amp; cut</h2>
+        <label class="field">
+          <span>Material</span>
+          <select id="material" name="material"></select>
+        </label>
+        <label class="field" id="operation-field">
+          <span>Operation</span>
+          <select id="operation" name="operation"></select>
+        </label>
+        <label class="field">
+          <span>How hard to push</span>
+          <input type="range" id="aggr" min="0" max="2" step="1" value="1" />
+          <output id="aggr-out" class="range-out">Nominal</output>
+        </label>
+        <label class="checkbox" id="thinning-field">
+          <input type="checkbox" id="chipThinning" checked />
+          <span>Apply radial chip-thinning (raise feed for light stepovers)</span>
+        </label>
+      </section>
+    </form>
+
+    <!-- Results -->
+    <section id="results" class="results" aria-live="polite"></section>
+
+    <p class="disclaimer">
+      These are conservative <strong>starting points</strong>, not guarantees. Real feeds &amp; speeds depend on
+      tool coating, stick-out, work holding, coolant and machine condition. Trust your ears and your chips,
+      start on the safe side, and defer to the tool manufacturer's data.
+    </p>
+  </main>
+
+  <script src="./data.js"></script>
+  <script src="./calc.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

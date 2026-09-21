@@ -13,6 +13,19 @@ Cloud-Native Engineer | DevOps & Cybersecurity | Future DevSecOps
 
 ---
 
+## 📂 Projects in this repo
+
+Each project is self-contained in its own top-level folder. The repo root
+([`index.html`](./index.html)) is a portfolio hub that links to each one.
+
+| Project | What it is | Stack | Folder |
+| --- | --- | --- | --- |
+| **⚙️ [Feeds &amp; Speeds](./feeds-speeds/)** | Machining calculator — spindle speed, feed rate and depth of cut from your machine, tool and material | Vanilla JS · offline | [`feeds-speeds/`](./feeds-speeds/) |
+| **🏋️ [Iron Log](./iron-log/)** | Mobile-first workout tracker (PWA), offline-first with optional cloud sync | Vanilla JS · PWA · Supabase | [`iron-log/`](./iron-log/) |
+| **📱 [Iron Log — Native](./iron-log-native/)** | Native iOS version of Iron Log, one codebase plus a Next.js API | Expo · React Native · Next.js | [`iron-log-native/`](./iron-log-native/) |
+
+---
+
 ## 🧠 Overview
 
 I design and deploy secure, production-ready cloud-native systems that combine infrastructure automation and cybersecurity best practices.

@@ -1,0 +1,28 @@
+{
+  "name": "feeds-speeds-native",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Feeds & Speeds — native iOS/Android app (Expo/React Native) + Next.js API, one codebase.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "test": "node --test packages/core/test/*.test.ts",
+    "typecheck": "npm run -w @feedspeed/core typecheck && npm run -w @feedspeed/mobile typecheck && npm run -w @feedspeed/api typecheck",
+    "mobile": "npm run -w @feedspeed/mobile start",
+    "api": "npm run -w @feedspeed/api dev"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "//": "expo-router is declared here so npm hoists it to the root node_modules; babel-preset-expo resolves it from there to enable the router transform. Keep the range in sync with apps/mobile.",
+  "dependencies": {
+    "expo-router": "~57.0.21"
+  },
+  "//overrides": "Pin react + react-dom to the exact Expo SDK 57 version everywhere so a hoisted newer react can't mismatch react-dom (which breaks the Next.js build).",
+  "overrides": {
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  }
+}

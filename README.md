@@ -21,6 +21,7 @@ Each project is self-contained in its own top-level folder. The repo root
 | Project | What it is | Stack | Folder |
 | --- | --- | --- | --- |
 | **⚙️ [Feeds &amp; Speeds](./feeds-speeds/)** | Machining calculator — spindle speed, feed rate and depth of cut from your machine, tool and material | Vanilla JS · offline | [`feeds-speeds/`](./feeds-speeds/) |
+| **📱 [Feeds &amp; Speeds — Native](./feeds-speeds-native/)** | Publishable native build of the calculator, with machine-aware power &amp; deflection checks and a shared math core | Expo · React Native · Next.js | [`feeds-speeds-native/`](./feeds-speeds-native/) |
 | **🏋️ [Iron Log](./iron-log/)** | Mobile-first workout tracker (PWA), offline-first with optional cloud sync | Vanilla JS · PWA · Supabase | [`iron-log/`](./iron-log/) |
 | **📱 [Iron Log — Native](./iron-log-native/)** | Native iOS version of Iron Log, one codebase plus a Next.js API | Expo · React Native · Next.js | [`iron-log-native/`](./iron-log-native/) |
 

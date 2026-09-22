@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Expo / React Native
+.expo/
+apps/mobile/ios/
+apps/mobile/android/
+apps/mobile/.expo/
+*.tsbuildinfo
+
+# Next.js
+apps/api/.next/
+apps/api/out/
+
+# Env / secrets
+.env
+.env.local
+.env*.local
+
+# Logs / OS
+*.log
+.DS_Store

@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "Feeds & Speeds",
+    "slug": "feeds-speeds",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "feedspeed",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0d0d0f",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0d0d0f"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.foldyfamily.feedspeed",
+      "buildNumber": "1",
+      "infoPlist": {
+        "UIUserInterfaceStyle": "Dark",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.foldyfamily.feedspeed",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0d0d0f"
+      }
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "apiBaseUrl": "https://feeds-speeds-api.vercel.app"
+    }
+  }
+}

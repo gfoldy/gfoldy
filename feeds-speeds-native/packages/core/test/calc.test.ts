@@ -4,6 +4,7 @@ import {
   computeFeedsSpeeds, chipThinningFactor, interp,
   effectiveCoating, applyOutcome, applyObservedRatio, DEFAULT_CALIBRATION,
   scallopFromStepover, stepoverFromScallop, effectiveBallDiameter, finishGrade,
+  computeTapping, THREADS,
 } from '../src/index.ts';
 import type { CalcInput } from '../src/index.ts';
 
@@ -242,6 +243,46 @@ test('finish grade sharpens as scallop shrinks', () => {
   assert.equal(finishGrade(0.0001).grade, 'mirror');
   assert.equal(finishGrade(0.003).grade, 'visible');
   assert.equal(finishGrade(0.010).grade, 'rough');
+});
+
+test('tap drill for 1/4-20 @ 75% matches the #7 drill (0.201")', () => {
+  const t = THREADS.find((x) => x.key === '1/4-20')!;
+  const r = computeTapping({ majorIn: t.majorIn, pitchIn: t.pitchIn, pctThread: 75, materialKey: 'alu_6061', machineKey: 'vmc' });
+  assert.ok(Math.abs(r.tapDrill.in - 0.201) < 0.001, `got ${r.tapDrill.in}`);
+  assert.equal(r.tpi, 20);
+});
+
+test('tap drill for M6 × 1.0 @ 75% is ~5.0 mm', () => {
+  const t = THREADS.find((x) => x.key === 'M6 × 1.0')!;
+  const r = computeTapping({ majorIn: t.majorIn, pitchIn: t.pitchIn, pctThread: 75, materialKey: 'steel_mild', machineKey: 'vmc' });
+  assert.ok(Math.abs(r.tapDrill.mm - 5.0) < 0.1, `got ${r.tapDrill.mm}`);
+});
+
+test('tapping feed is locked to the pitch (feed = rpm × pitch)', () => {
+  const t = THREADS.find((x) => x.key === '1/4-20')!;
+  const r = computeTapping({ majorIn: t.majorIn, pitchIn: t.pitchIn, pctThread: 75, materialKey: 'alu_6061', machineKey: 'vmc' });
+  assert.ok(Math.abs(r.feedIpm - r.rpm * t.pitchIn) < 0.11);
+  assert.ok(Math.abs(r.feedPerRev.in - t.pitchIn) < 1e-6);
+});
+
+test('a higher %thread makes a smaller tap-drill hole and warns past ~80%', () => {
+  const t = THREADS.find((x) => x.key === '1/4-20')!;
+  const lo = computeTapping({ majorIn: t.majorIn, pitchIn: t.pitchIn, pctThread: 65, materialKey: 'alu_6061', machineKey: 'vmc' });
+  const hi = computeTapping({ majorIn: t.majorIn, pitchIn: t.pitchIn, pctThread: 85, materialKey: 'alu_6061', machineKey: 'vmc' });
+  assert.ok(hi.tapDrill.in < lo.tapDrill.in);
+  assert.ok(hi.warnings.some((w) => w.toLowerCase().includes('thread')));
+});
+
+test('tapping runs slower in hard material than soft', () => {
+  const t = THREADS.find((x) => x.key === '1/4-20')!;
+  const soft = computeTapping({ majorIn: t.majorIn, pitchIn: t.pitchIn, pctThread: 75, materialKey: 'alu_6061', machineKey: 'vmc' });
+  const hard = computeTapping({ majorIn: t.majorIn, pitchIn: t.pitchIn, pctThread: 75, materialKey: 'ss_304', machineKey: 'vmc' });
+  assert.ok(hard.rpm < soft.rpm);
+});
+
+test('computeFeedsSpeeds refuses a tap (uses the tapping panel)', () => {
+  const r = computeFeedsSpeeds(baseInput({ toolTypeKey: 'tap' }));
+  assert.ok(r.error);
 });
 
 test('interp clamps at the ends', () => {

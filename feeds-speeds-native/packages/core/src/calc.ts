@@ -73,6 +73,7 @@ export function computeFeedsSpeeds(input: CalcInput): CalcResult {
   });
 
   if (!material || !toolMat || !toolType) return base('Unknown machine, tool or material.');
+  if (toolType.model === 'tapping') return base('Taps are calculated in the tapping panel.');
 
   const diaIn = input.unit === 'mm' ? input.diameter * IN_PER_MM : input.diameter;
   if (!(diaIn > 0)) return base('Enter a tool diameter greater than zero.');

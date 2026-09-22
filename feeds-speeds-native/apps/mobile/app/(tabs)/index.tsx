@@ -13,6 +13,7 @@ import {
   Card, Title, Muted, Section, Select, Segmented, NumberField, Notice, Stat, Button,
   type SelectOption,
 } from '../../src/components/ui';
+import { TappingPanel } from '../../src/components/TappingPanel';
 import { pick, lenUnit, feedUnit, speedUnit, fmtMinutes } from '../../src/lib/format';
 
 // Options from core data.
@@ -55,6 +56,7 @@ export default function Calculator() {
   const [finishValue, setFinishValue] = useState('0.5');
 
   const isDrill = TOOL_TYPES[toolTypeKey]?.model === 'drilling';
+  const isTap = TOOL_TYPES[toolTypeKey]?.model === 'tapping';
   const isBall = toolTypeKey === 'ballnose';
   const num = (s: string) => (s.trim() === '' ? undefined : parseFloat(s));
   const roundTo = (x: number, dp: number) => { const f = Math.pow(10, dp); return Math.round(x * f) / f; };
@@ -182,12 +184,16 @@ export default function Calculator() {
           value={unit}
           onChange={toggleUnit}
         />
-        <View style={{ height: 12 }} />
-        <Segmented<string>
-          options={[{ key: '0', label: 'Conservative' }, { key: '1', label: 'Nominal' }, { key: '2', label: 'Aggressive' }]}
-          value={String(settings.aggressiveness)}
-          onChange={(k) => setSettings({ aggressiveness: Number(k) as Aggressiveness })}
-        />
+        {!isTap ? (
+          <>
+            <View style={{ height: 12 }} />
+            <Segmented<string>
+              options={[{ key: '0', label: 'Conservative' }, { key: '1', label: 'Nominal' }, { key: '2', label: 'Aggressive' }]}
+              value={String(settings.aggressiveness)}
+              onChange={(k) => setSettings({ aggressiveness: Number(k) as Aggressiveness })}
+            />
+          </>
+        ) : null}
         {tools.length > 0 ? (
           <>
             <View style={{ height: 12 }} />
@@ -208,19 +214,23 @@ export default function Calculator() {
       <Card>
         <View style={styles.row}>
           <View style={{ flex: 1 }}><Select label="Type" value={toolTypeKey} options={toolTypeOpts} onChange={setToolTypeKey} /></View>
-          <View style={{ flex: 1 }}><Select label="Cutter" value={toolMaterialKey} options={toolMatOpts} onChange={setToolMaterialKey} /></View>
+          {!isTap ? <View style={{ flex: 1 }}><Select label="Cutter" value={toolMaterialKey} options={toolMatOpts} onChange={setToolMaterialKey} /></View> : null}
         </View>
-        <View style={{ height: 12 }} />
-        <View style={styles.row}>
-          <NumberField label="Diameter" value={diameter} onChange={setDiameter} suffix={lenUnit(unit)} />
-          <NumberField label={isDrill ? 'Lips' : 'Flutes'} value={flutes} onChange={setFlutes} />
-        </View>
-        <View style={{ height: 12 }} />
-        <Select label="Coating" value={coatingKey} options={coatingOpts} onChange={setCoatingKey} />
-        {!isDrill ? (
+        {!isTap ? (
           <>
             <View style={{ height: 12 }} />
-            <NumberField label="Stick-out (optional — enables deflection check)" value={stickout} onChange={setStickout} suffix={lenUnit(unit)} placeholder="e.g. 1.0" />
+            <View style={styles.row}>
+              <NumberField label="Diameter" value={diameter} onChange={setDiameter} suffix={lenUnit(unit)} />
+              <NumberField label={isDrill ? 'Lips' : 'Flutes'} value={flutes} onChange={setFlutes} />
+            </View>
+            <View style={{ height: 12 }} />
+            <Select label="Coating" value={coatingKey} options={coatingOpts} onChange={setCoatingKey} />
+            {!isDrill ? (
+              <>
+                <View style={{ height: 12 }} />
+                <NumberField label="Stick-out (optional — enables deflection check)" value={stickout} onChange={setStickout} suffix={lenUnit(unit)} placeholder="e.g. 1.0" />
+              </>
+            ) : null}
           </>
         ) : null}
       </Card>
@@ -229,20 +239,27 @@ export default function Calculator() {
       <Section>Material &amp; cut</Section>
       <Card>
         <Select label="Material" value={materialKey} options={materialOpts} onChange={setMaterialKey} />
-        {!isDrill ? (
+        {!isDrill && !isTap ? (
           <>
             <View style={{ height: 12 }} />
             <Select label="Operation" value={operation} options={operationOpts} onChange={(k) => setOperation(k as Operation)} />
           </>
         ) : null}
-        <View style={{ height: 12 }} />
-        <Pressable style={styles.checkRow} onPress={() => setSettings({ chipThinning: !settings.chipThinning })}>
-          <View style={[styles.checkbox, settings.chipThinning && styles.checkboxOn]}>
-            {settings.chipThinning ? <Text style={styles.checkMark}>✓</Text> : null}
-          </View>
-          <Text style={styles.checkLabel}>Apply radial chip-thinning (raise feed for light stepovers)</Text>
-        </Pressable>
+        {!isTap ? (
+          <>
+            <View style={{ height: 12 }} />
+            <Pressable style={styles.checkRow} onPress={() => setSettings({ chipThinning: !settings.chipThinning })}>
+              <View style={[styles.checkbox, settings.chipThinning && styles.checkboxOn]}>
+                {settings.chipThinning ? <Text style={styles.checkMark}>✓</Text> : null}
+              </View>
+              <Text style={styles.checkLabel}>Apply radial chip-thinning (raise feed for light stepovers)</Text>
+            </Pressable>
+          </>
+        ) : null}
       </Card>
+
+      {/* Tapping (own model — replaces the milling feeds/results) */}
+      {isTap ? <TappingPanel unit={unit} materialKey={materialKey} machineKey={machineKey} /> : null}
 
       {/* Ball-nose finish (surfacing) */}
       {isBall ? (
@@ -287,18 +304,24 @@ export default function Calculator() {
         </>
       ) : null}
 
-      {/* Tooling & cost (optional) */}
-      <Section>Tooling &amp; cost <Text style={styles.optional}>· optional</Text></Section>
-      <Card>
-        <View style={styles.row}>
-          <NumberField label="Tool price" value={toolPrice} onChange={setToolPrice} suffix="$" placeholder="40" />
-          <NumberField label="Shop rate" value={shopRate} onChange={saveShopRate} suffix="$/hr" placeholder="75" />
-        </View>
-        <View style={{ height: 12 }} />
-        <NumberField label={`Volume to remove (${unit === 'mm' ? 'cm³' : 'in³'}) — for a per-job estimate`} value={volume} onChange={setVolume} suffix={unit === 'mm' ? 'cm³' : 'in³'} placeholder="e.g. 2" />
-      </Card>
+      {/* Tooling & cost (optional) — milling only */}
+      {!isTap ? (
+        <>
+          <Section>Tooling &amp; cost <Text style={styles.optional}>· optional</Text></Section>
+          <Card>
+            <View style={styles.row}>
+              <NumberField label="Tool price" value={toolPrice} onChange={setToolPrice} suffix="$" placeholder="40" />
+              <NumberField label="Shop rate" value={shopRate} onChange={saveShopRate} suffix="$/hr" placeholder="75" />
+            </View>
+            <View style={{ height: 12 }} />
+            <NumberField label={`Volume to remove (${unit === 'mm' ? 'cm³' : 'in³'}) — for a per-job estimate`} value={volume} onChange={setVolume} suffix={unit === 'mm' ? 'cm³' : 'in³'} placeholder="e.g. 2" />
+          </Card>
+        </>
+      ) : null}
 
-      {/* Results */}
+      {/* Results — milling only */}
+      {!isTap ? (
+      <>
       <Section right={savedMsg ? <Text style={styles.savedMsg}>{savedMsg}</Text> : undefined}>Results</Section>
       {r.error ? (
         <Notice tone="error">{r.error}</Notice>
@@ -357,10 +380,12 @@ export default function Calculator() {
           ) : null}
         </>
       )}
+      </>
+      ) : null}
 
       <Muted style={{ marginTop: 22, fontSize: 12 }}>
-        Starting points only — real feeds &amp; speeds depend on coating, stick-out, work holding and coolant.
-        Start safe, trust your ears and chips, and defer to the tool maker's data.
+        Starting points only — real results depend on coating, stick-out/rigidity, work holding, coolant and
+        tool condition. Start safe, trust your ears and chips, and defer to the tool maker's data.
       </Muted>
 
       <Modal visible={showLog} transparent animationType="slide" onRequestClose={() => setShowLog(false)}>

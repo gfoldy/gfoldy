@@ -52,6 +52,7 @@ export const TOOL_TYPES: Record<string, ToolType> = {
   endmill:  { label: 'End mill (flat / square)', model: 'milling',  defaultFlutes: 2 },
   ballnose: { label: 'Ball-nose end mill',       model: 'milling',  defaultFlutes: 2 },
   drill:    { label: 'Drill',                    model: 'drilling', defaultFlutes: 2 },
+  tap:      { label: 'Tap (threading)',          model: 'tapping',  defaultFlutes: 0 },
 };
 
 // ---------------------------------------------------------------------------

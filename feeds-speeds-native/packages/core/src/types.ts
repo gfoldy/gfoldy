@@ -3,7 +3,7 @@
 export type UnitSystem = 'in' | 'mm';
 export type MaterialClass = 'soft' | 'medium' | 'hard';
 export type Operation = 'slotting' | 'roughing' | 'finishing' | 'adaptive';
-export type ToolModel = 'milling' | 'drilling';
+export type ToolModel = 'milling' | 'drilling' | 'tapping';
 export type Aggressiveness = 0 | 1 | 2;
 
 export interface Machine {

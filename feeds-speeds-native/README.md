@@ -48,6 +48,10 @@ Most free calculators just do RPM and feed. This one is **machine-aware**:
 - **Ball-nose finish** — for a ball-nose tool, solve surface finish either way:
   a target scallop (cusp) height ↔ the stepover that gives it, with a plain-
   English finish grade (mirror → needs finishing).
+- **Tapping** — pick a standard thread (metric / UNC / UNF) or a custom size and
+  get the tap-drill diameter for your chosen % thread, the tapping RPM, and the
+  feed **locked to the pitch** (one pitch per rev, as it must be), plus rigid-
+  tapping / fluid / chip-clearing guidance.
 - **Your tool crib** — save the tools you actually own (coating, flutes, price)
   and one-tap load them. Save dialed-in jobs per material + operation.
 - **Shop packs** — export your whole setup (tool crib, saved jobs, learned

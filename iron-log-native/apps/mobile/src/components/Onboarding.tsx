@@ -17,7 +17,8 @@ export function Onboarding() {
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.brand}>Iron <Text style={{ color: T.gold }}>Log</Text></Text>
+      <Text style={styles.brand}>LF<Text style={{ color: T.gold }}>T</Text></Text>
+      <Text style={styles.tagline}>Train. Track. Progress.</Text>
       <Text style={styles.h}>Who's training?</Text>
       <Text style={styles.sub}>Your data stays on this device, tagged to your name.</Text>
       <TextInput
@@ -29,7 +30,7 @@ export function Onboarding() {
         autoFocus
       />
       <Pressable style={[styles.btn, styles.gold]} onPress={() => go(true)} disabled={busy}>
-        <Text style={styles.goldText}>Use the Iron Log starter split</Text>
+        <Text style={styles.goldText}>Use the LFT starter split</Text>
       </Pressable>
       <Pressable style={[styles.btn, styles.ghost]} onPress={() => go(false)} disabled={busy}>
         <Text style={styles.ghostText}>Start from scratch</Text>
@@ -40,7 +41,8 @@ export function Onboarding() {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: T.bg, padding: 24, justifyContent: 'center' },
-  brand: { color: T.text, fontFamily: 'BricolageGrotesque_800ExtraBold', fontSize: 30, fontWeight: '800', textAlign: 'center', marginBottom: 40 },
+  brand: { color: T.text, fontFamily: 'BricolageGrotesque_800ExtraBold', fontSize: 48, fontWeight: '800', textAlign: 'center', letterSpacing: 2 },
+  tagline: { color: T.textDim, fontFamily: 'Manrope_700Bold', fontSize: 12, letterSpacing: 3, textTransform: 'uppercase', textAlign: 'center', marginTop: 6, marginBottom: 40 },
   h: { color: T.text, fontFamily: 'BricolageGrotesque_800ExtraBold', fontSize: 24, fontWeight: '800', marginBottom: 6 },
   sub: { color: T.textDim, fontFamily: 'Manrope_400Regular', fontSize: 14, marginBottom: 20 },
   input: {

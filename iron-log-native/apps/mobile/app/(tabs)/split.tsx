@@ -36,7 +36,7 @@ export default function SplitScreen() {
       {store.split.length === 0 && (
         <View style={styles.card}>
           <Text style={styles.muted}>No training days yet.</Text>
-          <Pressable style={styles.btnGold} onPress={() => store.saveSplit(starterSplit())}><Text style={styles.btnGoldText}>Load the Iron Log starter split</Text></Pressable>
+          <Pressable style={styles.btnGold} onPress={() => store.saveSplit(starterSplit())}><Text style={styles.btnGoldText}>Load the LFT starter split</Text></Pressable>
           <Pressable style={styles.btnGhost} onPress={addDay}><Text style={styles.btnGhostText}>+ Add a day from scratch</Text></Pressable>
         </View>
       )}

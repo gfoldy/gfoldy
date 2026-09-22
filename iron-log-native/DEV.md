@@ -50,5 +50,5 @@ start editing files locally, stop using it and let Claude know.
 
 ```bash
 git rev-parse --short HEAD                 # which commit you're on
-grep -c "0a0c0b" apps/mobile/src/theme.ts  # sanity-check a change landed
+grep -c "0a0a0b" apps/mobile/src/theme.ts  # sanity-check a change landed
 ```

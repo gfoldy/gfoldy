@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
   barFill: { height: '100%', borderRadius: 6 },
   barVal: { color: T.text, fontFamily: 'Manrope_700Bold', fontSize: 13, fontWeight: '700', minWidth: 54, textAlign: 'right' },
   barPct: { color: T.textFaint, fontFamily: 'Manrope_600SemiBold', fontSize: 11, fontWeight: '600' },
-  lagFlag: { backgroundColor: T.goldSoft, borderWidth: 1, borderColor: '#cfe0d4', borderRadius: 9, padding: 10, marginBottom: 12 },
+  lagFlag: { backgroundColor: T.goldSoft, borderWidth: 1, borderColor: '#2f4a17', borderRadius: 9, padding: 10, marginBottom: 12 },
   lagOk: { backgroundColor: T.greenSoft, borderColor: T.greenDim },
   lagText: { color: T.text, fontFamily: 'Manrope_400Regular', fontSize: 13, lineHeight: 18 },
   planRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 5 },

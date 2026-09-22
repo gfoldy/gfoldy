@@ -1,21 +1,21 @@
 {
   "expo": {
-    "name": "Iron Log",
-    "slug": "iron-log",
+    "name": "LFT",
+    "slug": "lft",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "ironlog",
+    "scheme": "lft",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#0a0c0b",
+    "backgroundColor": "#0a0a0b",
     "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0a0c0b"
+      "backgroundColor": "#0a0a0b"
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.foldyfamily.ironlog",
+      "bundleIdentifier": "com.foldyfamily.lft",
       "buildNumber": "1",
       "infoPlist": {
         "UIUserInterfaceStyle": "Dark",
@@ -23,10 +23,10 @@
       }
     },
     "android": {
-      "package": "com.foldyfamily.ironlog",
+      "package": "com.foldyfamily.lft",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0a0c0b"
+        "backgroundColor": "#0a0a0b"
       }
     },
     "plugins": [

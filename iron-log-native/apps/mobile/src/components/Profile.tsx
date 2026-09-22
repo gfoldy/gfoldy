@@ -54,8 +54,8 @@ export function Profile({ visible, onClose }: { visible: boolean; onClose: () =>
               <Svg style={StyleSheet.absoluteFill}>
                 <Defs>
                   <RadialGradient id="av" cx="0.3" cy="0.2" r="0.9">
-                    <Stop offset="0" stopColor="#5bdc8e" />
-                    <Stop offset="1" stopColor="#2f7a4c" />
+                    <Stop offset="0" stopColor="#93f04d" />
+                    <Stop offset="1" stopColor="#4c9c19" />
                   </RadialGradient>
                 </Defs>
                 <Rect x="0" y="0" width="100%" height="100%" rx={26} fill="url(#av)" />

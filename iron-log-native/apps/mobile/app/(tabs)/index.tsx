@@ -9,7 +9,7 @@ import {
   mesoStatus, lastSession, suggestNext, setTagShort, isCompleted,
 } from '@ironlog/core';
 import { useStore } from '../../src/db/store';
-import { T, radii, shadow, shadowSm, font, HERO_GRADIENT } from '../../src/theme';
+import { T, radii, shadow, shadowSm, font, HERO_GRADIENT, HERO_GLOW } from '../../src/theme';
 import { fmtNum } from '../../src/lib/format';
 import { Nutrition } from '../../src/components/Nutrition';
 import { Profile } from '../../src/components/Profile';
@@ -17,7 +17,8 @@ import { Profile } from '../../src/components/Profile';
 const initialsOf = (s: string) =>
   s.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || 'A';
 
-// Deep-forest gradient + a corner glow, painted behind the hero content.
+// Green-tinged black gradient + an electric-green corner glow (logo rim light),
+// painted behind the hero content.
 function HeroBg() {
   return (
     <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
@@ -28,8 +29,8 @@ function HeroBg() {
           <Stop offset="1" stopColor={HERO_GRADIENT[2]} />
         </SvgLinearGradient>
         <RadialGradient id="glow" cx="0.82" cy="0.1" r="0.75">
-          <Stop offset="0" stopColor="#4fe38f" stopOpacity="0.34" />
-          <Stop offset="1" stopColor="#4fe38f" stopOpacity="0" />
+          <Stop offset="0" stopColor={HERO_GLOW} stopOpacity="0.38" />
+          <Stop offset="1" stopColor={HERO_GLOW} stopOpacity="0" />
         </RadialGradient>
       </Defs>
       <Rect x="0" y="0" width="100%" height="100%" fill="url(#hero)" />
@@ -287,17 +288,17 @@ const styles = StyleSheet.create({
   navRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
   navMini: { width: 38, height: 38, borderRadius: 12, backgroundColor: T.bgElev, borderWidth: 1, borderColor: T.border, alignItems: 'center', justifyContent: 'center', ...shadowSm },
   navMiniText: { color: T.text, fontFamily: font.bold, fontSize: 20, marginTop: -2 },
-  todayPill: { paddingHorizontal: 12, height: 38, borderRadius: 12, backgroundColor: T.goldSoft, borderWidth: 1, borderColor: '#235233', alignItems: 'center', justifyContent: 'center' },
+  todayPill: { paddingHorizontal: 12, height: 38, borderRadius: 12, backgroundColor: T.goldSoft, borderWidth: 1, borderColor: '#2f4a17', alignItems: 'center', justifyContent: 'center' },
   todayPillText: { color: T.goldLt, fontFamily: font.bold, fontSize: 12 },
 
-  hero: { height: 200, borderRadius: 26, overflow: 'hidden', backgroundColor: HERO_GRADIENT[1], borderWidth: 1, borderColor: '#24382b', ...shadow },
+  hero: { height: 200, borderRadius: 26, overflow: 'hidden', backgroundColor: HERO_GRADIENT[1], borderWidth: 1, borderColor: '#2a3a12', ...shadow },
   heroGlyph: { position: 'absolute', right: -18, top: 10 },
   heroPill: { position: 'absolute', top: 16, left: 16, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
   heroPillText: { color: '#eafff1', fontFamily: font.bold, fontSize: 11, letterSpacing: 0.7, textTransform: 'uppercase' },
   heroDots: { position: 'absolute', top: 20, right: 16, flexDirection: 'row', gap: 5 },
   hdot: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.22)' },
-  hdotOn: { backgroundColor: 'rgba(120,240,170,0.75)' },
-  hdotNow: { backgroundColor: '#5bff9e' },
+  hdotOn: { backgroundColor: 'rgba(140,255,58,0.7)' },
+  hdotNow: { backgroundColor: HERO_GLOW },
   hdotDe: { backgroundColor: 'transparent', borderWidth: 1, borderColor: 'rgba(255,255,255,0.55)', borderStyle: 'dashed' },
   heroCap: { position: 'absolute', left: 20, bottom: 20, right: 20 },
   heroTitle: { color: '#ffffff', fontFamily: font.display, fontSize: 30, letterSpacing: -0.3 },

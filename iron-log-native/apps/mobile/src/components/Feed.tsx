@@ -12,7 +12,7 @@ function feedText(it: FeedItem): string {
     return `trained ${d.dayName ? String(d.dayName) + ' · ' : ''}${parts.join(' · ')}`;
   }
   if (it.type === 'pr') return `hit a PR${d.exercise ? ' on ' + String(d.exercise) : ''}`;
-  if (it.type === 'join') return 'joined Iron Log';
+  if (it.type === 'join') return 'joined LFT';
   return it.type;
 }
 

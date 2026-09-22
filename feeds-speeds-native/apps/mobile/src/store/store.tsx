@@ -51,6 +51,11 @@ interface StoreValue {
   getCalibration: (materialKey: string) => Calibration;
   logOutcome: (materialKey: string, outcome: CutOutcome) => Calibration;
   resetCalibrations: () => void;
+  /** Merge an imported shop pack; returns how many new tools/jobs were added. */
+  importData: (data: {
+    tools?: SavedTool[]; jobs?: SavedJob[];
+    calibrations?: Record<string, Calibration>; settings?: Partial<Settings>;
+  }) => { toolsAdded: number; jobsAdded: number };
 }
 
 const KEY = 'feedspeed.v1';
@@ -122,6 +127,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       return next;
     },
     resetCalibrations: () => setCalibrations({}),
+    importData: (data) => {
+      // Append only tools/jobs whose ids aren't already present (idempotent on
+      // re-import of your own pack; additive when merging a friend's).
+      const toolIds = new Set(tools.map((t) => t.id));
+      const newTools = (data.tools ?? []).filter((t) => t && t.id && !toolIds.has(t.id));
+      const jobIds = new Set(jobs.map((j) => j.id));
+      const newJobs = (data.jobs ?? []).filter((j) => j && j.id && !jobIds.has(j.id));
+      if (newTools.length) setTools((cur) => [...newTools, ...cur]);
+      if (newJobs.length) setJobs((cur) => [...newJobs, ...cur]);
+      if (data.calibrations) setCalibrations((cur) => ({ ...cur, ...data.calibrations }));
+      if (data.settings) setSettingsState((cur) => ({ ...cur, ...data.settings }));
+      return { toolsAdded: newTools.length, jobsAdded: newJobs.length };
+    },
   }), [ready, settings, tools, jobs, calibrations]);
 
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>;

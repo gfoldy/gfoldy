@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   computeFeedsSpeeds, chipThinningFactor, interp,
   effectiveCoating, applyOutcome, applyObservedRatio, DEFAULT_CALIBRATION,
+  scallopFromStepover, stepoverFromScallop, effectiveBallDiameter, finishGrade,
 } from '../src/index.ts';
 import type { CalcInput } from '../src/index.ts';
 
@@ -211,6 +212,36 @@ test('applyObservedRatio moves toward an exact ratio and ignores nonsense', () =
   assert.ok(moved.factor < 1);
   const ignored = applyObservedRatio(DEFAULT_CALIBRATION, -3);
   assert.equal(ignored.factor, DEFAULT_CALIBRATION.factor);
+});
+
+test('ball-nose scallop and stepover are exact inverses', () => {
+  const dia = 0.25; // 1/4" ball
+  const stepover = 0.02;
+  const h = scallopFromStepover(dia, stepover);
+  assert.ok(h > 0 && h < dia / 2);
+  const back = stepoverFromScallop(dia, h);
+  assert.ok(Math.abs(back - stepover) < 1e-9);
+});
+
+test('tighter stepover gives a smaller scallop', () => {
+  const dia = 0.25;
+  assert.ok(scallopFromStepover(dia, 0.01) < scallopFromStepover(dia, 0.04));
+});
+
+test('scallop caps at the ball radius for a stepover >= diameter', () => {
+  assert.equal(scallopFromStepover(0.25, 0.25), 0.125);
+  assert.equal(scallopFromStepover(0.25, 1.0), 0.125);
+});
+
+test('effective ball diameter is smaller than nominal at shallow depth and equals D at r', () => {
+  assert.ok(effectiveBallDiameter(0.25, 0.01) < 0.25);
+  assert.ok(Math.abs(effectiveBallDiameter(0.25, 0.125) - 0.25) < 1e-9); // Ap = r -> full D
+});
+
+test('finish grade sharpens as scallop shrinks', () => {
+  assert.equal(finishGrade(0.0001).grade, 'mirror');
+  assert.equal(finishGrade(0.003).grade, 'visible');
+  assert.equal(finishGrade(0.010).grade, 'rough');
 });
 
 test('interp clamps at the ends', () => {

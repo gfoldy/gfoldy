@@ -1,17 +1,40 @@
-import React from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, Alert, StyleSheet } from 'react-native';
 import Constants from 'expo-constants';
 import { useStore } from '../../src/store/store';
 import { T } from '../../src/theme';
 import { Card, Section, Muted, Segmented, Button, FieldLabel } from '../../src/components/ui';
 import { MATERIALS, type UnitSystem, type Aggressiveness } from '@feedspeed/core';
+import { buildPack, exportPack, pickPack } from '../../src/lib/shoppack';
 
 export default function SettingsScreen() {
-  const { settings, setSettings, tools, jobs, removeTool, removeJob, calibrations, resetCalibrations } = useStore();
+  const { settings, setSettings, tools, jobs, removeTool, removeJob, calibrations, resetCalibrations, importData } = useStore();
+  const [packMsg, setPackMsg] = useState<string | null>(null);
 
   function clearAll() {
     tools.forEach((t) => removeTool(t.id));
     jobs.forEach((j) => removeJob(j.id));
+  }
+
+  async function onExport() {
+    try {
+      const result = await exportPack(buildPack({ tools, jobs, calibrations, settings }));
+      setPackMsg(result === 'unavailable' ? 'Sharing is not available on this device.' : null);
+    } catch (e) {
+      Alert.alert('Export failed', String((e as Error)?.message ?? e));
+    }
+  }
+
+  async function onImport() {
+    try {
+      const pack = await pickPack();
+      if (!pack) return; // cancelled
+      const { toolsAdded, jobsAdded } = importData(pack);
+      const calCount = Object.keys(pack.calibrations ?? {}).length;
+      setPackMsg(`Imported: ${toolsAdded} tool${toolsAdded === 1 ? '' : 's'}, ${jobsAdded} job${jobsAdded === 1 ? '' : 's'}, ${calCount} calibration${calCount === 1 ? '' : 's'}, defaults applied.`);
+    } catch (e) {
+      Alert.alert('Import failed', String((e as Error)?.message ?? e));
+    }
   }
 
   const tuned = Object.entries(calibrations).filter(([, c]) => c.samples > 1);
@@ -63,6 +86,21 @@ export default function SettingsScreen() {
         )}
       </Card>
 
+      <Section>Shop pack</Section>
+      <Card>
+        <Muted>
+          Export your machines-worth of setup — tool crib, saved jobs, learned calibrations and defaults —
+          as one file to back up, move to a new phone, or share with a shop mate. Importing merges in;
+          nothing leaves your device unless you share the file.
+        </Muted>
+        <View style={{ height: 12 }} />
+        <View style={styles.row}>
+          <Button title="Export pack" tone="accent" onPress={onExport} style={{ flex: 1 }} />
+          <Button title="Import pack" tone="ghost" onPress={onImport} style={{ flex: 1 }} />
+        </View>
+        {packMsg ? <Muted style={{ marginTop: 10, color: T.green }}>{packMsg}</Muted> : null}
+      </Card>
+
       <Section>Data</Section>
       <Card>
         <Muted>{tools.length} saved tool{tools.length === 1 ? '' : 's'} · {jobs.length} saved job{jobs.length === 1 ? '' : 's'}, all stored on this device.</Muted>
@@ -87,6 +125,7 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
+  row: { flexDirection: 'row', gap: 12 },
   about: { color: T.text, fontFamily: 'BricolageGrotesque_800ExtraBold', fontWeight: '800', fontSize: 20 },
   calRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

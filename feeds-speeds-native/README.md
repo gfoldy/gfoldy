@@ -45,8 +45,15 @@ Most free calculators just do RPM and feed. This one is **machine-aware**:
 - **It learns from your shop** — log how a cut actually went (broke / dulled /
   as expected / lasted great) and the tool-life estimate for that material is
   nudged toward what you really see, on-device.
+- **Ball-nose finish** — for a ball-nose tool, solve surface finish either way:
+  a target scallop (cusp) height ↔ the stepover that gives it, with a plain-
+  English finish grade (mirror → needs finishing).
 - **Your tool crib** — save the tools you actually own (coating, flutes, price)
   and one-tap load them. Save dialed-in jobs per material + operation.
+- **Shop packs** — export your whole setup (tool crib, saved jobs, learned
+  calibrations, defaults) as one JSON file to back up, move phones, or hand to a
+  shop mate; importing merges it in. File-based and offline — nothing leaves the
+  device unless you share the file.
 - **Imperial or metric** everywhere, offline-first, no login, no paywall.
 
 See [`IDEAS.md`](./IDEAS.md) for the longer roadmap (chatter detection via the

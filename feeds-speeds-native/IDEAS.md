@@ -28,8 +28,9 @@ Legend: **✅ shipped** · **🔨 next** · **🌟 the differentiators** · **�
 1. **G-code / CAM export.** Emit a ready-to-paste block (`S…`, `F…`, plus a
    comment header) and per-CAM presets (Fusion 360, Carbide Create, VCarve).
    Nobody wants to retype numbers.
-2. **Surface-finish ↔ stepover (ball-nose).** Solve scallop height from stepover
-   (and vice-versa) so a finish pass is "how smooth do you want it?" not a guess.
+2. ~~**Surface-finish ↔ stepover (ball-nose).**~~ ✅ **Shipped** — scallop height
+   ↔ stepover both ways, with a finish grade. Next: fold the effective cutting
+   diameter (shallow ball engagement) into the surfacing pass's RPM.
 3. **Tapping & threadmilling.** Tap drill sizes, pitch-locked feed, threadmill
    passes — a common gap in free tools.
 4. **Turning / lathe mode.** Constant surface speed, feed-per-rev, DOC by insert.
@@ -65,8 +66,9 @@ Legend: **✅ shipped** · **🔨 next** · **🌟 the differentiators** · **�
 13. **Coolant & heat guidance** per material/coating (flood, mist, air, dry).
 14. **Apple Watch tap-through** at the machine, and Siri/voice ("feeds for a
     quarter-inch carbide in 6061") for greasy-handed lookups.
-15. **Shareable shop packs.** Export/import your machines + tool crib as a file
-    so a shop or a class starts from the same tuned library.
+15. ~~**Shareable shop packs.**~~ ✅ **Shipped** — export/import the whole setup
+    (tool crib, jobs, calibrations, defaults) as one JSON file; import merges.
+    Next: per-machine sub-packs and a QR hand-off.
 
 ## Why this wins
 - **Machine-aware, not chart-aware** (#7, #9, #11) — the numbers are trustworthy

@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import {
   computeFeedsSpeeds, MACHINES, MATERIALS, TOOL_MATERIALS, TOOL_TYPES, OPERATIONS, COATINGS, OUTCOME_META,
+  scallopFromStepover, stepoverFromScallop, finishGrade,
   type CalcInput, type UnitSystem, type Aggressiveness, type Operation, type CutOutcome,
 } from '@feedspeed/core';
 import { useStore, type SavedTool } from '../../src/store/store';
@@ -50,10 +51,31 @@ export default function Calculator() {
   const [volume, setVolume] = useState('');
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
   const [showLog, setShowLog] = useState(false);
+  const [finishMode, setFinishMode] = useState<'scallop' | 'stepover'>('scallop');
+  const [finishValue, setFinishValue] = useState('0.5');
 
   const isDrill = TOOL_TYPES[toolTypeKey]?.model === 'drilling';
+  const isBall = toolTypeKey === 'ballnose';
   const num = (s: string) => (s.trim() === '' ? undefined : parseFloat(s));
+  const roundTo = (x: number, dp: number) => { const f = Math.pow(10, dp); return Math.round(x * f) / f; };
   const cal = getCalibration(materialKey);
+
+  // Ball-nose surface finish (pure geometry from tool diameter + stepover).
+  const ballFinish = useMemo(() => {
+    if (!isBall) return null;
+    const dIn = unit === 'mm' ? parseFloat(diameter) / 25.4 : parseFloat(diameter);
+    const v = parseFloat(finishValue);
+    if (!(dIn > 0) || Number.isNaN(v)) return null;
+    let scallopIn: number, stepoverIn: number;
+    if (finishMode === 'scallop') {
+      scallopIn = unit === 'mm' ? v / 25.4 : v / 1000; // metric: mm, imperial: thou
+      stepoverIn = stepoverFromScallop(dIn, scallopIn);
+    } else {
+      stepoverIn = unit === 'mm' ? v / 25.4 : v;
+      scallopIn = scallopFromStepover(dIn, stepoverIn);
+    }
+    return { scallopIn, stepoverIn, grade: finishGrade(scallopIn), pct: Math.round((stepoverIn / dIn) * 100) };
+  }, [isBall, unit, diameter, finishValue, finishMode]);
 
   const input: CalcInput = useMemo(() => ({
     machineKey, materialKey, toolMaterialKey, toolTypeKey,
@@ -77,6 +99,16 @@ export default function Calculator() {
     if (next === unit) return;
     setDiameter((d) => convertStr(d, unit, next));
     setStickout((s) => convertStr(s, unit, next));
+    // Scallop values are held in thou (imperial) vs mm (metric); stepover in in vs mm.
+    setFinishValue((v) => {
+      const n = parseFloat(v);
+      if (Number.isNaN(n)) return v;
+      if (finishMode === 'scallop') {
+        const out = next === 'mm' ? n * 0.0254 : n / 0.0254; // thou <-> mm
+        return String(Math.round(out * (next === 'mm' ? 1000 : 100)) / (next === 'mm' ? 1000 : 100));
+      }
+      return convertStr(v, unit, next); // in <-> mm
+    });
     setSettings({ unit: next });
   }
 
@@ -211,6 +243,49 @@ export default function Calculator() {
           <Text style={styles.checkLabel}>Apply radial chip-thinning (raise feed for light stepovers)</Text>
         </Pressable>
       </Card>
+
+      {/* Ball-nose finish (surfacing) */}
+      {isBall ? (
+        <>
+          <Section>Ball-nose finish</Section>
+          <Card>
+            <Segmented<'scallop' | 'stepover'>
+              options={[{ key: 'scallop', label: 'Set scallop' }, { key: 'stepover', label: 'Set stepover' }]}
+              value={finishMode}
+              onChange={setFinishMode}
+            />
+            <View style={{ height: 12 }} />
+            <NumberField
+              label={finishMode === 'scallop' ? 'Target scallop (surface finish)' : 'Stepover between passes'}
+              value={finishValue}
+              onChange={setFinishValue}
+              suffix={finishMode === 'scallop' ? (unit === 'mm' ? 'mm' : 'thou') : lenUnit(unit)}
+            />
+            {ballFinish ? (
+              <>
+                <View style={{ height: 12 }} />
+                <View style={styles.stats}>
+                  {finishMode === 'scallop' ? (
+                    <Stat label="Stepover" tone="accent"
+                      value={unit === 'mm' ? String(roundTo(ballFinish.stepoverIn * 25.4, 2)) : String(roundTo(ballFinish.stepoverIn, 4))}
+                      unit={lenUnit(unit)} sub={`${ballFinish.pct}% of Ø`} />
+                  ) : (
+                    <Stat label="Scallop height" tone="accent"
+                      value={unit === 'mm' ? String(roundTo(ballFinish.scallopIn * 25.4, 3)) : String(roundTo(ballFinish.scallopIn * 1000, 2))}
+                      unit={unit === 'mm' ? 'mm' : 'thou'} sub={`${ballFinish.pct}% stepover`} />
+                  )}
+                </View>
+                <Notice tone="info">
+                  {ballFinish.grade.label}
+                  {finishMode === 'stepover'
+                    ? ` · scallop ${unit === 'mm' ? roundTo(ballFinish.scallopIn * 25.4, 3) + ' mm' : roundTo(ballFinish.scallopIn * 1000, 2) + ' thou'}`
+                    : ''}
+                </Notice>
+              </>
+            ) : null}
+          </Card>
+        </>
+      ) : null}
 
       {/* Tooling & cost (optional) */}
       <Section>Tooling &amp; cost <Text style={styles.optional}>· optional</Text></Section>

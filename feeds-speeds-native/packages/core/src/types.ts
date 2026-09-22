@@ -22,6 +22,8 @@ export interface ToolMaterial {
   sfmKey: 'hss' | 'carbide';
   /** Young's modulus (psi) — used for deflection estimates. */
   modulusPsi: number;
+  /** Taylor tool-life exponent n (V·T^n = C). Higher = life less sensitive to speed. */
+  taylorN: number;
 }
 
 export interface ToolType {
@@ -38,6 +40,8 @@ export interface Material {
   chipMult: number;
   /** Unit power (hp per in^3/min) for a sharp tool — drives the power check. */
   hpUnit: number;
+  /** Multiplies the class reference tool life (abrasive/gummy < 1, easy > 1). */
+  wearFactor?: number;
   sfm: {
     hss: [number, number];
     carbide: [number, number];
@@ -77,6 +81,14 @@ export interface CalcInput {
   operation: Operation;
   aggressiveness: Aggressiveness;
   chipThinning: boolean;
+
+  // --- Optional tooling & cost inputs ---
+  /** Price of the cutting tool ($) — enables tooling-cost figures. */
+  toolPrice?: number;
+  /** Machine / shop operating rate ($ per hour). */
+  machineRate?: number;
+  /** Volume of material to remove, in the active unit system (in^3 or cm^3). */
+  removeVolume?: number;
 }
 
 /** A value carried in both unit systems so the UI just picks one. */
@@ -128,4 +140,16 @@ export interface CalcResult {
 
   thinningApplied: boolean;
   thinningFactor: number;
+
+  // --- Tool life & cost ---
+  /** Estimated tool life in minutes of cutting at the realized surface speed. */
+  toolLifeMin: number | null;
+  /** Cost to remove unit volume (machine + tooling), $ per in^3 / per cm^3. */
+  costPerCuin: number | null;
+  costPerCc: number | null;
+  /** For a specific job (removeVolume given): */
+  jobTimeMin: number | null;   // cutting time
+  jobCost: number | null;      // machine + tooling
+  toolWearPct: number | null;  // % of one tool's life this job consumes
+  toolsPerJob: number | null;  // tools consumed (fractional allowed)
 }

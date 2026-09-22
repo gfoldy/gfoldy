@@ -95,6 +95,51 @@ test('chipThinningFactor is 1 at/above half engagement and >1 below', () => {
   assert.ok(chipThinningFactor(0.1) > 1);
 });
 
+test('tool life is reported and falls as speed rises', () => {
+  const conservative = computeFeedsSpeeds(baseInput({ machineKey: 'router_pro', aggressiveness: 0 }));
+  const aggressive = computeFeedsSpeeds(baseInput({ machineKey: 'router_pro', aggressiveness: 2 }));
+  assert.ok(conservative.toolLifeMin != null && conservative.toolLifeMin > 0);
+  assert.ok(aggressive.toolLifeMin != null && aggressive.toolLifeMin > 0);
+  // Pushing harder (higher surface speed) shortens Taylor tool life.
+  assert.ok(aggressive.toolLifeMin! < conservative.toolLifeMin!);
+});
+
+test('exotic materials wear tools faster than aluminium at nominal', () => {
+  const alu = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', materialKey: 'alu_6061', aggressiveness: 1 }));
+  const ti = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', materialKey: 'titanium', aggressiveness: 1 }));
+  assert.ok(ti.toolLifeMin! < alu.toolLifeMin!);
+});
+
+test('cost per volume needs a cost input; job cost needs a volume', () => {
+  const noCost = computeFeedsSpeeds(baseInput({ machineKey: 'vmc' }));
+  assert.equal(noCost.costPerCuin, null);
+  assert.equal(noCost.jobCost, null);
+
+  const withRate = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', machineRate: 75 }));
+  assert.ok(withRate.costPerCuin != null && withRate.costPerCuin > 0);
+  assert.equal(withRate.jobTimeMin, null); // no volume yet
+
+  const job = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', machineRate: 75, toolPrice: 40, removeVolume: 2 }));
+  assert.ok(job.jobTimeMin != null && job.jobTimeMin > 0);
+  assert.ok(job.jobCost != null && job.jobCost > 0);
+  assert.ok(job.toolWearPct != null && job.toolWearPct > 0);
+});
+
+test('tool price raises cost per volume above machine-only cost', () => {
+  const rateOnly = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', machineRate: 75 }));
+  const rateAndTool = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', machineRate: 75, toolPrice: 60 }));
+  assert.ok(rateAndTool.costPerCuin! > rateOnly.costPerCuin!);
+});
+
+test('job time is independent of cost inputs', () => {
+  const a = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', removeVolume: 3 }));
+  const b = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', removeVolume: 3, machineRate: 90 }));
+  assert.ok(a.jobTimeMin != null && b.jobTimeMin != null);
+  assert.equal(a.jobTimeMin, b.jobTimeMin);
+  assert.equal(a.jobCost, null);
+  assert.ok(b.jobCost != null);
+});
+
 test('interp clamps at the ends', () => {
   const table = [[0, 0], [1, 10]] as const;
   assert.equal(interp(table, -5), 0);

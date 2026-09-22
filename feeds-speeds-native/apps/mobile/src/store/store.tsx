@@ -12,6 +12,7 @@ export interface SavedTool {
   unit: UnitSystem;
   flutes: number;
   stickout?: number;
+  price?: number;
 }
 
 // A saved calculation ("this worked / this is my go-to").
@@ -26,6 +27,8 @@ export interface Settings {
   unit: UnitSystem;
   aggressiveness: Aggressiveness;
   chipThinning: boolean;
+  /** Shop / machine operating rate ($ per hour), used for cost estimates. */
+  machineRate?: number;
 }
 
 interface StoreValue {

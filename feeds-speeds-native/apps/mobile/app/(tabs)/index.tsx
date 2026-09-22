@@ -12,7 +12,7 @@ import {
   Card, Title, Muted, Section, Select, Segmented, NumberField, Notice, Stat, Button,
   type SelectOption,
 } from '../../src/components/ui';
-import { pick, lenUnit, feedUnit, speedUnit } from '../../src/lib/format';
+import { pick, lenUnit, feedUnit, speedUnit, fmtMinutes } from '../../src/lib/format';
 
 // Options from core data.
 const machineOpts: SelectOption[] = Object.entries(MACHINES).map(([key, m]) => ({ key, label: m.label }));
@@ -42,20 +42,27 @@ export default function Calculator() {
   const [diameter, setDiameter] = useState('0.25');
   const [flutes, setFlutes] = useState('2');
   const [stickout, setStickout] = useState('');
+  const [toolPrice, setToolPrice] = useState('');
+  const [shopRate, setShopRate] = useState(settings.machineRate != null ? String(settings.machineRate) : '');
+  const [volume, setVolume] = useState('');
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
 
   const isDrill = TOOL_TYPES[toolTypeKey]?.model === 'drilling';
+  const num = (s: string) => (s.trim() === '' ? undefined : parseFloat(s));
 
   const input: CalcInput = useMemo(() => ({
     machineKey, materialKey, toolMaterialKey, toolTypeKey,
     diameter: parseFloat(diameter),
     unit,
     flutes: parseInt(flutes, 10) || TOOL_TYPES[toolTypeKey]?.defaultFlutes || 2,
-    stickout: stickout.trim() === '' ? undefined : parseFloat(stickout),
+    stickout: num(stickout),
     operation: isDrill ? 'roughing' : operation,
     aggressiveness: settings.aggressiveness,
     chipThinning: settings.chipThinning,
-  }), [machineKey, materialKey, toolMaterialKey, toolTypeKey, diameter, unit, flutes, stickout, operation, isDrill, settings]);
+    toolPrice: num(toolPrice),
+    machineRate: num(shopRate),
+    removeVolume: num(volume),
+  }), [machineKey, materialKey, toolMaterialKey, toolTypeKey, diameter, unit, flutes, stickout, operation, isDrill, settings, toolPrice, shopRate, volume]);
 
   const r = useMemo(() => computeFeedsSpeeds(input), [input]);
 
@@ -66,12 +73,18 @@ export default function Calculator() {
     setSettings({ unit: next });
   }
 
+  function saveShopRate(v: string) {
+    setShopRate(v);
+    setSettings({ machineRate: v.trim() === '' ? undefined : parseFloat(v) });
+  }
+
   function loadTool(t: SavedTool) {
     setToolTypeKey(t.toolTypeKey);
     setToolMaterialKey(t.toolMaterialKey);
     setDiameter(String(t.unit === unit ? t.diameter : parseFloat(convertStr(String(t.diameter), t.unit, unit))));
     setFlutes(String(t.flutes));
     setStickout(t.stickout == null ? '' : String(t.stickout));
+    setToolPrice(t.price == null ? '' : String(t.price));
     flash(`Loaded ${t.name}`);
   }
 
@@ -89,7 +102,8 @@ export default function Calculator() {
     addTool({
       name, toolTypeKey, toolMaterialKey, diameter: dia, unit,
       flutes: parseInt(flutes, 10) || 2,
-      stickout: stickout.trim() === '' ? undefined : parseFloat(stickout),
+      stickout: num(stickout),
+      price: num(toolPrice),
     });
     flash('Saved to My Tools');
   }
@@ -182,6 +196,17 @@ export default function Calculator() {
         </Pressable>
       </Card>
 
+      {/* Tooling & cost (optional) */}
+      <Section>Tooling &amp; cost <Text style={styles.optional}>· optional</Text></Section>
+      <Card>
+        <View style={styles.row}>
+          <NumberField label="Tool price" value={toolPrice} onChange={setToolPrice} suffix="$" placeholder="40" />
+          <NumberField label="Shop rate" value={shopRate} onChange={saveShopRate} suffix="$/hr" placeholder="75" />
+        </View>
+        <View style={{ height: 12 }} />
+        <NumberField label={`Volume to remove (${unit === 'mm' ? 'cm³' : 'in³'}) — for a per-job estimate`} value={volume} onChange={setVolume} suffix={unit === 'mm' ? 'cm³' : 'in³'} placeholder="e.g. 2" />
+      </Card>
+
       {/* Results */}
       <Section right={savedMsg ? <Text style={styles.savedMsg}>{savedMsg}</Text> : undefined}>Results</Section>
       {r.error ? (
@@ -202,6 +227,24 @@ export default function Calculator() {
             {r.deflectionIn != null ? <Stat label="Tool deflection" value={String((r.deflectionIn * 1000).toFixed(1))} unit="thou"
               tone={r.deflectionIn > 0.002 ? 'warn' : 'default'} sub="estimate at stick-out" /> : null}
           </View>
+
+          {/* Tool life & economics */}
+          {(r.toolLifeMin != null || r.costPerCuin != null || r.jobTimeMin != null) ? (
+            <>
+              <Section>Tool life &amp; cost</Section>
+              <View style={styles.stats}>
+                {r.toolLifeMin != null ? <Stat label="Tool life" value={fmtMinutes(r.toolLifeMin)}
+                  tone={r.toolLifeMin < 5 ? 'warn' : 'default'} sub="cutting, at this speed" /> : null}
+                {r.costPerCuin != null ? <Stat label="Cost / volume"
+                  value={`$${unit === 'mm' ? r.costPerCc : r.costPerCuin}`} sub={`per ${unit === 'mm' ? 'cm³' : 'in³'} removed`} /> : null}
+                {r.jobTimeMin != null ? <Stat label="Job time" value={fmtMinutes(r.jobTimeMin)} sub="cutting time" /> : null}
+                {r.jobCost != null ? <Stat label="Job cost" value={`$${r.jobCost}`} tone="accent" sub="machine + tooling" /> : null}
+                {r.toolWearPct != null ? <Stat label="Tool wear" value={`${r.toolWearPct}%`}
+                  tone={r.toolWearPct > 100 ? 'warn' : 'default'}
+                  sub={r.toolsPerJob != null && r.toolsPerJob >= 1 ? `≈ ${Math.ceil(r.toolsPerJob)} tools` : 'of one tool'} /> : null}
+              </View>
+            </>
+          ) : null}
 
           {r.notes.map((n, i) => <Notice key={`n${i}`} tone="info">{n}</Notice>)}
           {r.thinningApplied ? <Notice tone="info">Chip-thinning applied: feed raised ×{r.thinningFactor} for the light stepover.</Notice> : null}
@@ -235,4 +278,5 @@ const styles = StyleSheet.create({
   checkMark: { color: T.accentInk, fontSize: 14, fontWeight: '800' },
   checkLabel: { flex: 1, color: T.text, fontFamily: 'Manrope_500Medium', fontSize: 13, lineHeight: 18 },
   savedMsg: { color: T.green, fontFamily: 'Manrope_600SemiBold', fontSize: 12 },
+  optional: { color: T.textFaint, fontFamily: 'Manrope_500Medium', fontSize: 11 },
 });

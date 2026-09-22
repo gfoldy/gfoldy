@@ -26,8 +26,17 @@ export const MACHINES: Record<string, Machine> = {
 // Tool (cutter) materials. modulusPsi feeds the deflection estimate.
 // ---------------------------------------------------------------------------
 export const TOOL_MATERIALS: Record<string, ToolMaterial> = {
-  hss:     { label: 'HSS (high speed steel)', sfmKey: 'hss',     modulusPsi: 30e6 },
-  carbide: { label: 'Carbide',                sfmKey: 'carbide', modulusPsi: 87e6 },
+  hss:     { label: 'HSS (high speed steel)', sfmKey: 'hss',     modulusPsi: 30e6, taylorN: 0.13 },
+  carbide: { label: 'Carbide',                sfmKey: 'carbide', modulusPsi: 87e6, taylorN: 0.25 },
+};
+
+// Reference tool life (minutes of cutting) expected at a material's *nominal*
+// surface speed, by class. Taylor's equation scales from here as the realized
+// speed moves away from nominal. Material.wearFactor tweaks per material.
+export const REF_LIFE_MIN_BY_CLASS: Record<string, number> = {
+  soft: 120,
+  medium: 60,
+  hard: 30,
 };
 
 export const TOOL_TYPES: Record<string, ToolType> = {
@@ -40,27 +49,27 @@ export const TOOL_TYPES: Record<string, ToolType> = {
 // Materials. sfm.* = [conservative, aggressive] surface speed (SFM).
 // ---------------------------------------------------------------------------
 export const MATERIALS: Record<string, Material> = {
-  alu_6061:  { label: 'Aluminium 6061 / 7075', group: 'Non-ferrous', class: 'soft',   chipMult: 1.5, hpUnit: 0.25, sfm: { hss: [250, 400], carbide: [600, 1200] } },
-  alu_cast:  { label: 'Aluminium — cast',       group: 'Non-ferrous', class: 'soft',   chipMult: 1.4, hpUnit: 0.28, sfm: { hss: [200, 350], carbide: [500, 1000] } },
-  brass:     { label: 'Brass',                  group: 'Non-ferrous', class: 'soft',   chipMult: 1.1, hpUnit: 0.55, sfm: { hss: [150, 250], carbide: [350, 600] } },
-  bronze:    { label: 'Bronze',                 group: 'Non-ferrous', class: 'medium', chipMult: 1.0, hpUnit: 0.65, sfm: { hss: [90, 150],  carbide: [250, 450] } },
-  copper:    { label: 'Copper',                 group: 'Non-ferrous', class: 'medium', chipMult: 1.1, hpUnit: 0.70, sfm: { hss: [100, 200], carbide: [300, 500] } },
+  alu_6061:  { label: 'Aluminium 6061 / 7075', group: 'Non-ferrous', class: 'soft',   chipMult: 1.5, hpUnit: 0.25, wearFactor: 1.2, sfm: { hss: [250, 400], carbide: [600, 1200] } },
+  alu_cast:  { label: 'Aluminium — cast',       group: 'Non-ferrous', class: 'soft',   chipMult: 1.4, hpUnit: 0.28, wearFactor: 1.0, sfm: { hss: [200, 350], carbide: [500, 1000] } },
+  brass:     { label: 'Brass',                  group: 'Non-ferrous', class: 'soft',   chipMult: 1.1, hpUnit: 0.55, wearFactor: 1.2, sfm: { hss: [150, 250], carbide: [350, 600] } },
+  bronze:    { label: 'Bronze',                 group: 'Non-ferrous', class: 'medium', chipMult: 1.0, hpUnit: 0.65, wearFactor: 1.0, sfm: { hss: [90, 150],  carbide: [250, 450] } },
+  copper:    { label: 'Copper',                 group: 'Non-ferrous', class: 'medium', chipMult: 1.1, hpUnit: 0.70, wearFactor: 1.1, sfm: { hss: [100, 200], carbide: [300, 500] } },
 
-  steel_mild:  { label: 'Mild / low-carbon steel (1018)', group: 'Ferrous', class: 'medium', chipMult: 1.0, hpUnit: 1.10, sfm: { hss: [80, 110], carbide: [300, 450] } },
-  steel_alloy: { label: 'Alloy steel (4140/4340)',        group: 'Ferrous', class: 'hard',   chipMult: 0.8, hpUnit: 1.60, sfm: { hss: [50, 80],  carbide: [200, 350] } },
-  tool_steel:  { label: 'Tool steel (hardened)',          group: 'Ferrous', class: 'hard',   chipMult: 0.7, hpUnit: 2.10, sfm: { hss: [40, 70],  carbide: [150, 300] } },
-  cast_iron:   { label: 'Cast iron',                      group: 'Ferrous', class: 'medium', chipMult: 0.9, hpUnit: 0.70, sfm: { hss: [50, 90],  carbide: [250, 400] } },
+  steel_mild:  { label: 'Mild / low-carbon steel (1018)', group: 'Ferrous', class: 'medium', chipMult: 1.0, hpUnit: 1.10, wearFactor: 1.0,  sfm: { hss: [80, 110], carbide: [300, 450] } },
+  steel_alloy: { label: 'Alloy steel (4140/4340)',        group: 'Ferrous', class: 'hard',   chipMult: 0.8, hpUnit: 1.60, wearFactor: 0.85, sfm: { hss: [50, 80],  carbide: [200, 350] } },
+  tool_steel:  { label: 'Tool steel (hardened)',          group: 'Ferrous', class: 'hard',   chipMult: 0.7, hpUnit: 2.10, wearFactor: 0.6,  sfm: { hss: [40, 70],  carbide: [150, 300] } },
+  cast_iron:   { label: 'Cast iron',                      group: 'Ferrous', class: 'medium', chipMult: 0.9, hpUnit: 0.70, wearFactor: 0.9,  sfm: { hss: [50, 90],  carbide: [250, 400] } },
 
-  ss_304:    { label: 'Stainless steel (304/316)', group: 'Stainless / exotic', class: 'hard', chipMult: 0.7, hpUnit: 1.50, sfm: { hss: [40, 70], carbide: [150, 300] } },
-  ss_174:    { label: 'Stainless steel (17-4 PH)', group: 'Stainless / exotic', class: 'hard', chipMult: 0.6, hpUnit: 1.70, sfm: { hss: [30, 60], carbide: [120, 250] } },
-  titanium:  { label: 'Titanium',                  group: 'Stainless / exotic', class: 'hard', chipMult: 0.5, hpUnit: 1.30, sfm: { hss: [30, 50], carbide: [100, 200] } },
+  ss_304:    { label: 'Stainless steel (304/316)', group: 'Stainless / exotic', class: 'hard', chipMult: 0.7, hpUnit: 1.50, wearFactor: 0.8, sfm: { hss: [40, 70], carbide: [150, 300] } },
+  ss_174:    { label: 'Stainless steel (17-4 PH)', group: 'Stainless / exotic', class: 'hard', chipMult: 0.6, hpUnit: 1.70, wearFactor: 0.6, sfm: { hss: [30, 60], carbide: [120, 250] } },
+  titanium:  { label: 'Titanium',                  group: 'Stainless / exotic', class: 'hard', chipMult: 0.5, hpUnit: 1.30, wearFactor: 0.4, sfm: { hss: [30, 50], carbide: [100, 200] } },
 
-  acrylic:   { label: 'Acrylic / polycarbonate', group: 'Plastic', class: 'soft', chipMult: 1.3, hpUnit: 0.10, sfm: { hss: [300, 500], carbide: [500, 1200] } },
-  delrin:    { label: 'Delrin / nylon (POM)',    group: 'Plastic', class: 'soft', chipMult: 1.5, hpUnit: 0.10, sfm: { hss: [400, 600], carbide: [600, 1200] } },
-  hdpe:      { label: 'HDPE / UHMW / ABS',       group: 'Plastic', class: 'soft', chipMult: 1.6, hpUnit: 0.08, sfm: { hss: [400, 700], carbide: [800, 1500] } },
+  acrylic:   { label: 'Acrylic / polycarbonate', group: 'Plastic', class: 'soft', chipMult: 1.3, hpUnit: 0.10, wearFactor: 1.5, sfm: { hss: [300, 500], carbide: [500, 1200] } },
+  delrin:    { label: 'Delrin / nylon (POM)',    group: 'Plastic', class: 'soft', chipMult: 1.5, hpUnit: 0.10, wearFactor: 1.5, sfm: { hss: [400, 600], carbide: [600, 1200] } },
+  hdpe:      { label: 'HDPE / UHMW / ABS',       group: 'Plastic', class: 'soft', chipMult: 1.6, hpUnit: 0.08, wearFactor: 1.5, sfm: { hss: [400, 700], carbide: [800, 1500] } },
 
-  hardwood:  { label: 'Hardwood (oak, maple)',    group: 'Wood', class: 'soft', chipMult: 1.8, hpUnit: 0.06, sfm: { hss: [400, 700], carbide: [600, 1200] } },
-  softwood:  { label: 'Softwood / plywood / MDF', group: 'Wood', class: 'soft', chipMult: 2.0, hpUnit: 0.05, sfm: { hss: [500, 900], carbide: [800, 1500] } },
+  hardwood:  { label: 'Hardwood (oak, maple)',    group: 'Wood', class: 'soft', chipMult: 1.8, hpUnit: 0.06, wearFactor: 0.9, sfm: { hss: [400, 700], carbide: [600, 1200] } },
+  softwood:  { label: 'Softwood / plywood / MDF', group: 'Wood', class: 'soft', chipMult: 2.0, hpUnit: 0.05, wearFactor: 0.7, sfm: { hss: [500, 900], carbide: [800, 1500] } },
 };
 
 // Baseline chip load (feed per tooth, inches) vs. tool diameter (inches).

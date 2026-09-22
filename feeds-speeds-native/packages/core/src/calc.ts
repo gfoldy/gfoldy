@@ -14,7 +14,7 @@
 import type { CalcInput, CalcResult, DualValue } from './types.ts';
 import {
   MACHINES, MATERIALS, TOOL_MATERIALS, TOOL_TYPES,
-  CHIPLOAD_BASE, DOC_BY_CLASS, OPERATIONS, AGGRESSIVENESS,
+  CHIPLOAD_BASE, DOC_BY_CLASS, OPERATIONS, AGGRESSIVENESS, REF_LIFE_MIN_BY_CLASS,
 } from './data.ts';
 import { IN_PER_MM, MM_PER_IN, SFM_PER_MPM, CC_PER_CUIN, round, interp, dual } from './units.ts';
 
@@ -64,6 +64,8 @@ export function computeFeedsSpeeds(input: CalcInput): CalcResult {
     powerHp: null, powerPct: null, torqueInLb: null,
     deflectionIn: null, deflectionMm: null,
     thinningApplied: false, thinningFactor: 1,
+    toolLifeMin: null, costPerCuin: null, costPerCc: null,
+    jobTimeMin: null, jobCost: null, toolWearPct: null, toolsPerJob: null,
     error: label || undefined,
   });
 
@@ -175,6 +177,44 @@ export function computeFeedsSpeeds(input: CalcInput): CalcResult {
     }
   }
 
+  // --- Tool life (Taylor) + cost -------------------------------------------
+  // Scale a per-class reference life by how far the realized surface speed sits
+  // from the material's nominal speed: T = Tref x (Vref / V)^(1/n).
+  let toolLifeMin: number | null = null;
+  const realizedSfm = (rpm * Math.PI * diaIn) / 12;
+  const vRef = (sfmRange[0] + sfmRange[1]) / 2;
+  if (realizedSfm > 0 && vRef > 0) {
+    const refLife = (REF_LIFE_MIN_BY_CLASS[material.class] ?? 60) * (material.wearFactor ?? 1);
+    const life = refLife * Math.pow(vRef / realizedSfm, 1 / toolMat.taylorN);
+    toolLifeMin = Math.max(0.1, Math.min(life, 100000));
+    if (toolLifeMin < 5) {
+      warnings.push(`Estimated tool life is only ~${toolLifeMin.toFixed(1)} min of cutting at this speed — back off for anything but a one-off.`);
+    }
+  }
+
+  let costPerCuin: number | null = null;
+  let jobTimeMin: number | null = null, jobCost: number | null = null;
+  let toolWearPct: number | null = null, toolsPerJob: number | null = null;
+
+  const machineCostPerMin = input.machineRate != null && input.machineRate > 0 ? input.machineRate / 60 : null;
+  const toolCostPerMin = input.toolPrice != null && input.toolPrice > 0 && toolLifeMin != null
+    ? input.toolPrice / toolLifeMin : null;
+  const hasCost = machineCostPerMin != null || toolCostPerMin != null;
+  const costPerMin = (machineCostPerMin ?? 0) + (toolCostPerMin ?? 0);
+
+  if (mrrCuin != null && mrrCuin > 0 && hasCost) {
+    costPerCuin = costPerMin / mrrCuin;
+  }
+  if (input.removeVolume != null && input.removeVolume > 0 && mrrCuin != null && mrrCuin > 0) {
+    const volCuin = input.unit === 'mm' ? input.removeVolume / CC_PER_CUIN : input.removeVolume;
+    jobTimeMin = volCuin / mrrCuin;
+    if (hasCost) jobCost = jobTimeMin * costPerMin;
+    if (toolLifeMin != null) {
+      toolsPerJob = jobTimeMin / toolLifeMin;
+      toolWearPct = toolsPerJob * 100;
+    }
+  }
+
   // --- Sanity warnings ------------------------------------------------------
   const gummy = input.materialKey.startsWith('alu') || material.group === 'Plastic';
   if (toolType.model === 'milling' && flutes >= 3 && material.class === 'soft' && gummy) {
@@ -216,5 +256,12 @@ export function computeFeedsSpeeds(input: CalcInput): CalcResult {
     deflectionIn: deflectionIn == null ? null : round(deflectionIn, 4),
     deflectionMm: deflectionIn == null ? null : round(deflectionIn * MM_PER_IN, 3),
     thinningApplied, thinningFactor: round(thinningFactor, 2),
+    toolLifeMin: toolLifeMin == null ? null : round(toolLifeMin, 1),
+    costPerCuin: costPerCuin == null ? null : round(costPerCuin, 3),
+    costPerCc: costPerCuin == null ? null : round(costPerCuin / CC_PER_CUIN, 4),
+    jobTimeMin: jobTimeMin == null ? null : round(jobTimeMin, 1),
+    jobCost: jobCost == null ? null : round(jobCost, 2),
+    toolWearPct: toolWearPct == null ? null : round(toolWearPct, 1),
+    toolsPerJob: toolsPerJob == null ? null : round(toolsPerJob, 2),
   };
 }

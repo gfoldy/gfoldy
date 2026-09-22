@@ -15,6 +15,9 @@ Legend: **✅ shipped** · **🔨 next** · **🌟 the differentiators** · **�
 - Radial **chip thinning**; **adaptive/HSM** operation mode; MRR.
 - Machine, tool and material presets; imperial/metric; contextual warnings.
 - Your **tool crib** + **saved jobs**, on-device.
+- **Tool-life & cost estimate** — Taylor's equation (`V·T^n = C`) for tool life
+  vs. speed, plus $/volume, cycle time, per-job cost and tool-wear from a shop
+  rate, tool price and optional volume-to-remove.
 
 ## Next, high-value 🔨
 1. **G-code / CAM export.** Emit a ready-to-paste block (`S…`, `F…`, plus a
@@ -40,9 +43,9 @@ Legend: **✅ shipped** · **🔨 next** · **🌟 the differentiators** · **�
    chips**. Over time the app tunes *your* starting points, and — opt-in —
    aggregates anonymized results into community-verified feeds & speeds per
    machine + tool + material. A dataset like that compounds and can't be copied.
-9. **Tool-life & cost estimate.** Taylor tool-life curve → "this pushes the tool
-   ~2× harder, ~40% shorter life." Show cycle time and $ per part so hobby vs.
-   production users can trade speed against tooling cost.
+9. ~~**Tool-life & cost estimate.**~~ ✅ **Shipped** — Taylor tool-life curve,
+   plus $/volume, cycle time, per-job cost and tool-wear. Next: extend to
+   full Taylor (feed & DOC terms) and a coating multiplier on tool life.
 10. **Snap-a-tool onboarding.** OCR a tool label / catalog number (or scan a
     barcode) to auto-fill diameter, flutes and coating into the crib.
 11. **Machine profiles that matter.** Real spindle power/torque *curves* (power

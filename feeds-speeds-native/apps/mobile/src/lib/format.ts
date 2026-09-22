@@ -9,6 +9,12 @@ export function pick(v: DualValue, unit: UnitSystem): number {
   return unit === 'mm' ? v.mm : v.in;
 }
 
+/** Minutes → "45 min" or "1.5 hr" for longer spans. */
+export function fmtMinutes(m: number): string {
+  if (m >= 90) return `${(m / 60).toFixed(1)} hr`;
+  return `${Math.round(m * 10) / 10} min`;
+}
+
 export const lenUnit = (unit: UnitSystem) => (unit === 'mm' ? 'mm' : 'in');
 export const feedUnit = (unit: UnitSystem) => (unit === 'mm' ? 'mm/min' : 'in/min');
 export const speedUnit = (unit: UnitSystem) => (unit === 'mm' ? 'm/min' : 'SFM');

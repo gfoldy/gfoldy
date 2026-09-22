@@ -15,9 +15,14 @@ Legend: **✅ shipped** · **🔨 next** · **🌟 the differentiators** · **�
 - Radial **chip thinning**; **adaptive/HSM** operation mode; MRR.
 - Machine, tool and material presets; imperial/metric; contextual warnings.
 - Your **tool crib** + **saved jobs**, on-device.
-- **Tool-life & cost estimate** — Taylor's equation (`V·T^n = C`) for tool life
-  vs. speed, plus $/volume, cycle time, per-job cost and tool-wear from a shop
-  rate, tool price and optional volume-to-remove.
+- **Tool-life & cost estimate** — extended Taylor (speed + feed + axial depth +
+  radial engagement) for tool life, plus $/volume, cycle time, per-job cost and
+  tool-wear from a shop rate, tool price and optional volume-to-remove.
+- **Coating-aware tool life** — TiN/TiCN/AlTiN/ZrN/diamond multipliers that are
+  material-adjusted (AlTiN poor in aluminium; diamond flagged & penalised on
+  steel).
+- **Learns from logged results** — per-material tool-life calibration nudged by
+  a one-tap "how did it go?" after a cut (the local half of #8).
 
 ## Next, high-value 🔨
 1. **G-code / CAM export.** Emit a ready-to-paste block (`S…`, `F…`, plus a
@@ -38,15 +43,16 @@ Legend: **✅ shipped** · **🔨 next** · **🌟 the differentiators** · **�
    find the chatter frequency, and suggest an RPM that dodges it (stability-lobe
    idea, made approachable). This is the feature no free app has and every
    machinist would show their friends.
-8. **"What actually worked" logger + community data.** After a cut, log the
-   result (good / rubbing / chatter / broke) with an optional **photo of the
-   chips**. Over time the app tunes *your* starting points, and — opt-in —
-   aggregates anonymized results into community-verified feeds & speeds per
-   machine + tool + material. A dataset like that compounds and can't be copied.
+8. **"What actually worked" logger + community data.** ✅ *Local half shipped* —
+   a one-tap outcome log after a cut tunes that material's tool-life estimate
+   on-device. Still to come: an optional **photo of the chips**, logging speed/
+   feed context per entry, and — opt-in — aggregating anonymized results into
+   community-verified feeds & speeds per machine + tool + material. A dataset
+   like that compounds and can't be copied.
 9. ~~**Tool-life & cost estimate.**~~ ✅ **Shipped** — extended Taylor tool-life
-   (speed + feed + axial depth + radial engagement), plus $/volume, cycle time,
-   per-job cost and tool-wear. Next: a coating multiplier on tool life, and
-   feeding real logged results back in to calibrate per material (see #8).
+   (speed + feed + axial depth + radial engagement), material-aware coating
+   multipliers, and per-material calibration from logged results, plus $/volume,
+   cycle time, per-job cost and tool-wear.
 10. **Snap-a-tool onboarding.** OCR a tool label / catalog number (or scan a
     barcode) to auto-fill diameter, flutes and coating into the crib.
 11. **Machine profiles that matter.** Real spindle power/torque *curves* (power

@@ -1,12 +1,23 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
-import { MATERIALS, type Material } from '@feedspeed/core';
+import { MATERIALS, COATINGS, effectiveCoating, type Material } from '@feedspeed/core';
 import { useStore } from '../../src/store/store';
 import { T } from '../../src/theme';
 import { Card, Section, Muted } from '../../src/components/ui';
 
 const SFM_PER_MPM = 1 / 0.3048;
 const toMpm = (sfm: number) => Math.round(sfm / SFM_PER_MPM);
+
+// Curated "best for" notes; the multiplier is read live from the core so it
+// never drifts from the actual model.
+const COATING_NOTES: { key: string; best: string; group: string }[] = [
+  { key: 'none', best: 'Baseline — fine for aluminium & one-offs', group: 'Non-ferrous' },
+  { key: 'tin', best: 'General purpose', group: 'Ferrous' },
+  { key: 'ticn', best: 'Steel & cast iron', group: 'Ferrous' },
+  { key: 'altin', best: 'High-heat steel, stainless, titanium — not aluminium', group: 'Ferrous' },
+  { key: 'zrn', best: 'Aluminium & non-ferrous', group: 'Non-ferrous' },
+  { key: 'diamond', best: 'PCD for aluminium/plastic/wood — never on steel', group: 'Non-ferrous' },
+];
 
 export default function ReferenceScreen() {
   const { settings } = useStore();
@@ -47,6 +58,20 @@ export default function ReferenceScreen() {
         </View>
       ))}
 
+      <Section>Coatings &amp; tool life</Section>
+      <Muted style={{ marginBottom: 8 }}>Rough tool-life multiplier vs. uncoated — the benefit depends on the material.</Muted>
+      <Card style={{ padding: 0 }}>
+        {COATING_NOTES.map((c, i) => (
+          <View key={c.key} style={[styles.tr, i < COATING_NOTES.length - 1 && styles.trBorder]}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.td}>{COATINGS[c.key]?.label}</Text>
+              <Text style={styles.coatingBest}>{c.best}</Text>
+            </View>
+            <Text style={[styles.td, { color: c.key === 'diamond' ? T.accent : T.text }]}>×{effectiveCoating(c.key, c.group).mult}</Text>
+          </View>
+        ))}
+      </Card>
+
       <Section>Formulas</Section>
       <Card>
         <Formula label="Spindle speed" body={metric ? 'RPM = (Vc × 1000) ÷ (π × D)' : 'RPM = (SFM × 12) ÷ (π × D)'} />
@@ -85,6 +110,7 @@ const styles = StyleSheet.create({
   thead: { backgroundColor: T.bgElev2, borderTopLeftRadius: 17, borderTopRightRadius: 17 },
   th: { color: T.textDim, fontFamily: 'Manrope_700Bold', fontWeight: '700', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 },
   td: { color: T.text, fontFamily: 'Manrope_500Medium', fontSize: 13 },
+  coatingBest: { color: T.textDim, fontFamily: 'Manrope_400Regular', fontSize: 12, marginTop: 2 },
   dim: { color: T.textDim },
   num: { flex: 1, textAlign: 'right' },
   formula: { paddingVertical: 11 },

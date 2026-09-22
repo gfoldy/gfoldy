@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { uid, type UnitSystem, type Aggressiveness, type CalcInput } from '@feedspeed/core';
+import {
+  uid, applyOutcome, DEFAULT_CALIBRATION,
+  type UnitSystem, type Aggressiveness, type CalcInput, type Calibration, type CutOutcome,
+} from '@feedspeed/core';
 
 // A tool the user actually owns — saved once, reused in the calculator.
 export interface SavedTool {
@@ -13,6 +16,7 @@ export interface SavedTool {
   flutes: number;
   stickout?: number;
   price?: number;
+  coatingKey?: string;
 }
 
 // A saved calculation ("this worked / this is my go-to").
@@ -42,6 +46,11 @@ interface StoreValue {
   jobs: SavedJob[];
   addJob: (name: string, input: CalcInput) => SavedJob;
   removeJob: (id: string) => void;
+  /** Per-material tool-life calibration learned from logged results. */
+  calibrations: Record<string, Calibration>;
+  getCalibration: (materialKey: string) => Calibration;
+  logOutcome: (materialKey: string, outcome: CutOutcome) => Calibration;
+  resetCalibrations: () => void;
 }
 
 const KEY = 'feedspeed.v1';
@@ -54,6 +63,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettingsState] = useState<Settings>(DEFAULT_SETTINGS);
   const [tools, setTools] = useState<SavedTool[]>([]);
   const [jobs, setJobs] = useState<SavedJob[]>([]);
+  const [calibrations, setCalibrations] = useState<Record<string, Calibration>>({});
   const loaded = useRef(false);
 
   // Load once.
@@ -62,10 +72,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       try {
         const raw = await AsyncStorage.getItem(KEY);
         if (raw) {
-          const data = JSON.parse(raw) as Partial<{ settings: Settings; tools: SavedTool[]; jobs: SavedJob[] }>;
+          const data = JSON.parse(raw) as Partial<{
+            settings: Settings; tools: SavedTool[]; jobs: SavedJob[]; calibrations: Record<string, Calibration>;
+          }>;
           if (data.settings) setSettingsState({ ...DEFAULT_SETTINGS, ...data.settings });
           if (Array.isArray(data.tools)) setTools(data.tools);
           if (Array.isArray(data.jobs)) setJobs(data.jobs);
+          if (data.calibrations && typeof data.calibrations === 'object') setCalibrations(data.calibrations);
         }
       } catch {
         // corrupt / unavailable storage — start clean.
@@ -79,8 +92,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // Persist on change (after the initial load).
   useEffect(() => {
     if (!loaded.current) return;
-    AsyncStorage.setItem(KEY, JSON.stringify({ settings, tools, jobs })).catch(() => {});
-  }, [settings, tools, jobs]);
+    AsyncStorage.setItem(KEY, JSON.stringify({ settings, tools, jobs, calibrations })).catch(() => {});
+  }, [settings, tools, jobs, calibrations]);
 
   const value = useMemo<StoreValue>(() => ({
     ready,
@@ -101,7 +114,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       return job;
     },
     removeJob: (id) => setJobs((xs) => xs.filter((j) => j.id !== id)),
-  }), [ready, settings, tools, jobs]);
+    calibrations,
+    getCalibration: (materialKey) => calibrations[materialKey] ?? DEFAULT_CALIBRATION,
+    logOutcome: (materialKey, outcome) => {
+      const next = applyOutcome(calibrations[materialKey] ?? DEFAULT_CALIBRATION, outcome);
+      setCalibrations((c) => ({ ...c, [materialKey]: next }));
+      return next;
+    },
+    resetCalibrations: () => setCalibrations({}),
+  }), [ready, settings, tools, jobs, calibrations]);
 
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>;
 }

@@ -18,6 +18,7 @@ import {
   TAYLOR_FEED_EXP, TAYLOR_DEPTH_EXP, TAYLOR_ENGAGEMENT_EXP,
 } from './data.ts';
 import { IN_PER_MM, MM_PER_IN, SFM_PER_MPM, CC_PER_CUIN, round, interp, dual } from './units.ts';
+import { effectiveCoating } from './coatings.ts';
 
 const SPINDLE_EFFICIENCY = 0.8;
 
@@ -65,7 +66,8 @@ export function computeFeedsSpeeds(input: CalcInput): CalcResult {
     powerHp: null, powerPct: null, torqueInLb: null,
     deflectionIn: null, deflectionMm: null,
     thinningApplied: false, thinningFactor: 1,
-    toolLifeMin: null, costPerCuin: null, costPerCc: null,
+    toolLifeMin: null, coatingLifeMult: null, lifeCalibration: 1,
+    costPerCuin: null, costPerCc: null,
     jobTimeMin: null, jobCost: null, toolWearPct: null, toolsPerJob: null,
     error: label || undefined,
   });
@@ -184,6 +186,8 @@ export function computeFeedsSpeeds(input: CalcInput): CalcResult {
   //   T = Tref x (Vref/V)^(1/n) x (Fref/F)^fe x (Dref/Ap)^de x (AeRef/Ae)^ee
   // Speed dominates (exponent 1/n); feed moderate; depth & engagement mild.
   let toolLifeMin: number | null = null;
+  let coatingLifeMult: number | null = null;
+  const lifeCalibration = input.lifeCalibration != null && input.lifeCalibration > 0 ? input.lifeCalibration : 1;
   const realizedSfm = (rpm * Math.PI * diaIn) / 12;
   const vRef = (sfmRange[0] + sfmRange[1]) / 2;
   if (realizedSfm > 0 && vRef > 0) {
@@ -201,6 +205,15 @@ export function computeFeedsSpeeds(input: CalcInput): CalcResult {
       life *= Math.pow(clampRatio(dRef / apIn), TAYLOR_DEPTH_EXP);
       life *= Math.pow(clampRatio(aeRef / aeIn), TAYLOR_ENGAGEMENT_EXP);
     }
+    // Coating multiplier (material-adjusted).
+    const eff = effectiveCoating(input.coatingKey, material.group);
+    coatingLifeMult = eff.mult;
+    if (eff.warning) warnings.push(eff.warning);
+    if (eff.note) notes.push(eff.note);
+    life *= eff.mult;
+    // Personal calibration from logged results.
+    life *= lifeCalibration;
+
     toolLifeMin = Math.max(0.1, Math.min(life, 100000));
     if (toolLifeMin < 5) {
       warnings.push(`Estimated tool life is only ~${toolLifeMin.toFixed(1)} min of cutting — back off speed, feed or depth for anything but a one-off.`);
@@ -272,6 +285,8 @@ export function computeFeedsSpeeds(input: CalcInput): CalcResult {
     deflectionMm: deflectionIn == null ? null : round(deflectionIn * MM_PER_IN, 3),
     thinningApplied, thinningFactor: round(thinningFactor, 2),
     toolLifeMin: toolLifeMin == null ? null : round(toolLifeMin, 1),
+    coatingLifeMult: coatingLifeMult == null ? null : round(coatingLifeMult, 2),
+    lifeCalibration: round(lifeCalibration, 2),
     costPerCuin: costPerCuin == null ? null : round(costPerCuin, 3),
     costPerCc: costPerCuin == null ? null : round(costPerCuin / CC_PER_CUIN, 4),
     jobTimeMin: jobTimeMin == null ? null : round(jobTimeMin, 1),

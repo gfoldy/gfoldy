@@ -39,7 +39,13 @@ Most free calculators just do RPM and feed. This one is **machine-aware**:
   speed, feed per tooth, axial depth and radial engagement into expected tool
   life, then a shop rate, tool price and optional volume give $/volume, cycle
   time, per-job cost and how many tools a job burns.
-- **Your tool crib** — save the tools and machines you actually own (with price)
+- **Coating-aware** — pick TiN / TiCN / AlTiN / ZrN / diamond and tool life
+  adjusts, *by material*: AlTiN rewards hot ferrous work but not aluminium, and
+  diamond is flagged (and penalised) if you point it at steel.
+- **It learns from your shop** — log how a cut actually went (broke / dulled /
+  as expected / lasted great) and the tool-life estimate for that material is
+  nudged toward what you really see, on-device.
+- **Your tool crib** — save the tools you actually own (coating, flutes, price)
   and one-tap load them. Save dialed-in jobs per material + operation.
 - **Imperial or metric** everywhere, offline-first, no login, no paywall.
 
@@ -104,5 +110,6 @@ MRR        = Ap × Ae × feed
 Power (hp) = MRR × unit-power / efficiency
 Deflection = Ft × L³ / (3 × E × I)           (cantilever, end-load estimate)
 Tool life  = Tref × (Vref/V)^(1/n) × (Fref/F)^fe × (Dref/Ap)^de × (Aeref/Ae)^ee
+             × coating multiplier × your learned calibration
 Cost/vol   = (machine $/min + tool $/min) / MRR
 ```

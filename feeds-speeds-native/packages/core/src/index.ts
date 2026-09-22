@@ -4,5 +4,7 @@
 export * from './types.ts';
 export * from './units.ts';
 export * from './data.ts';
+export * from './coatings.ts';
+export * from './calibration.ts';
 export * from './calc.ts';
 export * from './id.ts';

@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeFeedsSpeeds, chipThinningFactor, interp } from '../src/index.ts';
+import {
+  computeFeedsSpeeds, chipThinningFactor, interp,
+  effectiveCoating, applyOutcome, applyObservedRatio, DEFAULT_CALIBRATION,
+} from '../src/index.ts';
 import type { CalcInput } from '../src/index.ts';
 
 const baseInput = (over: Partial<CalcInput> = {}): CalcInput => ({
@@ -156,6 +159,58 @@ test('job time is independent of cost inputs', () => {
   assert.equal(a.jobTimeMin, b.jobTimeMin);
   assert.equal(a.jobCost, null);
   assert.ok(b.jobCost != null);
+});
+
+test('a coating multiplies tool life', () => {
+  const uncoated = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', materialKey: 'steel_mild', coatingKey: 'none' }));
+  const coated = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', materialKey: 'steel_mild', coatingKey: 'altin' }));
+  assert.ok(coated.toolLifeMin! > uncoated.toolLifeMin!);
+  assert.equal(coated.coatingLifeMult, 2.8);
+});
+
+test('coating benefit is material-aware', () => {
+  // AlTiN helps steel a lot but barely helps aluminium.
+  assert.equal(effectiveCoating('altin', 'Ferrous').mult, 2.8);
+  assert.equal(effectiveCoating('altin', 'Non-ferrous').mult, 1.0);
+  // Diamond is great on non-ferrous but must warn (and cut life) on steel.
+  assert.equal(effectiveCoating('diamond', 'Non-ferrous').mult, 5.0);
+  const badDiamond = effectiveCoating('diamond', 'Ferrous');
+  assert.ok(badDiamond.mult < 1 && badDiamond.warning);
+});
+
+test('diamond on steel warns and shortens life in a full calc', () => {
+  const r = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', materialKey: 'steel_mild', coatingKey: 'diamond' }));
+  assert.ok(r.warnings.some((w) => w.toLowerCase().includes('diamond')));
+  const plain = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', materialKey: 'steel_mild', coatingKey: 'none' }));
+  assert.ok(r.toolLifeMin! < plain.toolLifeMin!);
+});
+
+test('calibration multiplier scales tool life and cost', () => {
+  const base = computeFeedsSpeeds(baseInput({ machineKey: 'vmc' }));
+  const tuned = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', lifeCalibration: 0.5 }));
+  assert.ok(Math.abs(tuned.toolLifeMin! - base.toolLifeMin! * 0.5) < 0.5);
+  assert.equal(tuned.lifeCalibration, 0.5);
+});
+
+test('logging outcomes nudges the calibration factor the right way', () => {
+  let cal = DEFAULT_CALIBRATION;
+  const start = cal.factor;
+  cal = applyOutcome(cal, 'broke');       // life shorter than predicted
+  assert.ok(cal.factor < start);
+  assert.equal(cal.samples, 2);
+  // Repeated "broke" keeps pulling it down, but stays clamped above the floor.
+  for (let i = 0; i < 20; i++) cal = applyOutcome(cal, 'broke');
+  assert.ok(cal.factor >= 0.25);
+
+  let up = applyOutcome(DEFAULT_CALIBRATION, 'long'); // lasted longer than predicted
+  assert.ok(up.factor > 1);
+});
+
+test('applyObservedRatio moves toward an exact ratio and ignores nonsense', () => {
+  const moved = applyObservedRatio(DEFAULT_CALIBRATION, 0.5);
+  assert.ok(moved.factor < 1);
+  const ignored = applyObservedRatio(DEFAULT_CALIBRATION, -3);
+  assert.equal(ignored.factor, DEFAULT_CALIBRATION.factor);
 });
 
 test('interp clamps at the ends', () => {

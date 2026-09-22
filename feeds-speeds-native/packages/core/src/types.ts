@@ -81,6 +81,10 @@ export interface CalcInput {
   operation: Operation;
   aggressiveness: Aggressiveness;
   chipThinning: boolean;
+  /** Tool coating key (see COATINGS) — affects tool life. Default 'none'. */
+  coatingKey?: string;
+  /** Learned per-material tool-life multiplier from logged results. Default 1. */
+  lifeCalibration?: number;
 
   // --- Optional tooling & cost inputs ---
   /** Price of the cutting tool ($) — enables tooling-cost figures. */
@@ -144,6 +148,10 @@ export interface CalcResult {
   // --- Tool life & cost ---
   /** Estimated tool life in minutes of cutting at the realized surface speed. */
   toolLifeMin: number | null;
+  /** Effective coating multiplier applied to tool life (material-adjusted). */
+  coatingLifeMult: number | null;
+  /** Calibration multiplier applied to tool life (1 = uncalibrated). */
+  lifeCalibration: number;
   /** Cost to remove unit volume (machine + tooling), $ per in^3 / per cm^3. */
   costPerCuin: number | null;
   costPerCc: number | null;

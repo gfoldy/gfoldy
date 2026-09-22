@@ -1,13 +1,13 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Pressable, Modal, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import {
-  computeFeedsSpeeds, MACHINES, MATERIALS, TOOL_MATERIALS, TOOL_TYPES, OPERATIONS,
-  type CalcInput, type UnitSystem, type Aggressiveness, type Operation,
+  computeFeedsSpeeds, MACHINES, MATERIALS, TOOL_MATERIALS, TOOL_TYPES, OPERATIONS, COATINGS, OUTCOME_META,
+  type CalcInput, type UnitSystem, type Aggressiveness, type Operation, type CutOutcome,
 } from '@feedspeed/core';
 import { useStore, type SavedTool } from '../../src/store/store';
-import { T } from '../../src/theme';
+import { T, radii } from '../../src/theme';
 import {
   Card, Title, Muted, Section, Select, Segmented, NumberField, Notice, Stat, Button,
   type SelectOption,
@@ -20,6 +20,8 @@ const toolTypeOpts: SelectOption[] = Object.entries(TOOL_TYPES).map(([key, t]) =
 const toolMatOpts: SelectOption[] = Object.entries(TOOL_MATERIALS).map(([key, t]) => ({ key, label: t.label }));
 const materialOpts: SelectOption[] = Object.entries(MATERIALS).map(([key, m]) => ({ key, label: m.label, group: m.group }));
 const operationOpts: SelectOption[] = Object.entries(OPERATIONS).map(([key, o]) => ({ key, label: o.label }));
+const coatingOpts: SelectOption[] = Object.entries(COATINGS).map(([key, c]) => ({ key, label: c.label }));
+const OUTCOME_KEYS = Object.keys(OUTCOME_META) as CutOutcome[];
 
 function convertStr(v: string, from: UnitSystem, to: UnitSystem): string {
   if (from === to) return v;
@@ -31,12 +33,13 @@ function convertStr(v: string, from: UnitSystem, to: UnitSystem): string {
 
 export default function Calculator() {
   const insets = useSafeAreaInsets();
-  const { settings, setSettings, tools, addTool, addJob } = useStore();
+  const { settings, setSettings, tools, addTool, addJob, getCalibration, logOutcome } = useStore();
   const unit = settings.unit;
 
   const [machineKey, setMachineKey] = useState('router_hobby');
   const [toolTypeKey, setToolTypeKey] = useState('endmill');
   const [toolMaterialKey, setToolMaterialKey] = useState('carbide');
+  const [coatingKey, setCoatingKey] = useState('none');
   const [materialKey, setMaterialKey] = useState('alu_6061');
   const [operation, setOperation] = useState<Operation>('roughing');
   const [diameter, setDiameter] = useState('0.25');
@@ -46,9 +49,11 @@ export default function Calculator() {
   const [shopRate, setShopRate] = useState(settings.machineRate != null ? String(settings.machineRate) : '');
   const [volume, setVolume] = useState('');
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
+  const [showLog, setShowLog] = useState(false);
 
   const isDrill = TOOL_TYPES[toolTypeKey]?.model === 'drilling';
   const num = (s: string) => (s.trim() === '' ? undefined : parseFloat(s));
+  const cal = getCalibration(materialKey);
 
   const input: CalcInput = useMemo(() => ({
     machineKey, materialKey, toolMaterialKey, toolTypeKey,
@@ -59,10 +64,12 @@ export default function Calculator() {
     operation: isDrill ? 'roughing' : operation,
     aggressiveness: settings.aggressiveness,
     chipThinning: settings.chipThinning,
+    coatingKey,
+    lifeCalibration: cal.factor,
     toolPrice: num(toolPrice),
     machineRate: num(shopRate),
     removeVolume: num(volume),
-  }), [machineKey, materialKey, toolMaterialKey, toolTypeKey, diameter, unit, flutes, stickout, operation, isDrill, settings, toolPrice, shopRate, volume]);
+  }), [machineKey, materialKey, toolMaterialKey, toolTypeKey, coatingKey, cal.factor, diameter, unit, flutes, stickout, operation, isDrill, settings, toolPrice, shopRate, volume]);
 
   const r = useMemo(() => computeFeedsSpeeds(input), [input]);
 
@@ -81,11 +88,18 @@ export default function Calculator() {
   function loadTool(t: SavedTool) {
     setToolTypeKey(t.toolTypeKey);
     setToolMaterialKey(t.toolMaterialKey);
+    setCoatingKey(t.coatingKey ?? 'none');
     setDiameter(String(t.unit === unit ? t.diameter : parseFloat(convertStr(String(t.diameter), t.unit, unit))));
     setFlutes(String(t.flutes));
     setStickout(t.stickout == null ? '' : String(t.stickout));
     setToolPrice(t.price == null ? '' : String(t.price));
     flash(`Loaded ${t.name}`);
+  }
+
+  function onLogOutcome(outcome: CutOutcome) {
+    const next = logOutcome(materialKey, outcome);
+    setShowLog(false);
+    flash(`Logged — ${MATERIALS[materialKey]?.label} life ×${next.factor}`);
   }
 
   function flash(msg: string) {
@@ -100,7 +114,7 @@ export default function Calculator() {
     const firstWord = (s: string | undefined) => (s ?? '').split(' ')[0] ?? '';
     const name = `${diameter}${lenUnit(unit)} ${firstWord(TOOL_MATERIALS[toolMaterialKey]?.label)} ${firstWord(TOOL_TYPES[toolTypeKey]?.label).toLowerCase()}`;
     addTool({
-      name, toolTypeKey, toolMaterialKey, diameter: dia, unit,
+      name, toolTypeKey, toolMaterialKey, coatingKey, diameter: dia, unit,
       flutes: parseInt(flutes, 10) || 2,
       stickout: num(stickout),
       price: num(toolPrice),
@@ -169,6 +183,8 @@ export default function Calculator() {
           <NumberField label="Diameter" value={diameter} onChange={setDiameter} suffix={lenUnit(unit)} />
           <NumberField label={isDrill ? 'Lips' : 'Flutes'} value={flutes} onChange={setFlutes} />
         </View>
+        <View style={{ height: 12 }} />
+        <Select label="Coating" value={coatingKey} options={coatingOpts} onChange={setCoatingKey} />
         {!isDrill ? (
           <>
             <View style={{ height: 12 }} />
@@ -234,7 +250,10 @@ export default function Calculator() {
               <Section>Tool life &amp; cost</Section>
               <View style={styles.stats}>
                 {r.toolLifeMin != null ? <Stat label="Tool life" value={fmtMinutes(r.toolLifeMin)}
-                  tone={r.toolLifeMin < 5 ? 'warn' : 'default'} sub="cutting, at this speed" /> : null}
+                  tone={r.toolLifeMin < 5 ? 'warn' : 'default'}
+                  sub={cal.samples > 1 ? `tuned ×${r.lifeCalibration} · ${cal.samples - 1} log${cal.samples - 1 === 1 ? '' : 's'}`
+                    : r.coatingLifeMult != null && r.coatingLifeMult !== 1 ? `coating ×${r.coatingLifeMult}`
+                    : 'cutting, at this speed'} /> : null}
                 {r.costPerCuin != null ? <Stat label="Cost / volume"
                   value={`$${unit === 'mm' ? r.costPerCc : r.costPerCuin}`} sub={`per ${unit === 'mm' ? 'cm³' : 'in³'} removed`} /> : null}
                 {r.jobTimeMin != null ? <Stat label="Job time" value={fmtMinutes(r.jobTimeMin)} sub="cutting time" /> : null}
@@ -255,6 +274,12 @@ export default function Calculator() {
             <Button title="Save tool" tone="ghost" onPress={onSaveTool} style={{ flex: 1 }} />
             <Button title="Save job" tone="accent" onPress={onSaveJob} style={{ flex: 1 }} />
           </View>
+          {r.toolLifeMin != null ? (
+            <>
+              <View style={{ height: 10 }} />
+              <Button title="Log how this cut went →" tone="ghost" onPress={() => setShowLog(true)} />
+            </>
+          ) : null}
         </>
       )}
 
@@ -262,6 +287,24 @@ export default function Calculator() {
         Starting points only — real feeds &amp; speeds depend on coating, stick-out, work holding and coolant.
         Start safe, trust your ears and chips, and defer to the tool maker's data.
       </Muted>
+
+      <Modal visible={showLog} transparent animationType="slide" onRequestClose={() => setShowLog(false)}>
+        <Pressable style={styles.backdrop} onPress={() => setShowLog(false)} />
+        <View style={styles.sheet}>
+          <View style={styles.sheetHandle} />
+          <Text style={styles.sheetTitle}>How did the {MATERIALS[materialKey]?.label} cut go?</Text>
+          <Muted style={{ marginBottom: 12 }}>
+            This tunes the tool-life estimate for {MATERIALS[materialKey]?.label} toward what you actually see
+            {cal.samples > 1 ? ` (currently ×${cal.factor} from ${cal.samples - 1} log${cal.samples - 1 === 1 ? '' : 's'})` : ''}.
+          </Muted>
+          {OUTCOME_KEYS.map((k) => (
+            <Pressable key={k} style={styles.outcome} onPress={() => onLogOutcome(k)}>
+              <Text style={styles.outcomeLabel}>{OUTCOME_META[k].label}</Text>
+              <Text style={styles.outcomeHint}>{OUTCOME_META[k].hint}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -279,4 +322,18 @@ const styles = StyleSheet.create({
   checkLabel: { flex: 1, color: T.text, fontFamily: 'Manrope_500Medium', fontSize: 13, lineHeight: 18 },
   savedMsg: { color: T.green, fontFamily: 'Manrope_600SemiBold', fontSize: 12 },
   optional: { color: T.textFaint, fontFamily: 'Manrope_500Medium', fontSize: 11 },
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' },
+  sheet: {
+    position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: T.bgElev,
+    borderTopLeftRadius: 22, borderTopRightRadius: 22, borderWidth: 1, borderColor: T.border,
+    paddingHorizontal: 16, paddingBottom: 34, paddingTop: 10,
+  },
+  sheetHandle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: T.borderStrong, marginBottom: 12 },
+  sheetTitle: { color: T.text, fontFamily: 'Manrope_700Bold', fontWeight: '700', fontSize: 17, marginBottom: 6 },
+  outcome: {
+    backgroundColor: T.bgElev2, borderRadius: radii.md, borderWidth: 1, borderColor: T.border,
+    paddingVertical: 13, paddingHorizontal: 14, marginBottom: 8,
+  },
+  outcomeLabel: { color: T.text, fontFamily: 'Manrope_700Bold', fontWeight: '700', fontSize: 15 },
+  outcomeHint: { color: T.textDim, fontFamily: 'Manrope_400Regular', fontSize: 12, marginTop: 2 },
 });

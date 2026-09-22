@@ -54,7 +54,8 @@ export default function ReferenceScreen() {
         <Formula label="Feed (drilling)" body="Feed = RPM × feed per rev" />
         <Formula label="Material removal" body="MRR = Ap × Ae × feed" />
         <Formula label="Spindle power" body="hp ≈ MRR × unit-power ÷ efficiency" />
-        <Formula label="Chip thinning" body="Fz ×= 1 ÷ (2√(r − r²)),  r = Ae ÷ D" last />
+        <Formula label="Chip thinning" body="Fz ×= 1 ÷ (2√(r − r²)),  r = Ae ÷ D" />
+        <Formula label="Tool life (extended Taylor)" body="T = Tref × (Vref/V)^1/n × (Fref/F)^fe × (Dref/Ap)^de × (Aeref/Ae)^ee" last />
       </Card>
 
       <Muted style={{ marginTop: 18, fontSize: 12 }}>

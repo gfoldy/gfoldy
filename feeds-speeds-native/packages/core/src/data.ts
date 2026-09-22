@@ -31,13 +31,22 @@ export const TOOL_MATERIALS: Record<string, ToolMaterial> = {
 };
 
 // Reference tool life (minutes of cutting) expected at a material's *nominal*
-// surface speed, by class. Taylor's equation scales from here as the realized
-// speed moves away from nominal. Material.wearFactor tweaks per material.
+// cut — nominal surface speed, nominal chip load, and a nominal roughing depth
+// & engagement. The extended Taylor model scales from here. wearFactor tweaks
+// per material.
 export const REF_LIFE_MIN_BY_CLASS: Record<string, number> = {
   soft: 120,
   medium: 60,
   hard: 30,
 };
+
+// Extended-Taylor sensitivity exponents. Tool life scales by (ref/actual)^exp
+// for each variable. Speed uses 1/taylorN (steepest — carbide ≈ 4, HSS ≈ 8);
+// feed is moderate; axial depth and radial engagement are mild. This ordering
+// (speed > feed > depth) matches the classic generalized Taylor equation.
+export const TAYLOR_FEED_EXP = 1.0;
+export const TAYLOR_DEPTH_EXP = 0.25;
+export const TAYLOR_ENGAGEMENT_EXP = 0.2;
 
 export const TOOL_TYPES: Record<string, ToolType> = {
   endmill:  { label: 'End mill (flat / square)', model: 'milling',  defaultFlutes: 2 },

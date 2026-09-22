@@ -43,9 +43,10 @@ Legend: **✅ shipped** · **🔨 next** · **🌟 the differentiators** · **�
    chips**. Over time the app tunes *your* starting points, and — opt-in —
    aggregates anonymized results into community-verified feeds & speeds per
    machine + tool + material. A dataset like that compounds and can't be copied.
-9. ~~**Tool-life & cost estimate.**~~ ✅ **Shipped** — Taylor tool-life curve,
-   plus $/volume, cycle time, per-job cost and tool-wear. Next: extend to
-   full Taylor (feed & DOC terms) and a coating multiplier on tool life.
+9. ~~**Tool-life & cost estimate.**~~ ✅ **Shipped** — extended Taylor tool-life
+   (speed + feed + axial depth + radial engagement), plus $/volume, cycle time,
+   per-job cost and tool-wear. Next: a coating multiplier on tool life, and
+   feeding real logged results back in to calibrate per material (see #8).
 10. **Snap-a-tool onboarding.** OCR a tool label / catalog number (or scan a
     barcode) to auto-fill diameter, flutes and coating into the crib.
 11. **Machine profiles that matter.** Real spindle power/torque *curves* (power

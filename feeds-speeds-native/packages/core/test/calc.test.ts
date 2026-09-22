@@ -104,6 +104,24 @@ test('tool life is reported and falls as speed rises', () => {
   assert.ok(aggressive.toolLifeMin! < conservative.toolLifeMin!);
 });
 
+test('feed & depth shorten life even when speed is unchanged (capped RPM)', () => {
+  // On the VMC, a 1/4" tool in 6061 wants > 12000 RPM at both nominal and
+  // aggressive, so both cap at 12000 -> identical realized surface speed.
+  // The only difference left is feed & depth, which must still cut tool life.
+  const nominal = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', aggressiveness: 1 }));
+  const aggressive = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', aggressiveness: 2 }));
+  assert.equal(nominal.rpmClamped, true);
+  assert.equal(aggressive.rpmClamped, true);
+  assert.equal(nominal.rpm, aggressive.rpm); // same speed
+  assert.ok(aggressive.toolLifeMin! < nominal.toolLifeMin!); // feed+depth still bite
+});
+
+test('lighter radial engagement (finishing) gives longer life than slotting', () => {
+  const slot = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', operation: 'slotting' }));
+  const finish = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', operation: 'finishing' }));
+  assert.ok(finish.toolLifeMin! > slot.toolLifeMin!);
+});
+
 test('exotic materials wear tools faster than aluminium at nominal', () => {
   const alu = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', materialKey: 'alu_6061', aggressiveness: 1 }));
   const ti = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', materialKey: 'titanium', aggressiveness: 1 }));

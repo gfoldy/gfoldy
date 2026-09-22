@@ -35,9 +35,10 @@ Most free calculators just do RPM and feed. This one is **machine-aware**:
   push off and lose accuracy.
 - **Adaptive / HSM mode** — light radial, deep axial, with radial chip thinning
   applied the way real CAM does.
-- **Tool-life & cost estimate** — Taylor's equation (`V·T^n = C`) turns speed
-  into expected tool life, then a shop rate, tool price and optional volume give
-  $/volume, cycle time, per-job cost and how many tools a job burns.
+- **Tool-life & cost estimate** — the extended Taylor equation turns cutting
+  speed, feed per tooth, axial depth and radial engagement into expected tool
+  life, then a shop rate, tool price and optional volume give $/volume, cycle
+  time, per-job cost and how many tools a job burns.
 - **Your tool crib** — save the tools and machines you actually own (with price)
   and one-tap load them. Save dialed-in jobs per material + operation.
 - **Imperial or metric** everywhere, offline-first, no login, no paywall.
@@ -102,6 +103,6 @@ Feed       = RPM × chip load × flutes        (drills: RPM × feed-per-rev)
 MRR        = Ap × Ae × feed
 Power (hp) = MRR × unit-power / efficiency
 Deflection = Ft × L³ / (3 × E × I)           (cantilever, end-load estimate)
-Tool life  = Tref × (Vref / V)^(1/n)         (Taylor; Vref = nominal speed)
+Tool life  = Tref × (Vref/V)^(1/n) × (Fref/F)^fe × (Dref/Ap)^de × (Aeref/Ae)^ee
 Cost/vol   = (machine $/min + tool $/min) / MRR
 ```

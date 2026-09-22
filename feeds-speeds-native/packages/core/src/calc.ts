@@ -15,6 +15,7 @@ import type { CalcInput, CalcResult, DualValue } from './types.ts';
 import {
   MACHINES, MATERIALS, TOOL_MATERIALS, TOOL_TYPES,
   CHIPLOAD_BASE, DOC_BY_CLASS, OPERATIONS, AGGRESSIVENESS, REF_LIFE_MIN_BY_CLASS,
+  TAYLOR_FEED_EXP, TAYLOR_DEPTH_EXP, TAYLOR_ENGAGEMENT_EXP,
 } from './data.ts';
 import { IN_PER_MM, MM_PER_IN, SFM_PER_MPM, CC_PER_CUIN, round, interp, dual } from './units.ts';
 
@@ -177,18 +178,32 @@ export function computeFeedsSpeeds(input: CalcInput): CalcResult {
     }
   }
 
-  // --- Tool life (Taylor) + cost -------------------------------------------
-  // Scale a per-class reference life by how far the realized surface speed sits
-  // from the material's nominal speed: T = Tref x (Vref / V)^(1/n).
+  // --- Tool life (extended Taylor) + cost ----------------------------------
+  // Generalized Taylor: life falls with cutting speed, feed per tooth, axial
+  // depth and radial engagement, each relative to the material's nominal cut:
+  //   T = Tref x (Vref/V)^(1/n) x (Fref/F)^fe x (Dref/Ap)^de x (AeRef/Ae)^ee
+  // Speed dominates (exponent 1/n); feed moderate; depth & engagement mild.
   let toolLifeMin: number | null = null;
   const realizedSfm = (rpm * Math.PI * diaIn) / 12;
   const vRef = (sfmRange[0] + sfmRange[1]) / 2;
   if (realizedSfm > 0 && vRef > 0) {
+    const clampRatio = (x: number) => Math.min(Math.max(x, 0.2), 5);
     const refLife = (REF_LIFE_MIN_BY_CLASS[material.class] ?? 60) * (material.wearFactor ?? 1);
-    const life = refLife * Math.pow(vRef / realizedSfm, 1 / toolMat.taylorN);
+    let life = refLife * Math.pow(vRef / realizedSfm, 1 / toolMat.taylorN);
+    // Feed term: uses the intended chip thickness (the aggressiveness chip-load
+    // scale), NOT the programmed feed — chip thinning raises feed to keep the
+    // real chip thickness on target, so it must not be double-counted here.
+    life *= Math.pow(1 / agg.chipScale, TAYLOR_FEED_EXP);
+    // Axial depth + radial engagement terms (milling only; drilling has neither).
+    if (toolType.model === 'milling' && apIn != null && aeIn != null) {
+      const dRef = doc.roughAp * diaIn;   // nominal axial depth
+      const aeRef = doc.roughAe * diaIn;  // nominal radial engagement
+      life *= Math.pow(clampRatio(dRef / apIn), TAYLOR_DEPTH_EXP);
+      life *= Math.pow(clampRatio(aeRef / aeIn), TAYLOR_ENGAGEMENT_EXP);
+    }
     toolLifeMin = Math.max(0.1, Math.min(life, 100000));
     if (toolLifeMin < 5) {
-      warnings.push(`Estimated tool life is only ~${toolLifeMin.toFixed(1)} min of cutting at this speed — back off for anything but a one-off.`);
+      warnings.push(`Estimated tool life is only ~${toolLifeMin.toFixed(1)} min of cutting — back off speed, feed or depth for anything but a one-off.`);
     }
   }
 

@@ -1,9 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, type ViewStyle, type TextStyle } from 'react-native';
 import { T, radii } from '../theme';
+import { Surface } from './depth';
 
 export function Card({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
-  return <View style={[styles.card, style]}>{children}</View>;
+  return <Surface style={[styles.card, style]}>{children}</Surface>;
 }
 
 export function Section({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) {
@@ -25,10 +26,7 @@ export function Muted({ children, style }: { children: React.ReactNode; style?: 
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: T.bgElev,
     borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: T.border,
     padding: 14,
   },
   sectionRow: {

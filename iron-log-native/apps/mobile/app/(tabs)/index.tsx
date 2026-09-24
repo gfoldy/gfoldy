@@ -13,6 +13,7 @@ import { T, radii, shadow, shadowSm, font, HERO_GRADIENT, HERO_GLOW } from '../.
 import { fmtNum } from '../../src/lib/format';
 import { Nutrition } from '../../src/components/Nutrition';
 import { Profile } from '../../src/components/Profile';
+import { Surface, MetalText } from '../../src/components/depth';
 
 const initialsOf = (s: string) =>
   s.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || 'A';
@@ -114,6 +115,7 @@ export default function TodayScreen() {
       {/* hero */}
       <View style={styles.hero}>
         <HeroBg />
+        <View pointerEvents="none" style={styles.heroEdge} />
         <View style={styles.heroGlyph}><BarbellGlyph /></View>
         <View style={styles.heroPill}><Text style={styles.heroPillText}>{heroLabel}</Text></View>
         {meso && !meso.done && !meso.before && (
@@ -125,7 +127,7 @@ export default function TodayScreen() {
           </View>
         )}
         <View style={styles.heroCap}>
-          <Text style={styles.heroTitle}>{heroTitle}</Text>
+          <MetalText value={heroTitle} size={30} height={38} />
           <Text style={styles.heroMeta}>
             {day ? `${exerciseCount} exercise${exerciseCount === 1 ? '' : 's'}` : 'Nothing scheduled'}
             {meso && !meso.done && !meso.before ? `  ·  ${meso.phase} · Week ${meso.week}/${meso.weeks}` : ''}
@@ -134,18 +136,18 @@ export default function TodayScreen() {
       </View>
 
       {/* stat row */}
-      <View style={styles.statRow}>
-        <Stat value={fmtNum(volume)} unit={unit} label="Volume" accent />
+      <Surface style={styles.statRow}>
+        <Stat value={fmtNum(volume)} unit={unit} label="Volume" />
         <View style={styles.statDivide} />
         <Stat value={`${dayDone}/${dayTarget}`} label="Sets done" />
         <View style={styles.statDivide} />
         <Stat value={String(exerciseCount)} label="Exercises" />
-      </View>
+      </Surface>
 
       {groups.map((g) => (
         <View key={g.muscle}>
           <Text style={styles.section}>{g.muscle}</Text>
-          <View style={styles.card}>
+          <Surface style={styles.card}>
             {g.items.map((e) => (
               <ExerciseBlock
                 key={e.id}
@@ -160,14 +162,14 @@ export default function TodayScreen() {
                 onSet={store.upsertSet}
               />
             ))}
-          </View>
+          </Surface>
         </View>
       ))}
 
       {!day && (
-        <View style={[styles.card, { marginTop: 20 }]}>
+        <Surface style={[styles.card, { marginTop: 20 }]}>
           <Text style={styles.muted}>No training day matches this date. Build your split in the Split tab.</Text>
-        </View>
+        </Surface>
       )}
 
       <Nutrition date={date} />
@@ -177,13 +179,11 @@ export default function TodayScreen() {
   );
 }
 
-function Stat({ value, unit, label, accent }: { value: string; unit?: string; label: string; accent?: boolean }) {
+function Stat({ value, unit, label }: { value: string; unit?: string; label: string }) {
   return (
     <View style={styles.stat}>
-      <Text style={[styles.statVal, accent && { color: T.gold }]} numberOfLines={1} adjustsFontSizeToFit>
-        {value}{unit ? <Text style={styles.statUnit}> {unit}</Text> : null}
-      </Text>
-      <Text style={styles.statLab}>{label}</Text>
+      <MetalText value={value} size={20} align="center" height={25} />
+      <Text style={styles.statLab}>{unit ? `${label} · ${unit}` : label}</Text>
     </View>
   );
 }
@@ -292,6 +292,7 @@ const styles = StyleSheet.create({
   todayPillText: { color: T.goldLt, fontFamily: font.bold, fontSize: 12 },
 
   hero: { height: 200, borderRadius: 26, overflow: 'hidden', backgroundColor: HERO_GRADIENT[1], borderWidth: 1, borderColor: '#2a3a12', ...shadow },
+  heroEdge: { position: 'absolute', left: 0, right: 0, top: 0, height: 1.5, backgroundColor: 'rgba(255,255,255,0.1)', borderTopLeftRadius: 26, borderTopRightRadius: 26 },
   heroGlyph: { position: 'absolute', right: -18, top: 10 },
   heroPill: { position: 'absolute', top: 16, left: 16, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
   heroPillText: { color: '#eafff1', fontFamily: font.bold, fontSize: 11, letterSpacing: 0.7, textTransform: 'uppercase' },
@@ -300,19 +301,16 @@ const styles = StyleSheet.create({
   hdotOn: { backgroundColor: 'rgba(140,255,58,0.7)' },
   hdotNow: { backgroundColor: HERO_GLOW },
   hdotDe: { backgroundColor: 'transparent', borderWidth: 1, borderColor: 'rgba(255,255,255,0.55)', borderStyle: 'dashed' },
-  heroCap: { position: 'absolute', left: 20, bottom: 20, right: 20 },
-  heroTitle: { color: '#ffffff', fontFamily: font.display, fontSize: 30, letterSpacing: -0.3 },
-  heroMeta: { color: 'rgba(230,245,235,0.82)', fontFamily: font.medium, fontSize: 13, marginTop: 6 },
+  heroCap: { position: 'absolute', left: 20, bottom: 18, right: 20 },
+  heroMeta: { color: 'rgba(230,245,235,0.82)', fontFamily: font.medium, fontSize: 13, marginTop: 4 },
 
-  statRow: { flexDirection: 'row', alignItems: 'stretch', backgroundColor: T.bgElev, borderRadius: radii.lg, borderWidth: 1, borderColor: T.border, paddingVertical: 14, marginTop: 12, ...shadowSm },
+  statRow: { flexDirection: 'row', alignItems: 'stretch', borderRadius: radii.lg, paddingVertical: 16, marginTop: 12 },
   stat: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
-  statDivide: { width: StyleSheet.hairlineWidth, backgroundColor: T.border, marginVertical: 4 },
-  statVal: { color: T.text, fontFamily: font.display, fontSize: 20 },
-  statUnit: { color: T.textFaint, fontFamily: font.semibold, fontSize: 11 },
-  statLab: { color: T.textFaint, fontFamily: font.semibold, fontSize: 10, letterSpacing: 0.8, textTransform: 'uppercase', marginTop: 4 },
+  statDivide: { width: StyleSheet.hairlineWidth, backgroundColor: T.borderStrong, marginVertical: 6 },
+  statLab: { color: T.textFaint, fontFamily: font.semibold, fontSize: 10, letterSpacing: 0.8, textTransform: 'uppercase', marginTop: 2 },
 
   section: { color: T.textDim, fontFamily: font.bold, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginTop: 24, marginBottom: 8 },
-  card: { backgroundColor: T.bgElev, borderRadius: radii.lg, borderWidth: 1, borderColor: T.border, padding: 12, ...shadow },
+  card: { borderRadius: radii.lg, padding: 12 },
   muted: { color: T.textFaint, fontFamily: font.regular, fontSize: 14 },
   exercise: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: T.hairline },
   exHead: { flexDirection: 'row', alignItems: 'center' },

@@ -19,7 +19,7 @@ method-machining/
 In `public/index.html` (search for `EDIT`):
 
 - Email, phone, hours, and location in the **Request a Quote** section
-- The hero stats (`±0.0005"`, `1–1,000+`, `24–48 hr`) — make sure they match what you actually offer
+- The hero stats (`±0.0005"`, `Low & High`, `24–48 hr`) — make sure they match what you actually offer
 - Capabilities and materials lists — add or remove to match your machines
 
 ## Preview locally

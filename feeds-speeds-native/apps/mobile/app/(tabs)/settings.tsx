@@ -110,10 +110,12 @@ export default function SettingsScreen() {
 
       <Section>About</Section>
       <Card>
+        <Text style={styles.brand}>METHOD MACHINING</Text>
         <Text style={styles.about}>Feeds &amp; Speeds</Text>
-        <Muted style={{ marginTop: 4 }}>
-          Version {Constants.expoConfig?.version ?? '1.0.0'}. Machine-aware feeds &amp; speeds for milling, routing and
-          drilling — with spindle-power and tool-deflection checks most calculators skip.
+        <Text style={styles.tagline}>Precision by design. Built with purpose.</Text>
+        <Muted style={{ marginTop: 10 }}>
+          Version {Constants.expoConfig?.version ?? '1.0.0'}. Machine-aware feeds &amp; speeds for milling and
+          drilling — with spindle-power, tool-deflection and long-reach checks most calculators skip.
         </Muted>
         <Muted style={{ marginTop: 10, fontSize: 12 }}>
           All numbers are conservative starting points. Coating, work holding, coolant and machine condition all
@@ -126,7 +128,9 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 12 },
-  about: { color: T.text, fontFamily: 'BricolageGrotesque_800ExtraBold', fontWeight: '800', fontSize: 20 },
+  brand: { color: T.accent, fontFamily: 'Manrope_700Bold', fontWeight: '700', fontSize: 12, letterSpacing: 2 },
+  about: { color: T.text, fontFamily: 'BricolageGrotesque_800ExtraBold', fontWeight: '800', fontSize: 22, marginTop: 2 },
+  tagline: { color: T.textDim, fontFamily: 'Manrope_600SemiBold', fontWeight: '600', fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', marginTop: 4 },
   calRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: T.hairline,

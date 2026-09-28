@@ -171,10 +171,10 @@ export default function Calculator() {
       contentContainerStyle={{ padding: 16, paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 }}
       keyboardShouldPersistTaps="handled"
     >
-      <Muted style={{ fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', color: T.accent }}>
-        Feeds &amp; Speeds
+      <Muted style={{ fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: T.accent, fontFamily: 'Manrope_700Bold', fontWeight: '700' }}>
+        Method Machining
       </Muted>
-      <Title>Calculator</Title>
+      <Title>Feeds &amp; Speeds</Title>
 
       {/* Units + aggressiveness */}
       <Section>Setup</Section>

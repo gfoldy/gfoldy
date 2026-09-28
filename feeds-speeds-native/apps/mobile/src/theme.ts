@@ -1,33 +1,33 @@
-// Dark "machine shop" palette — near-black surfaces, machining orange accent,
-// blue for secondary/derived values. Mirrors the web feeds-speeds styling.
+// Method Machining palette — black ground, vivid Method green accent, and
+// chrome/silver for secondary/derived values. Matches the company branding.
 
 export const T = {
   // surfaces
-  bg: '#0d0d0f',
-  bgElev: '#16161a',    // cards
-  bgElev2: '#1e1e24',   // inputs, tracks, tags, inactive chips
-  border: '#2a2a31',
-  borderStrong: '#34343d',
-  hairline: '#232329',
+  bg: '#000000',        // true black, like the logo
+  bgElev: '#0e100e',    // cards
+  bgElev2: '#181b18',   // inputs, tracks, tags, inactive chips
+  border: '#262a26',
+  borderStrong: '#39423a',
+  hairline: '#1b1e1b',
   // text
-  text: '#f2f2f4',
-  textDim: '#9a9aa6',
-  textFaint: '#6c6c78',
-  // accent (machining orange)
-  accent: '#ff8a3d',
-  accentDim: '#c96a2b',
-  accentSoft: '#241a12',
-  accentInk: '#1a0f06',   // text/icons on the accent
-  // secondary (derived / info)
-  blue: '#4da3ff',
-  blueSoft: '#12202f',
+  text: '#f2f5f2',
+  textDim: '#9aa39c',
+  textFaint: '#5f665f',
+  // accent (Method green)
+  accent: '#2fc63a',
+  accentDim: '#1c9a28',
+  accentSoft: '#0d2712',
+  accentInk: '#04140a',   // text/icons on the accent
+  // secondary (derived / info) — chrome / silver
+  blue: '#b7c0c8',        // "steel" — token name kept for compatibility
+  blueSoft: '#151a1c',
   // status
   warn: '#ffcf5c',
   warnSoft: '#2a2410',
   red: '#ff6b6b',
   redSoft: '#2a1414',
-  green: '#5ecb8a',
-  greenSoft: '#122318',
+  green: '#2fc63a',
+  greenSoft: '#0d2712',
 } as const;
 
 export const radii = { sm: 8, md: 12, lg: 18, pill: 999 } as const;
@@ -62,6 +62,6 @@ export const shadowSm = {
 // Severity colours for result notices.
 export const NOTICE_COLORS = {
   warn: { bg: T.warnSoft, fg: T.warn, border: '#5a4a1e' },
-  info: { bg: T.blueSoft, fg: T.blue, border: '#1f4266' },
+  info: { bg: T.blueSoft, fg: T.blue, border: '#39423a' },
   error: { bg: T.redSoft, fg: T.red, border: '#5a2626' },
 } as const;

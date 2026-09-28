@@ -6,12 +6,12 @@
     "orientation": "portrait",
     "scheme": "feedspeed",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#0d0d0f",
+    "backgroundColor": "#000000",
     "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0d0d0f"
+      "backgroundColor": "#000000"
     },
     "ios": {
       "supportsTablet": true,
@@ -26,7 +26,7 @@
       "package": "com.foldyfamily.feedspeed",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0d0d0f"
+        "backgroundColor": "#000000"
       }
     },
     "plugins": [

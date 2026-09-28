@@ -30,9 +30,10 @@ Most free calculators just do RPM and feed. This one is **machine-aware**:
 - **Spindle-power check** — estimates the horsepower the cut needs
   (`MRR × unit-power ÷ efficiency`) and warns when it exceeds your machine's
   available power. A mini-mill and a Haas get different advice.
-- **Tool-deflection estimate** — enter tool stick-out and it models the cutter
-  as a cantilever beam (`Ft·L³ / 3EI`) to flag when a long, thin end mill will
-  push off and lose accuracy.
+- **Stick-out / long-reach derate** — enter tool stick-out and, past ~3× the
+  diameter (L/D), it automatically trims depth, width and feed to keep a long,
+  thin tool controllable, and models the cutter as a cantilever beam
+  (`Ft·L³ / 3EI`) to show the deflection you'd actually see.
 - **Adaptive / HSM mode** — light radial, deep axial, with radial chip thinning
   applied the way real CAM does.
 - **Tool-life & cost estimate** — the extended Taylor equation turns cutting

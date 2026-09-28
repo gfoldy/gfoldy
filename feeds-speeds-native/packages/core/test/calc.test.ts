@@ -4,12 +4,12 @@ import {
   computeFeedsSpeeds, chipThinningFactor, interp,
   effectiveCoating, applyOutcome, applyObservedRatio, DEFAULT_CALIBRATION,
   scallopFromStepover, stepoverFromScallop, effectiveBallDiameter, finishGrade,
-  computeTapping, THREADS,
+  computeTapping, THREADS, MACHINES,
 } from '../src/index.ts';
 import type { CalcInput } from '../src/index.ts';
 
 const baseInput = (over: Partial<CalcInput> = {}): CalcInput => ({
-  machineKey: 'vmc',
+  machineKey: 'haas_vf2',
   materialKey: 'alu_6061',
   toolMaterialKey: 'carbide',
   toolTypeKey: 'endmill',
@@ -77,11 +77,47 @@ test('deflection is reported only when stick-out is given', () => {
   assert.ok(withStickout.deflectionIn != null && withStickout.deflectionIn > 0);
 });
 
-test('drilling returns feed-per-rev and no radial DOC', () => {
-  const r = computeFeedsSpeeds(baseInput({ toolTypeKey: 'drill', diameter: 0.5 }));
+test('short stick-out (L/D <= 3) does not derate the cut', () => {
+  const base = computeFeedsSpeeds(baseInput({ machineKey: 'haas_vf2', diameter: 0.25 }));
+  const shortReach = computeFeedsSpeeds(baseInput({ machineKey: 'haas_vf2', diameter: 0.25, stickout: 0.6 })); // L/D 2.4
+  assert.equal(shortReach.stickoutDerate, 1);
+  assert.equal(shortReach.ap!.in, base.ap!.in);
+  assert.equal(shortReach.feedIpm, base.feedIpm);
+});
+
+test('long stick-out trims depth, width and feed (and less than a short one)', () => {
+  const base = computeFeedsSpeeds(baseInput({ machineKey: 'haas_vf2', diameter: 0.25 }));
+  const longReach = computeFeedsSpeeds(baseInput({ machineKey: 'haas_vf2', diameter: 0.25, stickout: 1.25 })); // L/D 5 -> 0.5
+  assert.ok(longReach.stickoutRatio! >= 4.9 && longReach.stickoutRatio! <= 5.1);
+  assert.ok(Math.abs(longReach.stickoutDerate - 0.5) < 0.02);
+  assert.ok(longReach.ap!.in < base.ap!.in);
+  assert.ok(longReach.ae!.in < base.ae!.in);
+  assert.ok(longReach.feedIpm < base.feedIpm);
+  assert.ok(longReach.notes.some((n) => n.toLowerCase().includes('long reach')));
+});
+
+test('very long reach derates harder and lowers deflection vs. no derate', () => {
+  const l5 = computeFeedsSpeeds(baseInput({ machineKey: 'haas_vf2', diameter: 0.25, stickout: 1.25 }));
+  const l8 = computeFeedsSpeeds(baseInput({ machineKey: 'haas_vf2', diameter: 0.25, stickout: 2.0 })); // L/D 8 -> 0.25
+  assert.ok(l8.stickoutDerate < l5.stickoutDerate);
+  assert.ok(l8.ap!.in < l5.ap!.in);
+});
+
+test('drilling returns feed-per-rev, a peck depth, and no milling DOC', () => {
+  const r = computeFeedsSpeeds(baseInput({ toolTypeKey: 'drill', diameter: 0.5, materialKey: 'alu_6061' }));
   assert.equal(r.ap, null);
   assert.equal(r.ae, null);
   assert.ok(r.feedPerRev.in > 0);
+  // soft material -> 1.0x diameter peck
+  assert.ok(r.peckDepth != null && Math.abs(r.peckDepth.in - 0.5) < 1e-6);
+});
+
+test('peck depth is smaller in hard material and zero for milling', () => {
+  const soft = computeFeedsSpeeds(baseInput({ toolTypeKey: 'drill', diameter: 0.25, materialKey: 'alu_6061' }));
+  const hard = computeFeedsSpeeds(baseInput({ toolTypeKey: 'drill', diameter: 0.25, materialKey: 'ss_304' }));
+  assert.ok(hard.peckDepth!.in < soft.peckDepth!.in);
+  const mill = computeFeedsSpeeds(baseInput({ toolTypeKey: 'endmill', diameter: 0.25 }));
+  assert.equal(mill.peckDepth, null);
 });
 
 test('zero / negative diameter is an error', () => {
@@ -113,8 +149,8 @@ test('feed & depth shorten life even when speed is unchanged (capped RPM)', () =
   // On the VMC, a 1/4" tool in 6061 wants > 12000 RPM at both nominal and
   // aggressive, so both cap at 12000 -> identical realized surface speed.
   // The only difference left is feed & depth, which must still cut tool life.
-  const nominal = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', aggressiveness: 1 }));
-  const aggressive = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', aggressiveness: 2 }));
+  const nominal = computeFeedsSpeeds(baseInput({ machineKey: 'haas_vf2', aggressiveness: 1 }));
+  const aggressive = computeFeedsSpeeds(baseInput({ machineKey: 'haas_vf2', aggressiveness: 2 }));
   assert.equal(nominal.rpmClamped, true);
   assert.equal(aggressive.rpmClamped, true);
   assert.equal(nominal.rpm, aggressive.rpm); // same speed
@@ -122,41 +158,41 @@ test('feed & depth shorten life even when speed is unchanged (capped RPM)', () =
 });
 
 test('lighter radial engagement (finishing) gives longer life than slotting', () => {
-  const slot = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', operation: 'slotting' }));
-  const finish = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', operation: 'finishing' }));
+  const slot = computeFeedsSpeeds(baseInput({ machineKey: 'haas_vf2', operation: 'slotting' }));
+  const finish = computeFeedsSpeeds(baseInput({ machineKey: 'haas_vf2', operation: 'finishing' }));
   assert.ok(finish.toolLifeMin! > slot.toolLifeMin!);
 });
 
 test('exotic materials wear tools faster than aluminium at nominal', () => {
-  const alu = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', materialKey: 'alu_6061', aggressiveness: 1 }));
-  const ti = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', materialKey: 'titanium', aggressiveness: 1 }));
+  const alu = computeFeedsSpeeds(baseInput({ machineKey: 'haas_vf2', materialKey: 'alu_6061', aggressiveness: 1 }));
+  const ti = computeFeedsSpeeds(baseInput({ machineKey: 'haas_vf2', materialKey: 'titanium', aggressiveness: 1 }));
   assert.ok(ti.toolLifeMin! < alu.toolLifeMin!);
 });
 
 test('cost per volume needs a cost input; job cost needs a volume', () => {
-  const noCost = computeFeedsSpeeds(baseInput({ machineKey: 'vmc' }));
+  const noCost = computeFeedsSpeeds(baseInput({ machineKey: 'haas_vf2' }));
   assert.equal(noCost.costPerCuin, null);
   assert.equal(noCost.jobCost, null);
 
-  const withRate = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', machineRate: 75 }));
+  const withRate = computeFeedsSpeeds(baseInput({ machineKey: 'haas_vf2', machineRate: 75 }));
   assert.ok(withRate.costPerCuin != null && withRate.costPerCuin > 0);
   assert.equal(withRate.jobTimeMin, null); // no volume yet
 
-  const job = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', machineRate: 75, toolPrice: 40, removeVolume: 2 }));
+  const job = computeFeedsSpeeds(baseInput({ machineKey: 'haas_vf2', machineRate: 75, toolPrice: 40, removeVolume: 2 }));
   assert.ok(job.jobTimeMin != null && job.jobTimeMin > 0);
   assert.ok(job.jobCost != null && job.jobCost > 0);
   assert.ok(job.toolWearPct != null && job.toolWearPct > 0);
 });
 
 test('tool price raises cost per volume above machine-only cost', () => {
-  const rateOnly = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', machineRate: 75 }));
-  const rateAndTool = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', machineRate: 75, toolPrice: 60 }));
+  const rateOnly = computeFeedsSpeeds(baseInput({ machineKey: 'haas_vf2', machineRate: 75 }));
+  const rateAndTool = computeFeedsSpeeds(baseInput({ machineKey: 'haas_vf2', machineRate: 75, toolPrice: 60 }));
   assert.ok(rateAndTool.costPerCuin! > rateOnly.costPerCuin!);
 });
 
 test('job time is independent of cost inputs', () => {
-  const a = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', removeVolume: 3 }));
-  const b = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', removeVolume: 3, machineRate: 90 }));
+  const a = computeFeedsSpeeds(baseInput({ machineKey: 'haas_vf2', removeVolume: 3 }));
+  const b = computeFeedsSpeeds(baseInput({ machineKey: 'haas_vf2', removeVolume: 3, machineRate: 90 }));
   assert.ok(a.jobTimeMin != null && b.jobTimeMin != null);
   assert.equal(a.jobTimeMin, b.jobTimeMin);
   assert.equal(a.jobCost, null);
@@ -164,8 +200,8 @@ test('job time is independent of cost inputs', () => {
 });
 
 test('a coating multiplies tool life', () => {
-  const uncoated = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', materialKey: 'steel_mild', coatingKey: 'none' }));
-  const coated = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', materialKey: 'steel_mild', coatingKey: 'altin' }));
+  const uncoated = computeFeedsSpeeds(baseInput({ machineKey: 'haas_vf2', materialKey: 'steel_mild', coatingKey: 'none' }));
+  const coated = computeFeedsSpeeds(baseInput({ machineKey: 'haas_vf2', materialKey: 'steel_mild', coatingKey: 'altin' }));
   assert.ok(coated.toolLifeMin! > uncoated.toolLifeMin!);
   assert.equal(coated.coatingLifeMult, 2.8);
 });
@@ -181,15 +217,15 @@ test('coating benefit is material-aware', () => {
 });
 
 test('diamond on steel warns and shortens life in a full calc', () => {
-  const r = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', materialKey: 'steel_mild', coatingKey: 'diamond' }));
+  const r = computeFeedsSpeeds(baseInput({ machineKey: 'haas_vf2', materialKey: 'steel_mild', coatingKey: 'diamond' }));
   assert.ok(r.warnings.some((w) => w.toLowerCase().includes('diamond')));
-  const plain = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', materialKey: 'steel_mild', coatingKey: 'none' }));
+  const plain = computeFeedsSpeeds(baseInput({ machineKey: 'haas_vf2', materialKey: 'steel_mild', coatingKey: 'none' }));
   assert.ok(r.toolLifeMin! < plain.toolLifeMin!);
 });
 
 test('calibration multiplier scales tool life and cost', () => {
-  const base = computeFeedsSpeeds(baseInput({ machineKey: 'vmc' }));
-  const tuned = computeFeedsSpeeds(baseInput({ machineKey: 'vmc', lifeCalibration: 0.5 }));
+  const base = computeFeedsSpeeds(baseInput({ machineKey: 'haas_vf2' }));
+  const tuned = computeFeedsSpeeds(baseInput({ machineKey: 'haas_vf2', lifeCalibration: 0.5 }));
   assert.ok(Math.abs(tuned.toolLifeMin! - base.toolLifeMin! * 0.5) < 0.5);
   assert.equal(tuned.lifeCalibration, 0.5);
 });
@@ -247,42 +283,75 @@ test('finish grade sharpens as scallop shrinks', () => {
 
 test('tap drill for 1/4-20 @ 75% matches the #7 drill (0.201")', () => {
   const t = THREADS.find((x) => x.key === '1/4-20')!;
-  const r = computeTapping({ majorIn: t.majorIn, pitchIn: t.pitchIn, pctThread: 75, materialKey: 'alu_6061', machineKey: 'vmc' });
+  const r = computeTapping({ majorIn: t.majorIn, pitchIn: t.pitchIn, pctThread: 75, materialKey: 'alu_6061', machineKey: 'haas_vf2' });
   assert.ok(Math.abs(r.tapDrill.in - 0.201) < 0.001, `got ${r.tapDrill.in}`);
   assert.equal(r.tpi, 20);
 });
 
 test('tap drill for M6 × 1.0 @ 75% is ~5.0 mm', () => {
   const t = THREADS.find((x) => x.key === 'M6 × 1.0')!;
-  const r = computeTapping({ majorIn: t.majorIn, pitchIn: t.pitchIn, pctThread: 75, materialKey: 'steel_mild', machineKey: 'vmc' });
+  const r = computeTapping({ majorIn: t.majorIn, pitchIn: t.pitchIn, pctThread: 75, materialKey: 'steel_mild', machineKey: 'haas_vf2' });
   assert.ok(Math.abs(r.tapDrill.mm - 5.0) < 0.1, `got ${r.tapDrill.mm}`);
 });
 
 test('tapping feed is locked to the pitch (feed = rpm × pitch)', () => {
   const t = THREADS.find((x) => x.key === '1/4-20')!;
-  const r = computeTapping({ majorIn: t.majorIn, pitchIn: t.pitchIn, pctThread: 75, materialKey: 'alu_6061', machineKey: 'vmc' });
+  const r = computeTapping({ majorIn: t.majorIn, pitchIn: t.pitchIn, pctThread: 75, materialKey: 'alu_6061', machineKey: 'haas_vf2' });
   assert.ok(Math.abs(r.feedIpm - r.rpm * t.pitchIn) < 0.11);
   assert.ok(Math.abs(r.feedPerRev.in - t.pitchIn) < 1e-6);
 });
 
 test('a higher %thread makes a smaller tap-drill hole and warns past ~80%', () => {
   const t = THREADS.find((x) => x.key === '1/4-20')!;
-  const lo = computeTapping({ majorIn: t.majorIn, pitchIn: t.pitchIn, pctThread: 65, materialKey: 'alu_6061', machineKey: 'vmc' });
-  const hi = computeTapping({ majorIn: t.majorIn, pitchIn: t.pitchIn, pctThread: 85, materialKey: 'alu_6061', machineKey: 'vmc' });
+  const lo = computeTapping({ majorIn: t.majorIn, pitchIn: t.pitchIn, pctThread: 65, materialKey: 'alu_6061', machineKey: 'haas_vf2' });
+  const hi = computeTapping({ majorIn: t.majorIn, pitchIn: t.pitchIn, pctThread: 85, materialKey: 'alu_6061', machineKey: 'haas_vf2' });
   assert.ok(hi.tapDrill.in < lo.tapDrill.in);
   assert.ok(hi.warnings.some((w) => w.toLowerCase().includes('thread')));
 });
 
 test('tapping runs slower in hard material than soft', () => {
   const t = THREADS.find((x) => x.key === '1/4-20')!;
-  const soft = computeTapping({ majorIn: t.majorIn, pitchIn: t.pitchIn, pctThread: 75, materialKey: 'alu_6061', machineKey: 'vmc' });
-  const hard = computeTapping({ majorIn: t.majorIn, pitchIn: t.pitchIn, pctThread: 75, materialKey: 'ss_304', machineKey: 'vmc' });
+  const soft = computeTapping({ majorIn: t.majorIn, pitchIn: t.pitchIn, pctThread: 75, materialKey: 'alu_6061', machineKey: 'haas_vf2' });
+  const hard = computeTapping({ majorIn: t.majorIn, pitchIn: t.pitchIn, pctThread: 75, materialKey: 'ss_304', machineKey: 'haas_vf2' });
   assert.ok(hard.rpm < soft.rpm);
 });
 
 test('computeFeedsSpeeds refuses a tap (uses the tapping panel)', () => {
   const r = computeFeedsSpeeds(baseInput({ toolTypeKey: 'tap' }));
   assert.ok(r.error);
+});
+
+test('machine roster is large and every machine carries its capabilities', () => {
+  const keys = Object.keys(MACHINES);
+  assert.ok(keys.length >= 30, `only ${keys.length} machines`);
+  for (const [key, m] of Object.entries(MACHINES)) {
+    assert.ok(m.category && m.label, `${key} missing label/category`);
+    assert.ok(m.rpmMax > m.rpmMin && m.rpmMin > 0, `${key} rpm range`);
+    assert.ok(m.hp > 0, `${key} hp`);
+    assert.ok(m.rigidity > 0 && m.rigidity <= 1, `${key} rigidity`);
+  }
+  // a couple of known specs
+  assert.equal(MACHINES.haas_vf2!.rpmMax, 8100);
+  assert.equal(MACHINES.haas_vf2!.hp, 30);
+  assert.equal(MACHINES.tormach_440!.hp, 0.5);
+});
+
+test('a machine feed-rate limit caps the feed with a note', () => {
+  // Sherline caps at 30 in/min; a 1/4" cut in aluminium wants more than that.
+  const r = computeFeedsSpeeds(baseInput({ machineKey: 'sherline_cnc', materialKey: 'alu_6061', aggressiveness: 1 }));
+  assert.equal(r.feedClamped, true);
+  assert.ok(r.feedIpm <= 30 + 1e-6);
+  assert.ok(r.notes.some((n) => n.toLowerCase().includes('feed capped')));
+});
+
+test('a high-feed machine does not clamp the same cut', () => {
+  const r = computeFeedsSpeeds(baseInput({ machineKey: 'haas_vf2', materialKey: 'alu_6061', aggressiveness: 1 }));
+  assert.equal(r.feedClamped, false);
+});
+
+test('custom machine ignores the feed cap', () => {
+  const r = computeFeedsSpeeds(baseInput({ machineKey: 'custom', customRpmMax: 24000, materialKey: 'alu_6061' }));
+  assert.equal(r.feedClamped, false);
 });
 
 test('interp clamps at the ends', () => {

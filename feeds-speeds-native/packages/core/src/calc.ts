@@ -37,6 +37,19 @@ export function chipThinningFactor(r: number): number {
   return Math.min(1 / (2 * Math.sqrt(r - r * r)), 3);
 }
 
+/**
+ * Long-reach derate: how much to trim depth/width/feed for a tool sticking out
+ * `ratio` = stick-out / diameter (L/D). Deflection grows with the cube of reach,
+ * so once L/D passes ~3 we pull the cut back, hard by L/D 8.
+ *   L/D <= 3 -> 1.0 · 5 -> 0.5 · >= 8 -> 0.25
+ */
+export function longReachDerate(ratio: number): number {
+  if (ratio <= 3) return 1;
+  if (ratio >= 8) return 0.25;
+  if (ratio <= 5) return 1 - (ratio - 3) * 0.25;   // 1.0 -> 0.5 over L/D 3..5
+  return 0.5 - (ratio - 5) * (0.25 / 3);           // 0.5 -> 0.25 over L/D 5..8
+}
+
 const nil: DualValue | null = null;
 
 export function computeFeedsSpeeds(input: CalcInput): CalcResult {
@@ -59,12 +72,13 @@ export function computeFeedsSpeeds(input: CalcInput): CalcResult {
     operationLabel: OPERATIONS[input.operation]?.label ?? '',
     diameter: { in: 0, mm: 0 }, flutes: 0,
     sfm: 0, vcMpm: 0, rpm: 0, rpmClamped: false, rpmFloored: false,
-    feedIpm: 0, feedMmpm: 0,
+    feedIpm: 0, feedMmpm: 0, feedClamped: false,
     feedPerTooth: { in: 0, mm: 0 }, feedPerRev: { in: 0, mm: 0 },
-    ap: nil, ae: nil, aePercent: null,
+    ap: nil, ae: nil, aePercent: null, peckDepth: nil,
     mrrCuin: null, mrrCc: null,
     powerHp: null, powerPct: null, torqueInLb: null,
     deflectionIn: null, deflectionMm: null,
+    stickoutRatio: null, stickoutDerate: 1,
     thinningApplied: false, thinningFactor: 1,
     toolLifeMin: null, coatingLifeMult: null, lifeCalibration: 1,
     costPerCuin: null, costPerCc: null,
@@ -115,10 +129,14 @@ export function computeFeedsSpeeds(input: CalcInput): CalcResult {
   const doc = DOC_BY_CLASS[material.class]!;
   const scale = machine.rigidity * agg.docScale;
   let apFrac: number | null, aeFrac: number | null;
+  let peckDepthIn: number | null = null;
 
   if (toolType.model === 'drilling') {
     apFrac = null; aeFrac = null;
-    notes.push('Peck-drill in steps of roughly 1x-3x the drill diameter, clearing chips between pecks. Beyond ~4x diameter, peck deeper and add coolant/air.');
+    // Peck increment scales with diameter, smaller for gummy/work-hardening stock.
+    const peckFrac = material.class === 'soft' ? 1.0 : material.class === 'hard' ? 0.5 : 0.8;
+    peckDepthIn = peckFrac * diaIn;
+    notes.push(`Peck about ${peckFrac.toFixed(1)}x the drill diameter per step (the peck-depth figure), retracting to clear chips; take smaller pecks as the hole deepens. Past ~4x diameter deep, add coolant/air.`);
   } else if (input.operation === 'slotting') {
     aeFrac = 1.0; apFrac = doc.slotAp * scale;
     notes.push('Slot is fully engaged (Ae = tool diameter) — keep depth per pass modest and clear chips well.');
@@ -138,6 +156,23 @@ export function computeFeedsSpeeds(input: CalcInput): CalcResult {
   let apIn = apFrac == null ? null : apFrac * diaIn;
   let aeIn = aeFrac == null ? null : aeFrac * diaIn;
 
+  // --- Stick-out (long-reach) derate ---------------------------------------
+  // Exposed length / diameter (L/D). Beyond ~3 the tool deflects enough that
+  // depth, width and feed all get trimmed to keep it controllable.
+  const stickoutIn = input.stickout == null ? null
+    : (input.unit === 'mm' ? input.stickout * IN_PER_MM : input.stickout);
+  let stickoutRatio: number | null = null;
+  let stickoutDerate = 1;
+  if (stickoutIn != null && stickoutIn > 0 && toolType.model === 'milling') {
+    stickoutRatio = stickoutIn / diaIn;
+    stickoutDerate = longReachDerate(stickoutRatio);
+    if (stickoutDerate < 1) {
+      if (apIn != null) apIn *= stickoutDerate;
+      if (aeIn != null) aeIn *= stickoutDerate;
+      notes.push(`Long reach (L/D ${stickoutRatio.toFixed(1)}): depth, width and feed trimmed to ${Math.round(stickoutDerate * 100)}% to keep deflection in check — a stubbier tool would cut faster.`);
+    }
+  }
+
   // --- Radial chip thinning -------------------------------------------------
   let thinningApplied = false, thinningFactor = 1;
   if (input.chipThinning && toolType.model === 'milling' && aeIn != null) {
@@ -148,6 +183,25 @@ export function computeFeedsSpeeds(input: CalcInput): CalcResult {
       feedPerRevIn = feedPerToothIn * flutes;
       thinningApplied = true;
     }
+  }
+
+  // Trim feed for long reach (after chip thinning, so it wins).
+  if (stickoutDerate < 1) {
+    feedIpm *= stickoutDerate;
+    feedPerToothIn *= stickoutDerate;
+    feedPerRevIn = feedPerToothIn * flutes;
+  }
+
+  // --- Machine feed-rate cap ------------------------------------------------
+  // Some machines simply can't drive the ideal feed; cap it to what they can.
+  const maxFeed = input.machineKey === 'custom' ? undefined : machine.maxFeedIpm;
+  let feedClamped = false;
+  if (maxFeed != null && feedIpm > maxFeed) {
+    feedIpm = maxFeed;
+    feedClamped = true;
+    feedPerToothIn = rpm > 0 ? feedIpm / (rpm * flutes) : feedPerToothIn;
+    feedPerRevIn = rpm > 0 ? feedIpm / rpm : feedPerRevIn;
+    notes.push(`Feed capped at this machine's ~${Math.round(maxFeed).toLocaleString()} in/min limit — the chip load is now below target, so watch for rubbing (drop RPM to keep the chip load up).`);
   }
 
   // --- Material removal rate + power + torque -------------------------------
@@ -166,9 +220,8 @@ export function computeFeedsSpeeds(input: CalcInput): CalcResult {
   }
 
   // --- Tool deflection estimate (optional) ----------------------------------
+  // Uses the already-derated cut, so this is the deflection you'd actually see.
   let deflectionIn: number | null = null;
-  const stickoutIn = input.stickout == null ? null
-    : (input.unit === 'mm' ? input.stickout * IN_PER_MM : input.stickout);
   if (stickoutIn != null && stickoutIn > 0 && torqueInLb != null && toolType.model === 'milling') {
     const ft = torqueInLb / (diaIn / 2);            // tangential cutting force (lbf)
     const effDia = 0.8 * diaIn;                     // fluted section is weaker than solid
@@ -272,11 +325,13 @@ export function computeFeedsSpeeds(input: CalcInput): CalcResult {
     rpmClamped, rpmFloored,
     feedIpm: round(feedIpm, 1),
     feedMmpm: round(feedIpm * MM_PER_IN, 0),
+    feedClamped,
     feedPerTooth: { in: round(feedPerToothIn, 4), mm: round(feedPerToothIn * MM_PER_IN, 3) },
     feedPerRev: { in: round(feedPerRevIn, 4), mm: round(feedPerRevIn * MM_PER_IN, 3) },
     ap: apIn == null ? null : dual(apIn, 3),
     ae: aeIn == null ? null : dual(aeIn, 3),
     aePercent: aeIn == null ? null : Math.round((aeIn / diaIn) * 100),
+    peckDepth: peckDepthIn == null ? null : dual(peckDepthIn, 3),
     mrrCuin: mrrCuin == null ? null : round(mrrCuin, 3),
     mrrCc: mrrCuin == null ? null : round(mrrCuin * CC_PER_CUIN, 2),
     powerHp: powerHp == null ? null : round(powerHp, 2),
@@ -284,6 +339,8 @@ export function computeFeedsSpeeds(input: CalcInput): CalcResult {
     torqueInLb: torqueInLb == null ? null : round(torqueInLb, 1),
     deflectionIn: deflectionIn == null ? null : round(deflectionIn, 4),
     deflectionMm: deflectionIn == null ? null : round(deflectionIn * MM_PER_IN, 3),
+    stickoutRatio: stickoutRatio == null ? null : round(stickoutRatio, 1),
+    stickoutDerate: round(stickoutDerate, 2),
     thinningApplied, thinningFactor: round(thinningFactor, 2),
     toolLifeMin: toolLifeMin == null ? null : round(toolLifeMin, 1),
     coatingLifeMult: coatingLifeMult == null ? null : round(coatingLifeMult, 2),

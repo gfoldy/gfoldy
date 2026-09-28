@@ -8,18 +8,69 @@ import type {
 } from './types.ts';
 
 // ---------------------------------------------------------------------------
-// Machines — constrain spindle RPM, available power, and how hard you can push.
-// hp is the usable power at the cutter; rigidity (0-1) scales depth/width.
+// Machines — each carries the real capabilities the calculator acts on:
+//   rpmMin/rpmMax : spindle range (clamps the ideal RPM)
+//   hp            : usable spindle power at the cutter (drives the power check)
+//   rigidity      : 0-1 stiffness (scales recommended depth/width of cut)
+//   maxFeedIpm    : the fastest cutting feed the machine can drive (caps feed)
+// Numbers are typical published specs / conservative starting points — a given
+// unit varies by spindle option, drawbar, and condition. 'Custom' lets you
+// enter your own spindle limits and power.
 // ---------------------------------------------------------------------------
 export const MACHINES: Record<string, Machine> = {
-  router_hobby: { label: 'CNC Router — hobby (Shapeoko, X-Carve, Onefinity)', rpmMin: 8000, rpmMax: 24000, hp: 1.25, rigidity: 0.55 },
-  router_pro:   { label: 'CNC Router — industrial / gantry',                   rpmMin: 6000, rpmMax: 24000, hp: 10,   rigidity: 0.80 },
-  vmc:          { label: 'CNC Mill — VMC (Haas, Tormach 1100, etc.)',          rpmMin: 100,  rpmMax: 12000, hp: 15,   rigidity: 1.00 },
-  benchtop_cnc: { label: 'CNC Mill — benchtop (PM-25, G0704, conversion)',     rpmMin: 100,  rpmMax: 5000,  hp: 1.5,  rigidity: 0.75 },
-  mini_mill:    { label: 'Mini mill (Sieg X2 / SX2, hobby)',                   rpmMin: 100,  rpmMax: 5000,  hp: 0.5,  rigidity: 0.45 },
-  knee_mill:    { label: 'Manual knee mill (Bridgeport)',                      rpmMin: 60,   rpmMax: 4200,  hp: 2,    rigidity: 0.85 },
-  drill_press:  { label: 'Drill press',                                        rpmMin: 200,  rpmMax: 3000,  hp: 0.75, rigidity: 0.70 },
-  custom:       { label: 'Custom (enter spindle limits)',                      rpmMin: 100,  rpmMax: 10000, hp: 2,    rigidity: 0.80 },
+  // --- Desktop / micro CNC ---
+  sherline_cnc: { label: 'Sherline CNC mill', category: 'Desktop CNC', rpmMin: 100, rpmMax: 10000, hp: 0.33, rigidity: 0.30, maxFeedIpm: 30 },
+  taig_cnc:     { label: 'Taig / MicroProto CNC', category: 'Desktop CNC', rpmMin: 1000, rpmMax: 10000, hp: 0.25, rigidity: 0.35, maxFeedIpm: 60 },
+  nomad3:       { label: 'Carbide 3D Nomad 3', category: 'Desktop CNC', rpmMin: 2000, rpmMax: 10000, hp: 0.20, rigidity: 0.40, maxFeedIpm: 60 },
+  bantam:       { label: 'Bantam Tools Desktop', category: 'Desktop CNC', rpmMin: 6000, rpmMax: 26000, hp: 0.20, rigidity: 0.35, maxFeedIpm: 120 },
+  mini_mill:    { label: 'Mini mill (Sieg X2 / SX2)', category: 'Desktop CNC', rpmMin: 100, rpmMax: 5000, hp: 0.5, rigidity: 0.45, maxFeedIpm: 40 },
+  sx2_7:        { label: 'Sieg SX2.7 / KX1 (CNC)', category: 'Desktop CNC', rpmMin: 100, rpmMax: 5000, hp: 1.0, rigidity: 0.50, maxFeedIpm: 50 },
+
+  // --- Benchtop CNC ---
+  benchtop_cnc: { label: 'Benchtop CNC (G0704 / PM-25 / BF20 conversion)', category: 'Benchtop CNC', rpmMin: 100, rpmMax: 5000, hp: 1.5, rigidity: 0.60, maxFeedIpm: 80 },
+  sx3:          { label: 'Sieg SX3 / KX3', category: 'Benchtop CNC', rpmMin: 100, rpmMax: 5000, hp: 1.6, rigidity: 0.62, maxFeedIpm: 80 },
+  pm30:         { label: 'PM-30MV / RF-45 conversion', category: 'Benchtop CNC', rpmMin: 100, rpmMax: 5000, hp: 2.0, rigidity: 0.65, maxFeedIpm: 100 },
+
+  // --- Prosumer / tabletop industrial ---
+  tormach_440:  { label: 'Tormach PCNC 440', category: 'Prosumer CNC', rpmMin: 250, rpmMax: 10000, hp: 0.5, rigidity: 0.60, maxFeedIpm: 100 },
+  tormach_770:  { label: 'Tormach 770M / 770MX', category: 'Prosumer CNC', rpmMin: 250, rpmMax: 10000, hp: 1.0, rigidity: 0.65, maxFeedIpm: 135 },
+  tormach_1100: { label: 'Tormach 1100M / 1100MX', category: 'Prosumer CNC', rpmMin: 250, rpmMax: 10000, hp: 1.5, rigidity: 0.70, maxFeedIpm: 165 },
+  syil_x5:      { label: 'SYIL X5', category: 'Prosumer CNC', rpmMin: 200, rpmMax: 15000, hp: 4, rigidity: 0.75, maxFeedIpm: 400 },
+  syil_x7:      { label: 'SYIL X7 (BT30)', category: 'Prosumer CNC', rpmMin: 100, rpmMax: 12000, hp: 9, rigidity: 0.82, maxFeedIpm: 600 },
+  pocketnc:     { label: 'Pocket NC / Penta (5-axis)', category: 'Prosumer CNC', rpmMin: 1000, rpmMax: 50000, hp: 0.2, rigidity: 0.40, maxFeedIpm: 40 },
+  datron_neo:   { label: 'Datron neo (HS spindle)', category: 'Prosumer CNC', rpmMin: 8000, rpmMax: 40000, hp: 5.4, rigidity: 0.85, maxFeedIpm: 900 },
+
+  // --- Industrial VMC ---
+  haas_minimill: { label: 'Haas Mini Mill', category: 'Industrial VMC', rpmMin: 100, rpmMax: 6000, hp: 7.5, rigidity: 0.88, maxFeedIpm: 400 },
+  haas_tm1:      { label: 'Haas TM-1 / TM-2 (toolroom)', category: 'Industrial VMC', rpmMin: 100, rpmMax: 6000, hp: 7.5, rigidity: 0.80, maxFeedIpm: 200 },
+  haas_dm1:      { label: 'Haas DM-1 / DM-2 (drill-mill)', category: 'Industrial VMC', rpmMin: 100, rpmMax: 15000, hp: 22, rigidity: 0.90, maxFeedIpm: 1400 },
+  haas_vf2:      { label: 'Haas VF-2', category: 'Industrial VMC', rpmMin: 100, rpmMax: 8100, hp: 30, rigidity: 1.00, maxFeedIpm: 500 },
+  haas_vf2ss:    { label: 'Haas VF-2SS (Super Speed)', category: 'Industrial VMC', rpmMin: 100, rpmMax: 12000, hp: 30, rigidity: 1.00, maxFeedIpm: 1000 },
+  haas_vf3:      { label: 'Haas VF-3 (6k spindle)', category: 'Industrial VMC', rpmMin: 100, rpmMax: 6000, hp: 30, rigidity: 1.00, maxFeedIpm: 500 },
+  haas_vf4:      { label: 'Haas VF-4 / VF-5', category: 'Industrial VMC', rpmMin: 100, rpmMax: 8100, hp: 30, rigidity: 1.00, maxFeedIpm: 500 },
+  haas_umc750:   { label: 'Haas UMC-750 (5-axis)', category: 'Industrial VMC', rpmMin: 100, rpmMax: 8100, hp: 30, rigidity: 1.00, maxFeedIpm: 500 },
+  haas_ec400:    { label: 'Haas EC-400 (horizontal)', category: 'Industrial VMC', rpmMin: 100, rpmMax: 12000, hp: 30, rigidity: 1.00, maxFeedIpm: 900 },
+  brother_s700:  { label: 'Brother Speedio S700X1', category: 'Industrial VMC', rpmMin: 100, rpmMax: 16000, hp: 13, rigidity: 0.95, maxFeedIpm: 1500 },
+  brother_s1000: { label: 'Brother Speedio S1000X1', category: 'Industrial VMC', rpmMin: 100, rpmMax: 16000, hp: 18, rigidity: 0.95, maxFeedIpm: 1500 },
+  robodrill:     { label: 'Fanuc Robodrill α-D21', category: 'Industrial VMC', rpmMin: 100, rpmMax: 24000, hp: 20, rigidity: 0.92, maxFeedIpm: 1900 },
+  doosan_dnm:    { label: 'Doosan / DN Solutions DNM 4500', category: 'Industrial VMC', rpmMin: 100, rpmMax: 8000, hp: 20, rigidity: 1.00, maxFeedIpm: 600 },
+  mazak_vcn:     { label: 'Mazak VCN-530C', category: 'Industrial VMC', rpmMin: 100, rpmMax: 12000, hp: 30, rigidity: 1.00, maxFeedIpm: 800 },
+  okuma_genos:   { label: 'Okuma Genos M560-V', category: 'Industrial VMC', rpmMin: 100, rpmMax: 15000, hp: 30, rigidity: 1.00, maxFeedIpm: 1500 },
+  dmg_cmx:       { label: 'DMG Mori CMX 1100 V', category: 'Industrial VMC', rpmMin: 100, rpmMax: 12000, hp: 20, rigidity: 0.98, maxFeedIpm: 1000 },
+  hurco_vm10:    { label: 'Hurco VM10i', category: 'Industrial VMC', rpmMin: 100, rpmMax: 10000, hp: 20, rigidity: 0.95, maxFeedIpm: 700 },
+  fadal_4020:    { label: 'Fadal VMC 4020', category: 'Industrial VMC', rpmMin: 100, rpmMax: 10000, hp: 15, rigidity: 0.90, maxFeedIpm: 400 },
+
+  // --- CNC routers ---
+  router_hobby: { label: 'CNC Router — hobby (Shapeoko, X-Carve, Onefinity)', category: 'CNC Router', rpmMin: 8000, rpmMax: 24000, hp: 1.25, rigidity: 0.55, maxFeedIpm: 200 },
+  router_pro:   { label: 'CNC Router — industrial / gantry', category: 'CNC Router', rpmMin: 6000, rpmMax: 24000, hp: 10, rigidity: 0.80, maxFeedIpm: 900 },
+
+  // --- Manual / other (hand or power feed — no hard feed cap) ---
+  knee_mill:    { label: 'Manual knee mill (Bridgeport Series I)', category: 'Manual / other', rpmMin: 60, rpmMax: 4200, hp: 2, rigidity: 0.85 },
+  bridgeport_ii:{ label: 'Bridgeport Series II', category: 'Manual / other', rpmMin: 60, rpmMax: 4200, hp: 4, rigidity: 0.88 },
+  roundcol:     { label: 'Round-column mill/drill (RF-45)', category: 'Manual / other', rpmMin: 100, rpmMax: 2500, hp: 1.5, rigidity: 0.55 },
+  drill_press:  { label: 'Drill press', category: 'Manual / other', rpmMin: 200, rpmMax: 3000, hp: 0.75, rigidity: 0.70 },
+
+  custom:       { label: 'Custom (enter spindle limits)', category: 'Custom', rpmMin: 100, rpmMax: 10000, hp: 2, rigidity: 0.80 },
 };
 
 // ---------------------------------------------------------------------------

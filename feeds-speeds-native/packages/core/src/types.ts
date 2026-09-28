@@ -8,12 +8,16 @@ export type Aggressiveness = 0 | 1 | 2;
 
 export interface Machine {
   label: string;
+  /** Grouping bucket for the picker (e.g. 'Industrial VMC'). */
+  category: string;
   rpmMin: number;
   rpmMax: number;
   /** Available spindle power at the cutter, in horsepower. */
   hp: number;
   /** 0-1 stiffness factor scaling recommended depth/width of cut. */
   rigidity: number;
+  /** Max cutting feed the machine can actually drive (in/min); caps the feed. */
+  maxFeedIpm?: number;
 }
 
 export interface ToolMaterial {
@@ -125,12 +129,14 @@ export interface CalcResult {
 
   feedIpm: number;
   feedMmpm: number;
+  feedClamped: boolean;         // feed hit the machine's max-feed limit
   feedPerTooth: DualValue;
   feedPerRev: DualValue;
 
-  ap: DualValue | null; // axial depth of cut per pass
-  ae: DualValue | null; // radial width of cut / stepover
+  ap: DualValue | null; // axial depth of cut per pass (milling)
+  ae: DualValue | null; // radial width of cut / stepover (milling)
   aePercent: number | null;
+  peckDepth: DualValue | null; // recommended peck increment (drilling)
 
   mrrCuin: number | null;
   mrrCc: number | null;
@@ -141,6 +147,8 @@ export interface CalcResult {
 
   deflectionIn: number | null;  // estimated tool deflection (in)
   deflectionMm: number | null;
+  stickoutRatio: number | null; // stick-out / diameter (L/D)
+  stickoutDerate: number;       // multiplier applied to depth/width/feed (1 = none)
 
   thinningApplied: boolean;
   thinningFactor: number;

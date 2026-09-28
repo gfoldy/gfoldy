@@ -17,7 +17,7 @@ import { TappingPanel } from '../../src/components/TappingPanel';
 import { pick, lenUnit, feedUnit, speedUnit, fmtMinutes } from '../../src/lib/format';
 
 // Options from core data.
-const machineOpts: SelectOption[] = Object.entries(MACHINES).map(([key, m]) => ({ key, label: m.label }));
+const machineOpts: SelectOption[] = Object.entries(MACHINES).map(([key, m]) => ({ key, label: m.label, group: m.category }));
 const toolTypeOpts: SelectOption[] = Object.entries(TOOL_TYPES).map(([key, t]) => ({ key, label: t.label }));
 const toolMatOpts: SelectOption[] = Object.entries(TOOL_MATERIALS).map(([key, t]) => ({ key, label: t.label }));
 const materialOpts: SelectOption[] = Object.entries(MATERIALS).map(([key, m]) => ({ key, label: m.label, group: m.group }));
@@ -221,14 +221,14 @@ export default function Calculator() {
             <View style={{ height: 12 }} />
             <View style={styles.row}>
               <NumberField label="Diameter" value={diameter} onChange={setDiameter} suffix={lenUnit(unit)} />
-              <NumberField label={isDrill ? 'Lips' : 'Flutes'} value={flutes} onChange={setFlutes} />
+              <NumberField label="Flutes" value={flutes} onChange={setFlutes} />
             </View>
             <View style={{ height: 12 }} />
             <Select label="Coating" value={coatingKey} options={coatingOpts} onChange={setCoatingKey} />
             {!isDrill ? (
               <>
                 <View style={{ height: 12 }} />
-                <NumberField label="Stick-out (optional — enables deflection check)" value={stickout} onChange={setStickout} suffix={lenUnit(unit)} placeholder="e.g. 1.0" />
+                <NumberField label="Stick-out (optional — trims the cut &amp; checks deflection for long reach)" value={stickout} onChange={setStickout} suffix={lenUnit(unit)} placeholder="e.g. 1.0" />
               </>
             ) : null}
           </>
@@ -331,9 +331,11 @@ export default function Calculator() {
             <Stat label="Spindle speed" value={r.rpm.toLocaleString()} unit="RPM" tone="accent"
               sub={r.rpmClamped ? '⚠ capped at max' : r.rpmFloored ? '⚠ raised to min' : `${unit === 'mm' ? r.vcMpm : r.sfm} ${speedUnit(unit)}`} />
             <Stat label="Feed rate" value={String(unit === 'mm' ? r.feedMmpm : r.feedIpm)} unit={feedUnit(unit)}
-              sub={isDrill ? `${pick(r.feedPerRev, unit)} ${lenUnit(unit)}/rev` : `${pick(r.feedPerTooth, unit)} ${lenUnit(unit)}/tooth × ${r.flutes}`} />
+              tone={r.feedClamped ? 'warn' : 'default'}
+              sub={r.feedClamped ? '⚠ capped at machine max' : isDrill ? `${pick(r.feedPerRev, unit)} ${lenUnit(unit)}/rev` : `${pick(r.feedPerTooth, unit)} ${lenUnit(unit)}/tooth × ${r.flutes}`} />
             {r.ap ? <Stat label="Depth of cut" value={String(pick(r.ap, unit))} unit={lenUnit(unit)} sub="axial · Ap" /> : null}
             {r.ae ? <Stat label="Width of cut" value={String(pick(r.ae, unit))} unit={lenUnit(unit)} sub={`stepover · ${r.aePercent}% of Ø`} /> : null}
+            {r.peckDepth ? <Stat label="Peck depth" value={String(pick(r.peckDepth, unit))} unit={lenUnit(unit)} sub="per step · retract to clear" /> : null}
             {r.mrrCuin != null ? <Stat label="Removal rate" value={String(unit === 'mm' ? r.mrrCc : r.mrrCuin)} unit={unit === 'mm' ? 'cm³/min' : 'in³/min'} sub="MRR" /> : null}
             {r.powerHp != null ? <Stat label="Spindle power" value={String(r.powerHp)} unit="hp"
               tone={r.powerPct != null && r.powerPct > 100 ? 'warn' : 'default'}

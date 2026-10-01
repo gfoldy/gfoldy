@@ -100,10 +100,37 @@ export const TAYLOR_DEPTH_EXP = 0.25;
 export const TAYLOR_ENGAGEMENT_EXP = 0.2;
 
 export const TOOL_TYPES: Record<string, ToolType> = {
-  endmill:  { label: 'End mill (flat / square)', model: 'milling',  defaultFlutes: 2 },
-  ballnose: { label: 'Ball-nose end mill',       model: 'milling',  defaultFlutes: 2 },
-  drill:    { label: 'Drill',                    model: 'drilling', defaultFlutes: 2 },
-  tap:      { label: 'Tap (threading)',          model: 'tapping',  defaultFlutes: 0 },
+  // --- Milling cutters ---
+  endmill:   { label: 'End mill (flat / square)', category: 'Milling cutters', model: 'milling', defaultFlutes: 2 },
+  ballnose:  { label: 'Ball-nose end mill',        category: 'Milling cutters', model: 'milling', defaultFlutes: 2 },
+  facemill:  { label: 'Face mill (indexable)',     category: 'Milling cutters', model: 'milling', defaultFlutes: 5, feedMult: 1.3, facing: true,
+    note: 'Face milling: a shallow axial pass over a wide swath. Keep radial engagement around 70% of the cutter and keep the cutter centerline off the part edge for the best insert entry.' },
+  flycutter: { label: 'Fly cutter (single point)', category: 'Milling cutters', model: 'milling', defaultFlutes: 1, speedMult: 0.8, facing: true,
+    note: 'Single-point facing for a fine finish — one edge, light depth, let it sweep; a slower speed keeps the finish clean.' },
+  chamfer:   { label: 'Chamfer / spot mill',        category: 'Milling cutters', model: 'milling', defaultFlutes: 2, speedMult: 0.9, feedMult: 0.6,
+    note: 'Light chamfer/spot cut — program by the chamfer width (part of the flute) and ease in; run a touch slower than an end mill.' },
+  slittingsaw:{ label: 'Slitting saw / slot cutter', category: 'Milling cutters', model: 'milling', defaultFlutes: 24, speedMult: 0.85, feedMult: 0.35, simpleMill: true,
+    note: 'Keep feed-per-tooth tiny (many teeth), climb-cut, and back off speed — slitting saws are thin and chatter easily. Feed shown is per the cutting edge.' },
+  woodruff:  { label: 'Woodruff / keyseat cutter',  category: 'Milling cutters', model: 'milling', defaultFlutes: 8, speedMult: 0.8, feedMult: 0.6, simpleMill: true,
+    note: 'Full-width side cut — feed gently, it is a fragile cutter. Plunge to depth, then feed along the keyway.' },
+  engraver:  { label: 'Engraving / V-bit',          category: 'Milling cutters', model: 'milling', defaultFlutes: 1, feedMult: 0.4, simpleMill: true,
+    note: 'Tiny tool: run high RPM and a light feed; depth sets the engraved width on a V-bit. Treat the feed as a ceiling.' },
+
+  // --- Holes ---
+  drill:     { label: 'Drill',                      category: 'Holes', model: 'drilling', defaultFlutes: 2, peck: true },
+  spotdrill: { label: 'Spot / center drill',        category: 'Holes', model: 'drilling', defaultFlutes: 2, speedMult: 0.8, feedMult: 0.5,
+    note: 'Spot just deep enough to start/chamfer the hole — the pilot tip is fragile, so ease in and do not peck. For a true center drill, stop at the body.' },
+  reamer:    { label: 'Reamer',                     category: 'Holes', model: 'drilling', defaultFlutes: 6, speedMult: 0.65, feedMult: 2.2,
+    note: 'Run a reamer slow and feed it fast — do NOT peck. Leave ~0.010-0.015" (small holes less) of stock for it to clean up to size.' },
+  countersink:{ label: 'Countersink',               category: 'Holes', model: 'drilling', defaultFlutes: 3, speedMult: 0.6, feedMult: 0.5,
+    note: 'Run slow and light to avoid chatter; step down to the depth that gives the head diameter you want.' },
+  boring:    { label: 'Boring head (single point)', category: 'Holes', model: 'drilling', defaultFlutes: 1, feedMult: 0.5,
+    note: 'Single-point finishing of a bore: light feed per rev, and take a spring (zero-depth) pass for size and finish.' },
+
+  // --- Threads ---
+  threadmill:{ label: 'Thread mill',                category: 'Threads', model: 'milling', defaultFlutes: 3, feedMult: 0.6, simpleMill: true,
+    note: 'Helical interpolation. The feed shown is at the cutting edge — on an INTERNAL thread the programmed (tool-center) feed is slower: Fcenter = Fedge × (Dhole − Dtool) / Dhole. Compensate or the thread runs fast.' },
+  tap:       { label: 'Tap (threading)',            category: 'Threads', model: 'tapping',  defaultFlutes: 0 },
 };
 
 // ---------------------------------------------------------------------------

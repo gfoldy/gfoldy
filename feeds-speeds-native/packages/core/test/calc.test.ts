@@ -4,7 +4,7 @@ import {
   computeFeedsSpeeds, chipThinningFactor, interp,
   effectiveCoating, applyOutcome, applyObservedRatio, DEFAULT_CALIBRATION,
   scallopFromStepover, stepoverFromScallop, effectiveBallDiameter, finishGrade,
-  computeTapping, THREADS, MACHINES,
+  computeTapping, THREADS, MACHINES, TOOL_TYPES,
 } from '../src/index.ts';
 import type { CalcInput } from '../src/index.ts';
 
@@ -352,6 +352,49 @@ test('a high-feed machine does not clamp the same cut', () => {
 test('custom machine ignores the feed cap', () => {
   const r = computeFeedsSpeeds(baseInput({ machineKey: 'custom', customRpmMax: 24000, materialKey: 'alu_6061' }));
   assert.equal(r.feedClamped, false);
+});
+
+test('tool roster covers mill tooling with grouping', () => {
+  const keys = Object.keys(TOOL_TYPES);
+  assert.ok(keys.length >= 14, `only ${keys.length} tool types`);
+  for (const t of ['facemill', 'flycutter', 'spotdrill', 'threadmill', 'reamer', 'countersink', 'boring', 'slittingsaw', 'woodruff', 'engraver']) {
+    assert.ok(TOOL_TYPES[t], `missing ${t}`);
+    assert.ok(TOOL_TYPES[t]!.category, `${t} has no category`);
+  }
+});
+
+test('face mill takes a shallow absolute axial cut over a wide swath (not fractional)', () => {
+  const r = computeFeedsSpeeds(baseInput({ toolTypeKey: 'facemill', diameter: 3.0, materialKey: 'alu_6061', machineKey: 'haas_vf3' }));
+  assert.ok(r.ap != null && r.ap.in < 0.2, `axial ${r.ap?.in}`);     // not 1.5x of 3"!
+  assert.ok(r.ae != null && Math.abs(r.ae.in - 0.7 * 3) < 0.01);     // ~70% of diameter
+});
+
+test('reamer runs slower and feeds faster per rev than a drill of the same size', () => {
+  const drill = computeFeedsSpeeds(baseInput({ toolTypeKey: 'drill', diameter: 0.5, materialKey: 'alu_6061', machineKey: 'haas_vf3' }));
+  const reamer = computeFeedsSpeeds(baseInput({ toolTypeKey: 'reamer', diameter: 0.5, materialKey: 'alu_6061', machineKey: 'haas_vf3' }));
+  assert.ok(reamer.rpm < drill.rpm);                 // slower speed
+  assert.ok(reamer.feedPerRev.in > drill.feedPerRev.in); // faster per rev
+});
+
+test('only true drills report a peck depth', () => {
+  assert.ok(computeFeedsSpeeds(baseInput({ toolTypeKey: 'drill', diameter: 0.25 })).peckDepth != null);
+  assert.equal(computeFeedsSpeeds(baseInput({ toolTypeKey: 'spotdrill', diameter: 0.25 })).peckDepth, null);
+  assert.equal(computeFeedsSpeeds(baseInput({ toolTypeKey: 'reamer', diameter: 0.25 })).peckDepth, null);
+});
+
+test('thread mill is a simple-mill: feed but no DOC, with arc-comp guidance', () => {
+  const r = computeFeedsSpeeds(baseInput({ toolTypeKey: 'threadmill', diameter: 0.25 }));
+  assert.equal(r.ap, null);
+  assert.equal(r.ae, null);
+  assert.ok(r.feedIpm > 0);
+  assert.ok(r.notes.some((n) => /internal|compensat|Fcenter|helical/i.test(n)));
+});
+
+test('spot / center drill runs a bit slower than a plain drill', () => {
+  // steel keeps the ideal RPM under the machine cap so the speed difference shows.
+  const drill = computeFeedsSpeeds(baseInput({ toolTypeKey: 'drill', diameter: 0.25, materialKey: 'steel_mild' }));
+  const spot = computeFeedsSpeeds(baseInput({ toolTypeKey: 'spotdrill', diameter: 0.25, materialKey: 'steel_mild' }));
+  assert.ok(spot.rpm < drill.rpm);
 });
 
 test('interp clamps at the ends', () => {

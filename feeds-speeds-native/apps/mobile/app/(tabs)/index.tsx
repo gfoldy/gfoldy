@@ -18,7 +18,7 @@ import { pick, lenUnit, feedUnit, speedUnit, fmtMinutes } from '../../src/lib/fo
 
 // Options from core data.
 const machineOpts: SelectOption[] = Object.entries(MACHINES).map(([key, m]) => ({ key, label: m.label, group: m.category }));
-const toolTypeOpts: SelectOption[] = Object.entries(TOOL_TYPES).map(([key, t]) => ({ key, label: t.label }));
+const toolTypeOpts: SelectOption[] = Object.entries(TOOL_TYPES).map(([key, t]) => ({ key, label: t.label, group: t.category }));
 const toolMatOpts: SelectOption[] = Object.entries(TOOL_MATERIALS).map(([key, t]) => ({ key, label: t.label }));
 const materialOpts: SelectOption[] = Object.entries(MATERIALS).map(([key, m]) => ({ key, label: m.label, group: m.group }));
 const operationOpts: SelectOption[] = Object.entries(OPERATIONS).map(([key, o]) => ({ key, label: o.label }));
@@ -119,6 +119,13 @@ export default function Calculator() {
     setSettings({ machineRate: v.trim() === '' ? undefined : parseFloat(v) });
   }
 
+  // Switching tool type resets the flute count to that tool's sensible default.
+  function onChangeToolType(key: string) {
+    setToolTypeKey(key);
+    const def = TOOL_TYPES[key]?.defaultFlutes;
+    if (def && def > 0) setFlutes(String(def));
+  }
+
   function loadTool(t: SavedTool) {
     setToolTypeKey(t.toolTypeKey);
     setToolMaterialKey(t.toolMaterialKey);
@@ -213,7 +220,7 @@ export default function Calculator() {
       <Section>Tool</Section>
       <Card>
         <View style={styles.row}>
-          <View style={{ flex: 1 }}><Select label="Type" value={toolTypeKey} options={toolTypeOpts} onChange={setToolTypeKey} /></View>
+          <View style={{ flex: 1 }}><Select label="Type" value={toolTypeKey} options={toolTypeOpts} onChange={onChangeToolType} /></View>
           {!isTap ? <View style={{ flex: 1 }}><Select label="Cutter" value={toolMaterialKey} options={toolMatOpts} onChange={setToolMaterialKey} /></View> : null}
         </View>
         {!isTap ? (

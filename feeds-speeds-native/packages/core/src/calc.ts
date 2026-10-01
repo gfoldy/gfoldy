@@ -96,7 +96,7 @@ export function computeFeedsSpeeds(input: CalcInput): CalcResult {
 
   // --- Surface speed -> spindle RPM -----------------------------------------
   const sfmRange = material.sfm[toolMat.sfmKey];
-  const sfm = sfmRange[0] + agg.sfmT * (sfmRange[1] - sfmRange[0]);
+  const sfm = (sfmRange[0] + agg.sfmT * (sfmRange[1] - sfmRange[0])) * (toolType.speedMult ?? 1);
   let rpm = (sfm * 12) / (Math.PI * diaIn);
 
   const rpmMin = input.machineKey === 'custom' ? (input.customRpmMin ?? machine.rpmMin) : machine.rpmMin;
@@ -114,13 +114,14 @@ export function computeFeedsSpeeds(input: CalcInput): CalcResult {
   }
 
   // --- Feed rate ------------------------------------------------------------
+  const feedMult = toolType.feedMult ?? 1;
   let feedPerToothIn: number, feedPerRevIn: number, feedIpm: number;
   if (toolType.model === 'drilling') {
-    feedPerRevIn = drillFeedPerRev(diaIn, material.class) * agg.chipScale;
+    feedPerRevIn = drillFeedPerRev(diaIn, material.class) * agg.chipScale * feedMult;
     feedPerToothIn = feedPerRevIn / flutes;
     feedIpm = rpm * feedPerRevIn;
   } else {
-    feedPerToothIn = baselineChipLoad(diaIn, material.chipMult) * agg.chipScale;
+    feedPerToothIn = baselineChipLoad(diaIn, material.chipMult) * agg.chipScale * feedMult;
     feedPerRevIn = feedPerToothIn * flutes;
     feedIpm = rpm * feedPerToothIn * flutes;
   }
@@ -128,33 +129,48 @@ export function computeFeedsSpeeds(input: CalcInput): CalcResult {
   // --- Depth / width of cut -------------------------------------------------
   const doc = DOC_BY_CLASS[material.class]!;
   const scale = machine.rigidity * agg.docScale;
-  let apFrac: number | null, aeFrac: number | null;
+  let apFrac: number | null = null, aeFrac: number | null = null;
   let peckDepthIn: number | null = null;
 
   if (toolType.model === 'drilling') {
-    apFrac = null; aeFrac = null;
-    // Peck increment scales with diameter, smaller for gummy/work-hardening stock.
-    const peckFrac = material.class === 'soft' ? 1.0 : material.class === 'hard' ? 0.5 : 0.8;
-    peckDepthIn = peckFrac * diaIn;
-    notes.push(`Peck about ${peckFrac.toFixed(1)}x the drill diameter per step (the peck-depth figure), retracting to clear chips; take smaller pecks as the hole deepens. Past ~4x diameter deep, add coolant/air.`);
-  } else if (input.operation === 'slotting') {
-    aeFrac = 1.0; apFrac = doc.slotAp * scale;
-    notes.push('Slot is fully engaged (Ae = tool diameter) — keep depth per pass modest and clear chips well.');
-  } else if (input.operation === 'finishing') {
-    aeFrac = doc.finishAe; apFrac = Math.min(doc.roughAp, 1.5) * scale;
-    notes.push('Light radial stepover for a clean wall finish; you can take the full depth axially in one pass.');
-  } else if (input.operation === 'adaptive') {
-    aeFrac = 0.10;
-    const axial = material.class === 'soft' ? 2.0 : material.class === 'medium' ? 1.5 : 1.0;
-    apFrac = axial * scale;
-    notes.push('Adaptive / HSM: light radial engagement with a deep axial pass. Requires a toolpath that keeps engagement constant (trochoidal) — chip thinning is doing a lot of the work here.');
-  } else { // roughing
-    aeFrac = doc.roughAe * agg.docScale; apFrac = doc.roughAp * scale;
-    notes.push('Roughing profile: moderate radial engagement with a deeper axial pass removes material efficiently.');
+    if (toolType.peck) {
+      // Peck increment scales with diameter, smaller for gummy/work-hardening stock.
+      const peckFrac = material.class === 'soft' ? 1.0 : material.class === 'hard' ? 0.5 : 0.8;
+      peckDepthIn = peckFrac * diaIn;
+      notes.push(`Peck about ${peckFrac.toFixed(1)}x the drill diameter per step (the peck-depth figure), retracting to clear chips; take smaller pecks as the hole deepens. Past ~4x diameter deep, add coolant/air.`);
+    }
+  } else if (!toolType.simpleMill) {
+    // Standard milling depth/width by operation.
+    let opNote = '';
+    if (input.operation === 'slotting') {
+      aeFrac = 1.0; apFrac = doc.slotAp * scale;
+      opNote = 'Slot is fully engaged (Ae = tool diameter) — keep depth per pass modest and clear chips well.';
+    } else if (input.operation === 'finishing') {
+      aeFrac = doc.finishAe; apFrac = Math.min(doc.roughAp, 1.5) * scale;
+      opNote = 'Light radial stepover for a clean wall finish; you can take the full depth axially in one pass.';
+    } else if (input.operation === 'adaptive') {
+      aeFrac = 0.10;
+      const axial = material.class === 'soft' ? 2.0 : material.class === 'medium' ? 1.5 : 1.0;
+      apFrac = axial * scale;
+      opNote = 'Adaptive / HSM: light radial engagement with a deep axial pass. Requires a toolpath that keeps engagement constant (trochoidal) — chip thinning is doing a lot of the work here.';
+    } else { // roughing
+      aeFrac = doc.roughAe * agg.docScale; apFrac = doc.roughAp * scale;
+      opNote = 'Roughing profile: moderate radial engagement with a deeper axial pass removes material efficiently.';
+    }
+    if (!toolType.facing) notes.push(opNote); // facing has its own guidance below
   }
 
   let apIn = apFrac == null ? null : apFrac * diaIn;
   let aeIn = aeFrac == null ? null : aeFrac * diaIn;
+
+  // Face-mill / fly-cutter: a shallow *absolute* axial pass over a wide swath.
+  if (toolType.facing && toolType.model === 'milling') {
+    apIn = (input.operation === 'finishing' ? 0.03 : 0.08) * scale;
+    aeIn = 0.70 * diaIn;
+  }
+
+  // Tool-specific guidance.
+  if (toolType.note) notes.push(toolType.note);
 
   // --- Stick-out (long-reach) derate ---------------------------------------
   // Exposed length / diameter (L/D). Beyond ~3 the tool deflects enough that

@@ -32,8 +32,22 @@ export interface ToolMaterial {
 
 export interface ToolType {
   label: string;
+  /** Grouping bucket for the picker (Milling cutters / Holes / Threads). */
+  category: string;
   model: ToolModel;
   defaultFlutes: number;
+  /** Scales surface speed (e.g. reamers/countersinks run slower). Default 1. */
+  speedMult?: number;
+  /** Scales feed / chip load (e.g. reamers feed faster per rev). Default 1. */
+  feedMult?: number;
+  /** Face-mill style: shallow absolute axial depth over a wide radial swath. */
+  facing?: boolean;
+  /** Milling feeds only — no depth/width-of-cut or MRR model (thread mill etc.). */
+  simpleMill?: boolean;
+  /** Drilling: show a peck depth (true drills only, not spot/ream/bore). */
+  peck?: boolean;
+  /** Tool-specific guidance added to the notes. */
+  note?: string;
 }
 
 export interface Material {

@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import {
   computeFeedsSpeeds, MACHINES, MATERIALS, TOOL_MATERIALS, TOOL_TYPES, OPERATIONS, COATINGS, OUTCOME_META,
-  scallopFromStepover, stepoverFromScallop, finishGrade,
+  effectiveCoating, scallopFromStepover, stepoverFromScallop, finishGrade,
   type CalcInput, type UnitSystem, type Aggressiveness, type Operation, type CutOutcome,
 } from '@feedspeed/core';
 import { useStore, type SavedTool } from '../../src/store/store';
@@ -22,7 +22,6 @@ const toolTypeOpts: SelectOption[] = Object.entries(TOOL_TYPES).map(([key, t]) =
 const toolMatOpts: SelectOption[] = Object.entries(TOOL_MATERIALS).map(([key, t]) => ({ key, label: t.label }));
 const materialOpts: SelectOption[] = Object.entries(MATERIALS).map(([key, m]) => ({ key, label: m.label, group: m.group }));
 const operationOpts: SelectOption[] = Object.entries(OPERATIONS).map(([key, o]) => ({ key, label: o.label }));
-const coatingOpts: SelectOption[] = Object.entries(COATINGS).map(([key, c]) => ({ key, label: c.label }));
 const OUTCOME_KEYS = Object.keys(OUTCOME_META) as CutOutcome[];
 
 function convertStr(v: string, from: UnitSystem, to: UnitSystem): string {
@@ -61,6 +60,19 @@ export default function Calculator() {
   const num = (s: string) => (s.trim() === '' ? undefined : parseFloat(s));
   const roundTo = (x: number, dp: number) => { const f = Math.pow(10, dp); return Math.round(x * f) / f; };
   const cal = getCalibration(materialKey);
+
+  // Coating list sorted for the selected material — best-fit coatings float to
+  // the top, each annotated with its tool-life multiplier for this material.
+  const coatingOpts: SelectOption[] = useMemo(() => {
+    const group = MATERIALS[materialKey]?.group ?? '';
+    return Object.keys(COATINGS)
+      .map((key) => {
+        const mult = effectiveCoating(key, group).mult;
+        return { key, mult, label: `${COATINGS[key]!.label}   ×${roundTo(mult, 1)}` };
+      })
+      .sort((a, b) => b.mult - a.mult)
+      .map((r) => ({ key: r.key, label: r.label, group: r.mult >= 1.3 ? 'Recommended' : 'Other / not ideal' }));
+  }, [materialKey]);
 
   // Ball-nose surface finish (pure geometry from tool diameter + stepover).
   const ballFinish = useMemo(() => {

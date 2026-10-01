@@ -144,7 +144,8 @@ export const MATERIALS: Record<string, Material> = {
   copper:    { label: 'Copper',                 group: 'Non-ferrous', class: 'medium', chipMult: 1.1, hpUnit: 0.70, wearFactor: 1.1, sfm: { hss: [100, 200], carbide: [300, 500] } },
 
   steel_mild:  { label: 'Mild / low-carbon steel (1018)', group: 'Ferrous', class: 'medium', chipMult: 1.0, hpUnit: 1.10, wearFactor: 1.0,  sfm: { hss: [80, 110], carbide: [300, 450] } },
-  steel_alloy: { label: 'Alloy steel (4140/4340)',        group: 'Ferrous', class: 'hard',   chipMult: 0.8, hpUnit: 1.60, wearFactor: 0.85, sfm: { hss: [50, 80],  carbide: [200, 350] } },
+  steel_alloy: { label: 'Alloy steel (4140/4340, annealed)',group: 'Ferrous', class: 'hard', chipMult: 0.8, hpUnit: 1.60, wearFactor: 0.85, sfm: { hss: [50, 80],  carbide: [200, 350] } },
+  steel_4140ph:{ label: '4140 pre-hard (28-32 HRC)',       group: 'Ferrous', class: 'hard',   chipMult: 0.72, hpUnit: 1.95, wearFactor: 0.65, sfm: { hss: [40, 60],  carbide: [180, 300] } },
   tool_steel:  { label: 'Tool steel (hardened)',          group: 'Ferrous', class: 'hard',   chipMult: 0.7, hpUnit: 2.10, wearFactor: 0.6,  sfm: { hss: [40, 70],  carbide: [150, 300] } },
   cast_iron:   { label: 'Cast iron',                      group: 'Ferrous', class: 'medium', chipMult: 0.9, hpUnit: 0.70, wearFactor: 0.9,  sfm: { hss: [50, 90],  carbide: [250, 400] } },
 

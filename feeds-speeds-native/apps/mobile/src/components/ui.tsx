@@ -4,6 +4,7 @@ import {
   type ViewStyle, type TextStyle,
 } from 'react-native';
 import { T, radii, NOTICE_COLORS } from '../theme';
+import { ChromeText } from './ChromeText';
 
 export function Card({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
   return <View style={[s.card, style]}>{children}</View>;
@@ -19,7 +20,7 @@ export function Section({ children, right }: { children: React.ReactNode; right?
 }
 
 export function Title({ children }: { children: React.ReactNode }) {
-  return <Text style={s.title}>{children}</Text>;
+  return <ChromeText style={s.title}>{children}</ChromeText>;
 }
 
 export function Muted({ children, style }: { children: React.ReactNode; style?: TextStyle }) {
@@ -38,9 +39,11 @@ export function Stat({
   tone?: 'default' | 'accent' | 'warn';
 }) {
   const valColor = tone === 'accent' ? T.accent : tone === 'warn' ? T.warn : T.text;
+  // Green glow on the highlighted (accent) figures for the lit-up look.
+  const glow = tone === 'accent' ? s.glowAccent : null;
   return (
     <View style={s.stat}>
-      <Text style={[s.statValue, { color: valColor }]}>
+      <Text style={[s.statValue, { color: valColor }, glow]}>
         {value}{unit ? <Text style={s.statUnit}> {unit}</Text> : null}
       </Text>
       <Text style={s.statLabel}>{label}</Text>
@@ -219,6 +222,7 @@ const s = StyleSheet.create({
     borderRadius: radii.md, borderWidth: 1, borderColor: T.border, padding: 14,
   },
   statValue: { fontFamily: 'BricolageGrotesque_800ExtraBold', fontWeight: '800', fontSize: 24 },
+  glowAccent: { textShadowColor: 'rgba(47,198,58,0.55)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 12 },
   statUnit: { color: T.textDim, fontFamily: 'Manrope_500Medium', fontWeight: '500', fontSize: 13 },
   statLabel: {
     color: T.textDim, fontSize: 11, marginTop: 6, textTransform: 'uppercase',

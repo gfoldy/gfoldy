@@ -1,13 +1,20 @@
 import React from 'react';
+import { View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { T, shadow } from '../../src/theme';
 
 // expo-router v57 types the header/tab style options as Animated styles and the
-// icon `color` as a nullable ColorValue; cast at these boundaries.
+// icon `color` as a nullable ColorValue; cast at these boundaries. The active
+// tab gets a green glow (iOS shadow) for the lit-up, on-brand look.
 const icon = (name: React.ComponentProps<typeof Ionicons>['name']) =>
-  (p: { color: unknown; size: number }) =>
-    <Ionicons name={name} color={p.color as string} size={p.size} />;
+  (p: { color: unknown; size: number; focused: boolean }) => (
+    <View style={p.focused
+      ? { shadowColor: T.accent, shadowOpacity: 0.9, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }
+      : undefined}>
+      <Ionicons name={name} color={p.color as string} size={p.size} />
+    </View>
+  );
 
 export default function TabsLayout() {
   return (

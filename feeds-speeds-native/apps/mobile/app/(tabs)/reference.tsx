@@ -12,11 +12,19 @@ const toMpm = (sfm: number) => Math.round(sfm / SFM_PER_MPM);
 // never drifts from the actual model.
 const COATING_NOTES: { key: string; best: string; group: string }[] = [
   { key: 'none', best: 'Baseline — fine for aluminium & one-offs', group: 'Non-ferrous' },
-  { key: 'tin', best: 'General purpose', group: 'Ferrous' },
-  { key: 'ticn', best: 'Steel & cast iron', group: 'Ferrous' },
+  { key: 'oxide', best: 'HSS in steel — holds coolant, eases built-up edge', group: 'Ferrous' },
+  { key: 'tin', best: 'General purpose, all materials', group: 'Ferrous' },
+  { key: 'ticn', best: 'Steel & cast iron (abrasive)', group: 'Ferrous' },
+  { key: 'tialn', best: 'High-heat steel & stainless', group: 'Ferrous' },
   { key: 'altin', best: 'High-heat steel, stainless, titanium — not aluminium', group: 'Ferrous' },
+  { key: 'alcrn', best: 'Stainless, hardened & nickel alloys', group: 'Ferrous' },
+  { key: 'naco', best: 'Hardened steel (45 HRC+) & exotics', group: 'Ferrous' },
+  { key: 'crn', best: 'Gummy metals, copper, titanium (anti-BUE)', group: 'Stainless / exotic' },
+  { key: 'tib2', best: 'Aluminium & non-ferrous (anti-BUE)', group: 'Non-ferrous' },
   { key: 'zrn', best: 'Aluminium & non-ferrous', group: 'Non-ferrous' },
-  { key: 'diamond', best: 'PCD for aluminium/plastic/wood — never on steel', group: 'Non-ferrous' },
+  { key: 'dlc', best: 'Aluminium, plastic, graphite — low friction', group: 'Non-ferrous' },
+  { key: 'ws2', best: 'Lubricious top-coat over another coating', group: 'Non-ferrous' },
+  { key: 'diamond', best: 'PCD for aluminium/plastic/composite — never steel', group: 'Non-ferrous' },
 ];
 
 export default function ReferenceScreen() {

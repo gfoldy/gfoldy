@@ -4,7 +4,7 @@ import {
   computeFeedsSpeeds, chipThinningFactor, interp,
   effectiveCoating, applyOutcome, applyObservedRatio, DEFAULT_CALIBRATION,
   scallopFromStepover, stepoverFromScallop, effectiveBallDiameter, finishGrade,
-  computeTapping, THREADS, MACHINES, TOOL_TYPES,
+  computeTapping, THREADS, MACHINES, TOOL_TYPES, COATINGS,
 } from '../src/index.ts';
 import type { CalcInput } from '../src/index.ts';
 
@@ -214,6 +214,28 @@ test('coating benefit is material-aware', () => {
   assert.equal(effectiveCoating('diamond', 'Non-ferrous').mult, 5.0);
   const badDiamond = effectiveCoating('diamond', 'Ferrous');
   assert.ok(badDiamond.mult < 1 && badDiamond.warning);
+});
+
+test('full coating catalog is present and each resolves', () => {
+  const keys = Object.keys(COATINGS);
+  assert.ok(keys.length >= 12, `only ${keys.length} coatings`);
+  for (const k of keys) {
+    const eff = effectiveCoating(k, 'Ferrous');
+    assert.ok(eff.mult > 0, `${k} has no multiplier`);
+  }
+});
+
+test('aluminium-bearing and non-ferrous coatings target opposite materials', () => {
+  // nACo / AlCrN: strong on hot ferrous, weak in aluminium.
+  assert.ok(effectiveCoating('naco', 'Ferrous').mult > 3);
+  assert.ok(effectiveCoating('naco', 'Non-ferrous').mult <= 1.1);
+  assert.ok(effectiveCoating('alcrn', 'Stainless / exotic').mult > 2.5);
+  // TiB2 / DLC: strong in aluminium, weak on steel.
+  assert.ok(effectiveCoating('tib2', 'Non-ferrous').mult >= 1.8);
+  assert.ok(effectiveCoating('tib2', 'Ferrous').mult < 1);
+  assert.ok(effectiveCoating('dlc', 'Non-ferrous').mult > 2);
+  // Oxide is a mild all-rounder.
+  assert.ok(effectiveCoating('oxide', 'Ferrous').mult > 1 && effectiveCoating('oxide', 'Ferrous').mult < 1.6);
 });
 
 test('diamond on steel warns and shortens life in a full calc', () => {

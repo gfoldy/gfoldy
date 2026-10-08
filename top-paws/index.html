@@ -5,231 +5,166 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Top Paws Pet Supply</title>
 <meta name="description" content="Top Paws Pet Supply: name-brand dog food, toys, treats and gear, plus fresh-baked dog treats for in-store pickup.">
+<link rel="icon" href="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800&family=DM+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap">
 <style>
-/* Layout: sticky header, compact hero, filterable shop grid, bakery menu beside a sticky order ticket, visit info. */
+/* Layout: logo-led header, hero with the logo and today's hours, shop as a brand-grouped price list,
+   bakery case with an order slip, visit info. Single light theme taken from the logo. */
 :root {
-  --bg: #f5f8fb;
-  --surface: #ffffff;
-  --ink: #14233d;
-  --ink-soft: #4b5b74;
-  --line: #d9e1ec;
-  --navy: #1b3a6b;
-  --sun: #ffc52e;
-  --sun-ink: #3a2a00;
-  --sun-soft: #fff3cc;
-  --berry: #d23f5f;
-  --mint: #2f8f6b;
-  --tile-food: #e4ecf8;
-  --tile-toys: #fde9d4;
-  --tile-treats: #f6e1e6;
-  --tile-gear: #dff1ea;
-  --header: #1b3a6b;
-  --font-display: "Lilita One", "Arial Rounded MT Bold", "Trebuchet MS", sans-serif;
-  --font-body: "Nunito Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "DM Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-  --radius: 14px;
+  --paper: #ffffff;
+  --mist: #f4f0f4;       /* lightest swoosh */
+  --lavender: #d6cdd6;   /* logo swoosh */
+  --lavender-dk: #a998aa;
+  --plum: #584060;       /* logo lettering */
+  --plum-dk: #3f2c46;
+  --brown: #885838;      /* puppy + paw prints */
+  --brown-dk: #3a2214;
+  --ink: #2e2232;
+  --muted: #6e6172;
+  --rule: #e4dde5;
+  --tongue: #c8443f;     /* puppy's tongue, used for "few left" */
+  --display: "Fredoka", "Arial Rounded MT Bold", "Trebuchet MS", sans-serif;
+  --body: "Nunito", "Segoe UI", system-ui, sans-serif;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0e1626; --surface: #16213a; --ink: #eef2f8; --ink-soft: #a8b5ca; --line: #2a3a58;
-    --navy: #9fc0f5; --sun: #ffc52e; --sun-ink: #2a1e00; --sun-soft: #3a3115; --berry: #ff7d97; --mint: #5fd0a4;
-    --tile-food: #1f3157; --tile-toys: #43301d; --tile-treats: #452532; --tile-gear: #1c3d33; --header: #0a1220;
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #0e1626; --surface: #16213a; --ink: #eef2f8; --ink-soft: #a8b5ca; --line: #2a3a58;
-  --navy: #9fc0f5; --sun: #ffc52e; --sun-ink: #2a1e00; --sun-soft: #3a3115; --berry: #ff7d97; --mint: #5fd0a4;
-  --tile-food: #1f3157; --tile-toys: #43301d; --tile-treats: #452532; --tile-gear: #1c3d33; --header: #0a1220;
-  color-scheme: dark;
-}
-
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: 80px; }
-@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; animation: none !important; } }
-body {
-  margin: 0; background: var(--bg); color: var(--ink);
-  font-family: var(--font-body); font-size: 16px; line-height: 1.55;
-}
+html { scroll-behavior: smooth; scroll-padding-top: 96px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 17px/1.6 var(--body); }
 img { max-width: 100%; }
 [hidden] { display: none !important; }
-a { color: var(--navy); }
-:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; border-radius: 6px; }
-h1, h2, h3 { font-family: var(--font-display); font-weight: 400; line-height: 1.1; text-wrap: balance; margin: 0; letter-spacing: 0.01em; }
-.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; }
-.eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); }
-.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+a { color: var(--plum); }
+:focus-visible { outline: 3px solid var(--lavender-dk); outline-offset: 2px; border-radius: 4px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; color: var(--plum); line-height: 1.15; margin: 0; text-wrap: balance; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 20px; }
+.num { font-variant-numeric: tabular-nums; }
 
 /* Header */
-.site-header {
-  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
-  background: var(--header); color: #fff; border-bottom: 1px solid var(--line);
-}
-.site-header .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 12px; flex-wrap: wrap; }
-.brand { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; }
-.brand-mark { width: 40px; height: 40px; flex: none; }
-.brand-name { font-family: var(--font-display); font-size: 24px; line-height: 1; }
-.brand-name small { display: block; font-family: var(--font-body); font-size: 11px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; opacity: 0.8; margin-top: 3px; }
-.nav { display: flex; gap: 6px; flex-wrap: wrap; }
-.nav a { color: inherit; text-decoration: none; font-weight: 700; padding: 8px 12px; border-radius: 999px; }
-.nav a:hover { background: rgba(255,255,255,0.12); }
-.nav a.cta { background: var(--sun); color: var(--sun-ink); }
-.nav a.cta:hover { filter: brightness(1.05); background: var(--sun); }
+.site-header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--paper); border-bottom: 1px solid var(--rule); }
+.site-header .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; padding-block: 8px; flex-wrap: wrap; }
+.site-header .logo { height: 60px; width: auto; display: block; }
+.nav { display: flex; align-items: center; gap: 4px 22px; flex-wrap: wrap; font-weight: 800; }
+.nav a { text-decoration: none; color: var(--plum); }
+.nav a:hover { color: var(--brown); }
+
+.btn { display: inline-block; font: 700 17px/1 var(--body); padding: 14px 22px; border-radius: 10px; border: 2px solid var(--plum); text-decoration: none; cursor: pointer; }
+.btn-plum { background: var(--plum); color: #fff; }
+.btn-plum:hover { background: var(--plum-dk); border-color: var(--plum-dk); }
+.btn-line { background: transparent; color: var(--plum); }
+.btn-line:hover { background: var(--mist); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.nav .btn { padding: 10px 16px; font-size: 15px; color: #fff; }
 
 /* Hero */
-.hero { padding-block: 48px 40px; }
-.hero .wrap { display: grid; grid-template-columns: 1.3fr 1fr; gap: 40px; align-items: center; }
-.hero h1 { font-size: clamp(40px, 6.5vw, 72px); color: var(--navy); }
-.hero h1 .hl { background: linear-gradient(transparent 62%, var(--sun) 62%, var(--sun) 92%, transparent 92%); padding-inline: 4px; color: var(--ink); }
-.hero p.lede { font-size: 19px; color: var(--ink-soft); max-width: 34em; margin: 18px 0 26px; }
+.hero { padding-block: 40px 56px; }
+.hero .wrap { display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 48px; align-items: center; }
+.hero-logo { width: 100%; max-width: 400px; image-rendering: auto; }
+.hero h1 { font-size: clamp(32px, 4.6vw, 50px); }
+.hero p { color: var(--muted); max-width: 33em; margin: 16px 0 22px; }
+.open-today { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; color: var(--brown); margin-bottom: 14px; }
+.open-today .dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
 .btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  font: 800 16px/1 var(--font-body); padding: 14px 22px; border-radius: 999px; border: 2px solid transparent;
-  cursor: pointer; text-decoration: none; transition: transform .15s ease, filter .15s ease;
-}
-.btn:hover { transform: translateY(-1px); }
-.btn-sun { background: var(--sun); color: var(--sun-ink); }
-.btn-ghost { background: transparent; color: var(--ink); border-color: var(--line); }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-.hero-card {
-  background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 24px;
-  display: grid; gap: 14px; position: relative; overflow: hidden;
-}
-.hero-card .paw-bg { position: absolute; right: -30px; bottom: -30px; width: 180px; opacity: 0.08; color: var(--navy); }
-.fact { display: flex; gap: 14px; align-items: baseline; position: relative; }
-.fact b { font-family: var(--font-display); font-weight: 400; font-size: 30px; color: var(--navy); min-width: 3.2ch; }
-.fact span { color: var(--ink-soft); }
 
-/* Sections */
-section.block { padding-block: 56px; }
-.section-head { display: flex; justify-content: space-between; align-items: end; gap: 20px; flex-wrap: wrap; margin-bottom: 24px; }
-.section-head h2 { font-size: clamp(32px, 4.5vw, 46px); color: var(--navy); }
-.section-head p { margin: 6px 0 0; color: var(--ink-soft); max-width: 40em; }
+/* Section heads with a little paw trail, like the logo */
+.block { padding-block: 56px; }
+.head { display: flex; align-items: flex-end; gap: 14px; margin-bottom: 8px; }
+.head h2 { font-size: clamp(30px, 4vw, 40px); }
+.trail { width: 74px; height: 40px; color: var(--brown); flex: none; margin-bottom: 4px; }
+.sub { color: var(--muted); margin: 0 0 26px; max-width: 40em; }
 
-/* Shop controls */
-.controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 22px; }
-.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
-.tab {
-  font: 700 15px/1 var(--font-body); padding: 10px 16px; border-radius: 999px; cursor: pointer;
-  background: var(--surface); color: var(--ink); border: 1.5px solid var(--line);
-}
-.tab[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-.tab .count { font-family: var(--font-mono); font-size: 12px; opacity: 0.7; margin-left: 4px; }
-.search { flex: 1 1 220px; min-width: 0; position: relative; }
-.search input, .field input, .field select, .field textarea {
-  width: 100%; font: 500 16px/1.3 var(--font-body); color: var(--ink); background: var(--surface);
-  border: 1.5px solid var(--line); border-radius: 12px; padding: 11px 14px;
-}
-.search input { padding-left: 38px; border-radius: 999px; }
-.search svg { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); width: 17px; color: var(--ink-soft); }
-.select-brand { flex: 0 1 200px; min-width: 0; }
-.select-brand select { width: 100%; font: 600 15px/1.3 var(--font-body); color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: 999px; padding: 10px 14px; }
+/* Shop */
+.shop-tools { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between; border-bottom: 2px solid var(--rule); margin-bottom: 30px; }
+.tabs { display: flex; flex-wrap: wrap; gap: 0 22px; }
+.tab { font: 700 17px/1 var(--body); background: none; border: 0; padding: 12px 0 13px; margin-bottom: -2px; color: var(--muted); cursor: pointer; border-bottom: 4px solid transparent; }
+.tab:hover { color: var(--plum); }
+.tab[aria-pressed="true"] { color: var(--plum); border-bottom-color: var(--brown); }
+.search { flex: 0 1 280px; min-width: 0; margin-bottom: 8px; }
+input, select, textarea { width: 100%; font: 600 16px/1.3 var(--body); color: var(--ink); background: var(--paper); border: 1.5px solid var(--lavender); border-radius: 8px; padding: 10px 12px; }
+input:focus, select:focus, textarea:focus { border-color: var(--plum); outline: none; box-shadow: 0 0 0 3px var(--mist); }
 
-/* Product grid */
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
-.product {
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
-  display: flex; flex-direction: column; overflow: hidden; min-width: 0;
-}
-.product .tile { height: 112px; display: grid; place-items: center; position: relative; }
-.product .tile svg { width: 56px; height: 56px; color: var(--ink); opacity: 0.85; }
-.tile[data-cat="food"] { background: var(--tile-food); }
-.tile[data-cat="toys"] { background: var(--tile-toys); }
-.tile[data-cat="treats"] { background: var(--tile-treats); }
-.tile[data-cat="gear"] { background: var(--tile-gear); }
-.tag { position: absolute; top: 10px; left: 10px; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; background: var(--surface); color: var(--ink); padding: 4px 8px; border-radius: 999px; }
-.product .body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
-.product .brandline { font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
-.product h3 { font-family: var(--font-body); font-weight: 800; font-size: 17px; line-height: 1.3; }
-.product .desc { font-size: 14px; color: var(--ink-soft); margin: 2px 0 0; }
-.product .foot { margin-top: auto; padding-top: 12px; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
-.price { font-family: var(--font-mono); font-weight: 500; font-size: 18px; font-variant-numeric: tabular-nums; }
-.size { font-size: 13px; color: var(--ink-soft); text-align: right; }
-.stock { font-size: 12px; font-weight: 800; }
-.stock.in { color: var(--mint); }
-.stock.low { color: var(--berry); }
-.empty { padding: 40px; text-align: center; color: var(--ink-soft); background: var(--surface); border: 1px dashed var(--line); border-radius: var(--radius); }
+.cat + .cat { margin-top: 44px; }
+.cat > h3 { font-size: 28px; margin-bottom: 18px; }
+.brands { columns: 2; column-gap: 56px; }
+.brand-group { break-inside: avoid; margin-bottom: 26px; }
+.brand-group h4 { margin: 0 0 6px; font: 800 13px/1.2 var(--body); letter-spacing: 0.1em; text-transform: uppercase; color: var(--brown); }
+.item { display: flex; align-items: baseline; gap: 8px; padding-block: 6px; }
+.item .name { font-weight: 700; min-width: 0; }
+.item .size { display: block; font-size: 14px; font-weight: 400; color: var(--muted); }
+.item .few { font-size: 13px; font-weight: 800; color: var(--tongue); margin-left: 6px; white-space: nowrap; }
+.item .dots { flex: 1; border-bottom: 2px dotted var(--lavender); min-width: 20px; transform: translateY(-5px); }
+.item .price { font-weight: 800; color: var(--plum); font-variant-numeric: tabular-nums; }
+.no-match { color: var(--muted); padding: 20px 0; }
+.special { margin-top: 28px; color: var(--muted); }
 
 /* Bakery */
-.bakery { background: var(--sun-soft); }
-.bakery-layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 28px; align-items: start; }
-.notice { display: flex; gap: 12px; align-items: flex-start; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 18px; font-size: 15px; }
-.notice svg { flex: none; width: 22px; color: var(--mint); margin-top: 2px; }
-.menu { display: grid; gap: 12px; }
-.treat {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 20px; align-items: center;
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px;
-}
-.treat h3 { font-family: var(--font-display); font-size: 22px; color: var(--navy); }
-.treat .meta { font-size: 13px; color: var(--ink-soft); font-weight: 700; margin-top: 2px; }
-.treat .ingredients { grid-column: 1 / -1; font-size: 14px; color: var(--ink-soft); margin: 0; }
-.treat .badges { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; }
-.badge { font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-soft); }
-.badge.notice48 { border-color: var(--berry); color: var(--berry); }
-.stepper { display: inline-flex; align-items: center; border: 1.5px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--bg); }
-.stepper button { width: 38px; height: 38px; border: 0; background: transparent; color: var(--ink); font: 800 20px/1 var(--font-body); cursor: pointer; }
-.stepper button:hover { background: var(--line); }
-.stepper button:disabled { opacity: 0.35; cursor: default; background: transparent; }
-.stepper output { min-width: 2.2ch; text-align: center; font-family: var(--font-mono); font-weight: 500; }
-.treat-right { display: flex; align-items: center; gap: 14px; justify-self: end; }
+.bakery { background: var(--mist); }
+.bakery-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 40px; align-items: start; }
+.treat { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 18px; align-items: center; padding-block: 16px; border-bottom: 1px dashed var(--lavender-dk); }
+.treat:first-child { padding-top: 0; }
+.treat h3 { font-size: 22px; }
+.treat .unit { color: var(--muted); font-weight: 600; font-size: 15px; }
+.treat .unit b { color: var(--plum); font-weight: 800; }
+.treat .ing { grid-column: 1 / -1; color: var(--muted); font-size: 15px; margin: 0; }
+.treat .note { grid-column: 1 / -1; font-size: 14px; font-weight: 800; color: var(--brown); }
+.qty { display: inline-flex; align-items: center; gap: 4px; }
+.qty button { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--plum); background: var(--paper); color: var(--plum); font: 700 20px/1 var(--body); cursor: pointer; }
+.qty button:hover { background: var(--plum); color: #fff; }
+.qty button:disabled { opacity: 0.3; cursor: default; background: var(--paper); color: var(--plum); }
+.qty output { min-width: 2ch; text-align: center; font-weight: 800; font-variant-numeric: tabular-nums; }
+.keep { margin-top: 22px; font-size: 15px; color: var(--muted); }
 
-.ticket {
-  position: sticky; top: calc(env(safe-area-inset-top, 0px) + 84px);
-  background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 22px;
-  box-shadow: 0 10px 30px -18px rgba(20, 35, 61, 0.45);
-}
-.ticket h3 { font-size: 26px; color: var(--navy); }
-.ticket-lines { list-style: none; margin: 14px 0; padding: 0; display: grid; gap: 8px; }
-.ticket-lines li { display: flex; justify-content: space-between; gap: 12px; font-size: 15px; }
-.ticket-lines li span:first-child { min-width: 0; }
-.ticket-empty { color: var(--ink-soft); font-size: 15px; margin: 12px 0; }
-.ticket-total { display: flex; justify-content: space-between; border-top: 2px dashed var(--line); padding-top: 12px; font-weight: 800; font-size: 18px; }
-.ticket form { display: grid; gap: 12px; margin-top: 16px; }
-.field label { display: block; font-size: 13px; font-weight: 800; margin-bottom: 5px; }
-.field .hint { font-size: 12px; color: var(--ink-soft); margin-top: 4px; }
-.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.field textarea { resize: vertical; min-height: 64px; }
-.form-error { color: var(--berry); font-size: 14px; font-weight: 700; margin: 0; }
-.confirm { text-align: left; display: grid; gap: 10px; }
-.confirm .check { width: 48px; height: 48px; border-radius: 50%; background: var(--mint); color: #fff; display: grid; place-items: center; }
-.confirm .order-no { font-family: var(--font-mono); font-size: 20px; }
+.slip { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 96px); background: var(--paper); border: 1px solid var(--lavender); border-radius: 12px; padding: 22px; }
+.slip h3 { font-size: 26px; display: flex; align-items: center; gap: 10px; }
+.slip h3 svg { width: 26px; height: 26px; color: var(--brown); }
+.lines { list-style: none; margin: 14px 0 10px; padding: 0; display: grid; gap: 6px; }
+.lines li { display: flex; justify-content: space-between; gap: 12px; }
+.lines li span:last-child { font-variant-numeric: tabular-nums; }
+.slip .empty { color: var(--muted); margin: 12px 0; }
+.total { display: flex; justify-content: space-between; font-weight: 800; font-size: 19px; color: var(--plum); border-top: 2px dashed var(--lavender); padding-top: 10px; }
+.slip form { display: grid; gap: 12px; margin-top: 18px; }
+.field label { display: block; font-size: 14px; font-weight: 800; margin-bottom: 4px; }
+.field .opt { font-weight: 600; color: var(--muted); }
+.field .hint { font-size: 13px; color: var(--muted); margin-top: 3px; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+textarea { resize: vertical; min-height: 60px; }
+.error { color: var(--tongue); font-weight: 700; font-size: 15px; margin: 0; }
+.pay { font-size: 14px; color: var(--muted); margin: 0; }
+.done { display: grid; gap: 10px; }
+.done .order-no { font-weight: 800; font-size: 20px; color: var(--brown); letter-spacing: 0.04em; }
 
 /* Visit */
-.visit-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-.visit-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
-.visit-card h3 { font-size: 22px; color: var(--navy); margin-bottom: 10px; }
-.hours { width: 100%; border-collapse: collapse; font-size: 15px; }
-.hours td { padding: 4px 0; }
-.hours td:last-child { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 14px; }
-.hours tr.today td { font-weight: 800; color: var(--navy); }
+.visit { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; }
+.visit h3 { font-size: 22px; margin-bottom: 10px; }
+.visit p { margin: 0 0 8px; }
+.hours { width: 100%; border-collapse: collapse; }
+.hours td { padding: 3px 0; }
+.hours td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.hours tr.today td { font-weight: 800; color: var(--plum); }
 
-footer { padding-block: 28px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 14px; }
-footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+footer { background: var(--plum); color: #efe8f0; padding-block: 26px; font-size: 15px; }
+footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; }
+footer svg { width: 54px; height: 30px; color: var(--lavender); }
 
-@media (max-width: 900px) {
-  .hero .wrap, .bakery-layout { grid-template-columns: 1fr; }
-  .ticket { position: static; }
-  .visit-grid { grid-template-columns: 1fr; }
+@media (max-width: 880px) {
+  .hero .wrap, .bakery-grid { grid-template-columns: 1fr; }
+  .hero .wrap { gap: 24px; }
+  .hero-logo { max-width: 300px; }
+  .brands { columns: 1; }
+  .slip { position: static; }
+  .visit { grid-template-columns: 1fr; gap: 28px; }
 }
 @media (max-width: 520px) {
   .wrap { padding-inline: 16px; }
-  .nav a:not(.cta) { padding: 8px 9px; font-size: 15px; }
-  .treat { grid-template-columns: 1fr; }
-  .treat-right { justify-self: start; }
-  .field-row { grid-template-columns: 1fr; }
-  .grid { grid-template-columns: 1fr; gap: 10px; }
-  .product { flex-direction: row; }
-  .product .tile { width: 84px; height: auto; flex: none; }
-  .product .tile svg { width: 36px; height: 36px; }
-  .product .tag { display: none; }
-  .product .body { padding: 12px 14px; }
-  .product .desc { display: none; }
-  section.block { padding-block: 40px; }
+  .site-header .logo { height: 46px; }
+  .hero { padding-block: 24px 40px; }
+  .hero-logo { max-width: 230px; }
+  .nav { gap: 4px 14px; font-size: 15px; }
+  .nav .btn { padding: 8px 12px; font-size: 14px; }
+  .search { flex-basis: 100%; }
+  .two { grid-template-columns: 1fr; }
+  .block { padding-block: 40px; }
 }
 </style>
 </head>
@@ -237,27 +172,18 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
-    <symbol id="i-paw" viewBox="0 0 64 64"><g fill="currentColor"><ellipse cx="18" cy="22" rx="6.5" ry="8.5"/><ellipse cx="32" cy="15" rx="6.5" ry="8.5"/><ellipse cx="46" cy="22" rx="6.5" ry="8.5"/><ellipse cx="10" cy="36" rx="5.5" ry="7" transform="rotate(-20 10 36)"/><ellipse cx="54" cy="36" rx="5.5" ry="7" transform="rotate(20 54 36)"/><path d="M32 30c-9 0-17 11-17 18 0 6 5 9 10 8 3-.6 4.5-2 7-2s4 1.4 7 2c5 1 10-2 10-8 0-7-8-18-17-18z"/></g></symbol>
-    <symbol id="i-food" viewBox="0 0 64 64"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"><path d="M18 10h28l-2 6 4 40H16l4-40z"/><path d="M20 16h24"/><circle cx="32" cy="36" r="8"/><path d="M28 36h8M32 32v8" stroke-linecap="round"/></g></symbol>
-    <symbol id="i-toys" viewBox="0 0 64 64"><g fill="none" stroke="currentColor" stroke-width="3"><circle cx="32" cy="32" r="20"/><path d="M14 26c10 4 26 4 36 0M14 38c10-4 26-4 36 0"/></g></symbol>
-    <symbol id="i-treats" viewBox="0 0 64 64"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" d="M16 22a6 6 0 1 1 6-8 6 6 0 1 1 6 8l14 14a6 6 0 1 1 8 6 6 6 0 1 1-8 6L28 34a6 6 0 1 1-6 0z" transform="translate(-2 2)"/></symbol>
-    <symbol id="i-gear" viewBox="0 0 64 64"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 14c14 0 18 10 18 20v16"/><circle cx="30" cy="54" r="4"/><rect x="26" y="40" width="8" height="10" rx="2"/><path d="M12 14a6 6 0 1 0 0 0.1"/><path d="M40 18h12v12H40z"/></g></symbol>
-    <symbol id="i-search" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M16 16l5 5"/></g></symbol>
-    <symbol id="i-leaf" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 19c0-9 6-14 15-14 0 9-5 15-14 15M5 19l7-7"/></symbol>
-    <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="paw" viewBox="0 0 40 40"><g fill="currentColor"><ellipse cx="11" cy="14" rx="4" ry="5.2"/><ellipse cx="20" cy="9.5" rx="4" ry="5.2"/><ellipse cx="29" cy="14" rx="4" ry="5.2"/><ellipse cx="6" cy="23" rx="3.4" ry="4.4" transform="rotate(-22 6 23)"/><ellipse cx="34" cy="23" rx="3.4" ry="4.4" transform="rotate(22 34 23)"/><path d="M20 19c-6 0-11 7.5-11 12 0 4 3.2 5.8 6.6 5.2 2-.4 2.8-1.3 4.4-1.3s2.4.9 4.4 1.3c3.4.6 6.6-1.2 6.6-5.2 0-4.5-5-12-11-12z"/></g></symbol>
+    <symbol id="trail" viewBox="0 0 74 40"><use href="#paw" x="0" y="20" width="16" height="16" transform="rotate(-18 8 28)"/><use href="#paw" x="18" y="10" width="16" height="16" transform="rotate(-10 26 18)"/><use href="#paw" x="38" y="16" width="16" height="16" transform="rotate(-18 46 24)"/><use href="#paw" x="56" y="4" width="16" height="16" transform="rotate(-10 64 12)"/></symbol>
   </defs>
 </svg>
 
 <header class="site-header">
   <div class="wrap">
-    <a class="brand" href="#top" aria-label="Top Paws Pet Supply home">
-      <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="31" fill="#ffc52e"/><g transform="translate(9 9) scale(.72)" style="color:#1b3a6b"><use href="#i-paw"/></g></svg>
-      <span class="brand-name">Top Paws<small>Pet Supply</small></span>
-    </a>
+    <a href="#top" aria-label="Top Paws Pet Supply, back to top"><img class="logo" src="logo.png" alt="Top Paws"></a>
     <nav class="nav" aria-label="Main">
       <a href="#shop">Shop</a>
-      <a href="#visit">Visit</a>
-      <a class="cta" href="#bakery">Order Bakery</a>
+      <a href="#visit">Hours &amp; location</a>
+      <a class="btn btn-plum" href="#bakery">Bakery orders</a>
     </nav>
   </div>
 </header>
@@ -265,113 +191,68 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
 <main id="top">
   <section class="hero">
     <div class="wrap">
+      <img class="hero-logo" src="logo.png" alt="Top Paws Pet Supply logo with a brown cartoon puppy">
       <div>
-        <div class="eyebrow">Your neighborhood pet supply store</div>
-        <h1>Good food, tough toys, and <span class="hl">fresh-baked</span> treats.</h1>
-        <p class="lede">We stock the dog food brands you trust and the toys that survive a real chewer. Our in-store bakery makes dog treats from scratch every morning. Order ahead and pick them up at the counter.</p>
+        <div class="open-today" id="open-today"><span class="dot"></span><span></span></div>
+        <h1>Everything your dog needs, plus treats we bake right here in the store.</h1>
+        <p>Top Paws is a family-run pet supply shop. We carry the food brands your vet recommends, toys that hold up to real chewers, and a bakery case full of homemade dog treats. Order ahead and we'll have your treats boxed up at the counter.</p>
         <div class="btn-row">
-          <a class="btn btn-sun" href="#bakery">Order fresh treats</a>
-          <a class="btn btn-ghost" href="#shop">Browse the store</a>
+          <a class="btn btn-plum" href="#bakery">Order from the bakery</a>
+          <a class="btn btn-line" href="#shop">See what we carry</a>
         </div>
-      </div>
-      <div class="hero-card" aria-label="Store highlights">
-        <svg class="paw-bg" viewBox="0 0 64 64" aria-hidden="true"><use href="#i-paw"/></svg>
-        <div class="fact"><b id="brand-count">20+</b><span>name brands of food, toys and treats on our shelves</span></div>
-        <div class="fact"><b>Daily</b><span>dog treats baked fresh in-store with dog-safe ingredients</span></div>
-        <div class="fact"><b>24h</b><span>notice for bakery pickup orders (48h for custom cakes)</span></div>
       </div>
     </div>
   </section>
 
   <section class="block" id="shop" aria-labelledby="shop-title">
     <div class="wrap">
-      <div class="section-head">
-        <div>
-          <div class="eyebrow">In the store</div>
-          <h2 id="shop-title">What we carry</h2>
-          <p>Prices are in-store prices. Don't see your brand? Ask us and we'll special-order it.</p>
-        </div>
-      </div>
-      <div class="controls">
+      <div class="head"><h2 id="shop-title">What's on our shelves</h2><svg class="trail" aria-hidden="true"><use href="#trail"/></svg></div>
+      <p class="sub">In-store prices. Stock changes week to week, so give us a call if you want us to set something aside.</p>
+      <div class="shop-tools">
         <div class="tabs" role="group" aria-label="Category" id="tabs"></div>
-        <div class="search">
-          <svg aria-hidden="true"><use href="#i-search"/></svg>
-          <input id="search" type="search" placeholder="Search brands or products" aria-label="Search products">
-        </div>
-        <div class="select-brand">
-          <select id="brand" aria-label="Filter by brand"><option value="">All brands</option></select>
-        </div>
+        <div class="search"><input id="search" type="search" placeholder="Search a brand or item" aria-label="Search brands and items"></div>
       </div>
-      <div class="grid" id="grid" aria-live="polite"></div>
+      <div id="list" aria-live="polite"></div>
+      <p class="special">Don't see your dog's food? Ask us. We can special-order most brands within a week.</p>
     </div>
   </section>
 
   <section class="block bakery" id="bakery" aria-labelledby="bakery-title">
     <div class="wrap">
-      <div class="section-head">
+      <div class="head"><h2 id="bakery-title">The Top Paws bakery case</h2><svg class="trail" aria-hidden="true"><use href="#trail"/></svg></div>
+      <p class="sub">We bake every morning with simple, dog-safe ingredients. Nothing with chocolate, xylitol, raisins, onion or added sugar ever goes in the oven. Pick your treats, choose a pickup time, and pay when you come in.</p>
+      <div class="bakery-grid">
         <div>
-          <div class="eyebrow">Top Paws Bakery</div>
-          <h2 id="bakery-title">Fresh-baked for dogs</h2>
-          <p>Everything is baked in our store kitchen with human-grade, dog-safe ingredients. No chocolate, xylitol, raisins, onion, or added sugar. Pick your treats, choose a pickup time, and we'll have them boxed at the front counter.</p>
-        </div>
-      </div>
-      <div class="bakery-layout">
-        <div>
-          <div class="notice">
-            <svg aria-hidden="true"><use href="#i-leaf"/></svg>
-            <span>Treats keep 5 days in the fridge or 3 months frozen. If your dog has allergies, tell us in the order notes and we'll check every ingredient with you.</span>
-          </div>
-          <div class="menu" id="menu"></div>
+          <div id="menu"></div>
+          <p class="keep">Treats keep about 5 days in the fridge or 3 months in the freezer. If your dog has allergies, put it in the notes and we'll call you to go over ingredients.</p>
         </div>
 
-        <aside class="ticket" aria-labelledby="ticket-title">
-          <div id="ticket-form-view">
-            <h3 id="ticket-title">Your pickup order</h3>
-            <ul class="ticket-lines" id="ticket-lines"></ul>
-            <p class="ticket-empty" id="ticket-empty">Add treats from the menu to start your order.</p>
-            <div class="ticket-total"><span>Total</span><span class="mono" id="ticket-total">$0.00</span></div>
+        <aside class="slip" aria-labelledby="slip-title">
+          <div id="slip-form">
+            <h3 id="slip-title"><svg aria-hidden="true"><use href="#paw"/></svg>Pickup order</h3>
+            <ul class="lines" id="lines"></ul>
+            <p class="empty" id="empty">Tap + next to a treat to add it.</p>
+            <div class="total"><span>Total</span><span class="num" id="total">$0.00</span></div>
             <form id="order-form" novalidate>
-              <div class="field-row">
-                <div class="field">
-                  <label for="pickup-date">Pickup day</label>
-                  <input id="pickup-date" type="date" required>
-                </div>
-                <div class="field">
-                  <label for="pickup-time">Time</label>
-                  <select id="pickup-time" required></select>
-                </div>
+              <div class="two">
+                <div class="field"><label for="pickup-date">Pickup day</label><input id="pickup-date" type="date" required></div>
+                <div class="field"><label for="pickup-time">Time</label><select id="pickup-time" required></select></div>
               </div>
-              <div class="field">
-                <label for="cust-name">Your name</label>
-                <input id="cust-name" type="text" autocomplete="name" required>
-              </div>
-              <div class="field">
-                <label for="cust-phone">Phone</label>
-                <input id="cust-phone" type="tel" autocomplete="tel" required>
-                <div class="hint">We'll text you when your order is ready.</div>
-              </div>
-              <div class="field">
-                <label for="dog-name">Dog's name <span style="font-weight:600;color:var(--ink-soft)">(optional)</span></label>
-                <input id="dog-name" type="text">
-                <div class="hint">We pipe it onto Bark-day Cakes.</div>
-              </div>
-              <div class="field">
-                <label for="notes">Notes or allergies</label>
-                <textarea id="notes" rows="2"></textarea>
-              </div>
-              <p class="form-error" id="form-error" role="alert" hidden></p>
-              <button class="btn btn-sun" type="submit" id="submit-btn" disabled>Place pickup order</button>
-              <div class="hint" style="font-size:12px;color:var(--ink-soft)">Pay at pickup. Cash or card.</div>
+              <div class="field"><label for="cust-name">Your name</label><input id="cust-name" type="text" autocomplete="name" required></div>
+              <div class="field"><label for="cust-phone">Phone</label><input id="cust-phone" type="tel" autocomplete="tel" required><div class="hint">We'll text you when it's ready.</div></div>
+              <div class="field"><label for="dog-name">Dog's name <span class="opt">(optional)</span></label><input id="dog-name" type="text"><div class="hint">Goes on top of a Bark-day Cake.</div></div>
+              <div class="field"><label for="notes">Notes or allergies</label><textarea id="notes" rows="2"></textarea></div>
+              <p class="error" id="error" role="alert" hidden></p>
+              <button class="btn btn-plum" type="submit" id="submit-btn" disabled>Place pickup order</button>
+              <p class="pay">Pay at pickup with cash or card.</p>
             </form>
           </div>
-
-          <div id="ticket-confirm" class="confirm" hidden>
-            <div class="check"><svg width="26" height="26" aria-hidden="true"><use href="#i-check"/></svg></div>
-            <h3 id="confirm-title">Order received</h3>
-            <div>Order number <span class="order-no" id="confirm-no"></span></div>
-            <p id="confirm-text" style="margin:0"></p>
-            <ul class="ticket-lines" id="confirm-lines"></ul>
-            <button class="btn btn-ghost" type="button" id="new-order">Start a new order</button>
+          <div class="done" id="slip-done" hidden>
+            <h3 id="done-title">Got it!</h3>
+            <div>Order <span class="order-no" id="done-no"></span></div>
+            <p id="done-text" style="margin:0"></p>
+            <ul class="lines" id="done-lines"></ul>
+            <button class="btn btn-line" type="button" id="new-order">Start another order</button>
           </div>
         </aside>
       </div>
@@ -380,28 +261,11 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
 
   <section class="block" id="visit" aria-labelledby="visit-title">
     <div class="wrap">
-      <div class="section-head">
-        <div>
-          <div class="eyebrow">Come say hi</div>
-          <h2 id="visit-title">Visit the store</h2>
-        </div>
-      </div>
-      <div class="visit-grid">
-        <div class="visit-card">
-          <h3>Hours</h3>
-          <table class="hours" id="hours"></table>
-        </div>
-        <div class="visit-card">
-          <h3>Find us</h3>
-          <p style="margin:0 0 8px" id="addr"></p>
-          <p style="margin:0">Leashed dogs are always welcome inside. Ask for a free biscuit at the counter.</p>
-        </div>
-        <div class="visit-card">
-          <h3>Contact</h3>
-          <p style="margin:0 0 6px">Phone: <span class="mono" id="phone"></span></p>
-          <p style="margin:0 0 6px">Email: <span id="email"></span></p>
-          <p style="margin:0">Questions about a bakery order? Call us with your order number.</p>
-        </div>
+      <div class="head"><h2 id="visit-title">Come see us</h2><svg class="trail" aria-hidden="true"><use href="#trail"/></svg></div>
+      <div class="visit" style="margin-top:24px">
+        <div><h3>Hours</h3><table class="hours" id="hours"></table></div>
+        <div><h3>Where we are</h3><p id="addr"></p><p>Dogs on a leash are always welcome inside. Ask at the register for a free biscuit.</p></div>
+        <div><h3>Get in touch</h3><p>Call <span class="num" id="phone"></span></p><p id="email"></p><p>Calling about a bakery order? Have your order number handy.</p></div>
       </div>
     </div>
   </section>
@@ -410,7 +274,7 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
 <footer>
   <div class="wrap">
     <span>© <span id="year"></span> Top Paws Pet Supply</span>
-    <span>Fresh treats baked in-store daily</span>
+    <svg aria-hidden="true"><use href="#trail"/></svg>
   </div>
 </footer>
 
@@ -502,16 +366,13 @@ const BAKERY = [
   { id: "barkcake", name: "Bark-day Cake", unit: "6 in cake", price: 28.00, ingredients: "Peanut butter and carrot cake with yogurt frosting. We pipe your dog's name on top.", badges: ["Serves 4–6 dogs"], needs48: true },
 ];
 
-/* ========================================================================== */
-
 const CATS = [
   { key: "all", label: "Everything" },
   { key: "food", label: "Dog Food" },
   { key: "toys", label: "Toys" },
   { key: "treats", label: "Treats & Chews" },
-  { key: "gear", label: "Gear & Supplies" },
+  { key: "gear", label: "Leashes & Supplies" },
 ];
-const CAT_LABEL = { food: "Food", toys: "Toy", treats: "Treat", gear: "Gear" };
 const money = n => "$" + n.toFixed(2);
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -520,81 +381,54 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;"
 let activeCat = "all";
 
 function renderTabs() {
-  $("tabs").innerHTML = CATS.map(c => {
-    const n = c.key === "all" ? PRODUCTS.length : PRODUCTS.filter(p => p.cat === c.key).length;
-    return `<button class="tab" type="button" data-cat="${c.key}" aria-pressed="${c.key === activeCat}">${c.label}<span class="count">${n}</span></button>`;
-  }).join("");
+  $("tabs").innerHTML = CATS.map(c =>
+    `<button class="tab" type="button" data-cat="${c.key}" aria-pressed="${c.key === activeCat}">${c.label}</button>`).join("");
 }
 
-function renderBrandOptions() {
-  const sel = $("brand");
-  const current = sel.value;
-  const pool = activeCat === "all" ? PRODUCTS : PRODUCTS.filter(p => p.cat === activeCat);
-  const brands = [...new Set(pool.map(p => p.brand))].sort((a, b) => a.localeCompare(b));
-  sel.innerHTML = `<option value="">All brands</option>` + brands.map(b => `<option${b === current ? " selected" : ""}>${esc(b)}</option>`).join("");
-  if (!brands.includes(current)) sel.value = "";
-}
-
-function renderGrid() {
+function renderList() {
   const q = $("search").value.trim().toLowerCase();
-  const brand = $("brand").value;
-  const list = PRODUCTS.filter(p =>
-    (activeCat === "all" || p.cat === activeCat) &&
-    (!brand || p.brand === brand) &&
-    (!q || (p.brand + " " + p.name + " " + p.desc).toLowerCase().includes(q))
-  );
-  $("grid").innerHTML = list.length ? list.map(p => `
-    <article class="product">
-      <div class="tile" data-cat="${p.cat}">
-        <span class="tag">${CAT_LABEL[p.cat]}</span>
-        <svg aria-hidden="true"><use href="#i-${p.cat}"/></svg>
-      </div>
-      <div class="body">
-        <div class="brandline">${esc(p.brand)}</div>
-        <h3>${esc(p.name)}</h3>
-        <p class="desc">${esc(p.desc)}</p>
-        <div class="foot">
-          <div>
-            <div class="price">${money(p.price)}</div>
-            <div class="stock ${p.stock}">${p.stock === "low" ? "Only a few left" : "In stock"}</div>
-          </div>
-          <div class="size">${esc(p.size)}</div>
-        </div>
-      </div>
-    </article>`).join("")
-    : `<div class="empty" style="grid-column:1/-1">No products match that search. Try another brand, or call us and we'll special-order it.</div>`;
+  const cats = CATS.filter(c => c.key !== "all" && (activeCat === "all" || c.key === activeCat));
+  let html = "";
+  for (const c of cats) {
+    const items = PRODUCTS.filter(p => p.cat === c.key &&
+      (!q || (p.brand + " " + p.name + " " + p.desc).toLowerCase().includes(q)));
+    if (!items.length) continue;
+    const brands = [...new Set(items.map(p => p.brand))];
+    html += `<div class="cat"><h3>${c.label}</h3><div class="brands">` + brands.map(b => `
+      <div class="brand-group"><h4>${esc(b)}</h4>` + items.filter(p => p.brand === b).map(p => `
+        <div class="item" title="${esc(p.desc)}">
+          <span class="name">${esc(p.name)}${p.stock === "low" ? `<span class="few">few left</span>` : ""}<span class="size">${esc(p.size)}</span></span>
+          <span class="dots"></span>
+          <span class="price">${money(p.price)}</span>
+        </div>`).join("") + `</div>`).join("") + `</div></div>`;
+  }
+  $("list").innerHTML = html || `<p class="no-match">Nothing matches "${esc(q)}". Try a different word, or call and ask. We may be able to order it.</p>`;
 }
 
 $("tabs").addEventListener("click", e => {
   const b = e.target.closest(".tab");
   if (!b) return;
   activeCat = b.dataset.cat;
-  renderTabs(); renderBrandOptions(); renderGrid();
+  renderTabs(); renderList();
 });
-$("search").addEventListener("input", renderGrid);
-$("brand").addEventListener("change", renderGrid);
+$("search").addEventListener("input", renderList);
 
 /* ---------- Bakery ---------- */
 const cart = {};
 
 function renderMenu() {
   $("menu").innerHTML = BAKERY.map(t => {
-    const badges = [...t.badges.map(b => `<span class="badge">${esc(b)}</span>`), t.needs48 ? `<span class="badge notice48">48 hr notice</span>` : ""].join("");
+    const notes = [...t.badges, t.needs48 ? "Needs 48 hours' notice" : ""].filter(Boolean).join(" · ");
     return `
     <div class="treat">
-      <div>
-        <h3>${esc(t.name)}</h3>
-        <div class="meta"><span class="mono">${money(t.price)}</span> · ${esc(t.unit)}</div>
+      <div><h3>${esc(t.name)}</h3><div class="unit"><b>${money(t.price)}</b> ${esc(t.unit)}</div></div>
+      <div class="qty" role="group" aria-label="How many ${esc(t.name)}">
+        <button type="button" data-id="${t.id}" data-d="-1" aria-label="One less ${esc(t.name)}">−</button>
+        <output id="qty-${t.id}" aria-live="polite">0</output>
+        <button type="button" data-id="${t.id}" data-d="1" aria-label="One more ${esc(t.name)}">+</button>
       </div>
-      <div class="treat-right">
-        <div class="stepper" role="group" aria-label="Quantity of ${esc(t.name)}">
-          <button type="button" data-id="${t.id}" data-d="-1" aria-label="Remove one ${esc(t.name)}">−</button>
-          <output id="qty-${t.id}" aria-live="polite">0</output>
-          <button type="button" data-id="${t.id}" data-d="1" aria-label="Add one ${esc(t.name)}">+</button>
-        </div>
-      </div>
-      <p class="ingredients">${esc(t.ingredients)}</p>
-      ${badges ? `<div class="badges">${badges}</div>` : ""}
+      <p class="ing">${esc(t.ingredients)}</p>
+      ${notes ? `<div class="note">${esc(notes)}</div>` : ""}
     </div>`;
   }).join("");
 }
@@ -605,23 +439,23 @@ $("menu").addEventListener("click", e => {
   const id = b.dataset.id;
   cart[id] = Math.max(0, Math.min(24, (cart[id] || 0) + Number(b.dataset.d)));
   if (!cart[id]) delete cart[id];
-  updateTicket();
+  updateSlip();
 });
 
 function cartLines() {
   return BAKERY.filter(t => cart[t.id]).map(t => ({ ...t, qty: cart[t.id], line: cart[t.id] * t.price }));
 }
-function needsCakeNotice() { return BAKERY.some(t => t.needs48 && cart[t.id]); }
+const lineHtml = l => `<li><span>${l.qty} × ${esc(l.name)}</span><span>${money(l.line)}</span></li>`;
 
-function updateTicket() {
+function updateSlip() {
   const lines = cartLines();
   BAKERY.forEach(t => {
     $("qty-" + t.id).textContent = cart[t.id] || 0;
     document.querySelector(`button[data-id="${t.id}"][data-d="-1"]`).disabled = !cart[t.id];
   });
-  $("ticket-lines").innerHTML = lines.map(l => `<li><span>${l.qty} × ${esc(l.name)}</span><span class="mono">${money(l.line)}</span></li>`).join("");
-  $("ticket-empty").hidden = lines.length > 0;
-  $("ticket-total").textContent = money(lines.reduce((s, l) => s + l.line, 0));
+  $("lines").innerHTML = lines.map(lineHtml).join("");
+  $("empty").hidden = lines.length > 0;
+  $("total").textContent = money(lines.reduce((s, l) => s + l.line, 0));
   $("submit-btn").disabled = lines.length === 0;
   setDateBounds();
 }
@@ -629,12 +463,10 @@ function updateTicket() {
 /* Pickup scheduling */
 function ymd(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
 function parseYmd(s) { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); }
-
 function earliestPickup() {
-  const hrs = needsCakeNotice() ? 48 : 24;
+  const hrs = BAKERY.some(t => t.needs48 && cart[t.id]) ? 48 : 24;
   return new Date(Date.now() + hrs * 3600 * 1000);
 }
-
 function slotsFor(dateStr) {
   const d = parseYmd(dateStr);
   const h = STORE.hours[d.getDay()];
@@ -651,7 +483,7 @@ function fmtTime(m) {
   const h = Math.floor(m / 60), mm = m % 60;
   return ((h + 11) % 12 + 1) + ":" + String(mm).padStart(2, "0") + (h < 12 ? " AM" : " PM");
 }
-
+const fmtHour = h => fmtTime(h * 60).replace(":00", "");
 function firstOpenDate() {
   const d = new Date(earliestPickup()); d.setHours(0, 0, 0, 0);
   for (let i = 0; i < 14; i++) {
@@ -660,7 +492,6 @@ function firstOpenDate() {
   }
   return ymd(d);
 }
-
 function setDateBounds() {
   const input = $("pickup-date");
   const min = firstOpenDate();
@@ -669,35 +500,30 @@ function setDateBounds() {
   if (!input.value || input.value < min) input.value = min;
   renderSlots();
 }
-
 function renderSlots() {
   const sel = $("pickup-time");
   const prev = sel.value;
   const slots = $("pickup-date").value ? slotsFor($("pickup-date").value) : [];
   sel.innerHTML = slots.length
     ? slots.map(m => `<option value="${m}"${String(m) === prev ? " selected" : ""}>${fmtTime(m)}</option>`).join("")
-    : `<option value="">Closed or too soon</option>`;
+    : `<option value="">We're closed that day</option>`;
 }
 $("pickup-date").addEventListener("change", renderSlots);
 
 /* Submit */
 $("order-form").addEventListener("submit", async e => {
   e.preventDefault();
-  const err = $("form-error");
+  const err = $("error");
   const name = $("cust-name").value.trim();
   const phone = $("cust-phone").value.trim();
   const date = $("pickup-date").value;
   const time = $("pickup-time").value;
   const problems = [];
   if (!cartLines().length) problems.push("add at least one treat");
-  if (!date || !time) problems.push("choose a pickup day and time when we're open");
+  if (!date || !time) problems.push("pick a day and time we're open");
   if (!name) problems.push("enter your name");
   if (phone.replace(/\D/g, "").length < 10) problems.push("enter a 10-digit phone number");
-  if (problems.length) {
-    err.textContent = "Please " + problems.join(", ") + ".";
-    err.hidden = false;
-    return;
-  }
+  if (problems.length) { err.textContent = "Please " + problems.join(", ") + "."; err.hidden = false; return; }
   err.hidden = true;
 
   const lines = cartLines();
@@ -723,48 +549,51 @@ $("order-form").addEventListener("submit", async e => {
     } catch (_) { sent = false; }
     btn.textContent = "Place pickup order"; btn.disabled = false;
     if (!sent) {
-      err.textContent = `We couldn't send your order. Check your connection and try again, or call us at ${STORE.phone}.`;
+      err.textContent = `Your order didn't go through. Check your connection and try again, or call us at ${STORE.phone}.`;
       err.hidden = false;
       return;
     }
   }
 
-  $("confirm-no").textContent = orderNo;
-  $("confirm-title").textContent = sent ? "Order received" : "Order ready to call in";
-  $("confirm-text").textContent = sent
-    ? `Thanks, ${name}! Your treats will be boxed and waiting at the front counter on ${when}. We'll text ${phone} if anything changes.`
-    : `Online ordering isn't connected yet. Please call ${STORE.phone} and give us order ${orderNo} for pickup on ${when}.`;
-  $("confirm-lines").innerHTML = lines.map(l => `<li><span>${l.qty} × ${esc(l.name)}</span><span class="mono">${money(l.line)}</span></li>`).join("")
-    + `<li style="font-weight:800;border-top:2px dashed var(--line);padding-top:8px"><span>Total, pay at pickup</span><span class="mono">${order.total}</span></li>`;
-  $("ticket-form-view").hidden = true;
-  $("ticket-confirm").hidden = false;
+  $("done-no").textContent = orderNo;
+  $("done-title").textContent = sent ? "Got it!" : "Almost done";
+  $("done-text").textContent = sent
+    ? `Thanks, ${name}. Your treats will be boxed up at the counter on ${when}. We'll text ${phone} if anything changes.`
+    : `Online ordering isn't hooked up yet. Please call ${STORE.phone} and read us order ${orderNo} for pickup on ${when}.`;
+  $("done-lines").innerHTML = lines.map(lineHtml).join("")
+    + `<li style="font-weight:800;color:var(--plum);border-top:2px dashed var(--lavender);padding-top:8px"><span>Pay at pickup</span><span>${order.total}</span></li>`;
+  $("slip-form").hidden = true;
+  $("slip-done").hidden = false;
 });
 
 $("new-order").addEventListener("click", () => {
   Object.keys(cart).forEach(k => delete cart[k]);
   $("order-form").reset();
-  $("ticket-confirm").hidden = true;
-  $("ticket-form-view").hidden = false;
-  updateTicket();
+  $("slip-done").hidden = true;
+  $("slip-form").hidden = false;
+  updateSlip();
 });
 
-/* ---------- Visit ---------- */
+/* ---------- Hours & contact ---------- */
 function renderVisit() {
   const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  const today = new Date().getDay();
-  const fmt = h => fmtTime(h * 60).replace(":00", "");
+  const now = new Date(), today = now.getDay(), h = STORE.hours[today];
   $("hours").innerHTML = [1, 2, 3, 4, 5, 6, 0].map(i => {
-    const h = STORE.hours[i];
-    return `<tr class="${i === today ? "today" : ""}"><td>${days[i]}</td><td>${h ? fmt(h[0]) + " – " + fmt(h[1]) : "Closed"}</td></tr>`;
+    const x = STORE.hours[i];
+    return `<tr class="${i === today ? "today" : ""}"><td>${days[i]}</td><td>${x ? fmtHour(x[0]) + " – " + fmtHour(x[1]) : "Closed"}</td></tr>`;
   }).join("");
+  const hr = now.getHours() + now.getMinutes() / 60;
+  $("open-today").lastElementChild.textContent =
+    !h ? "Closed today" :
+    hr < h[0] ? `Opens today at ${fmtHour(h[0])}` :
+    hr < h[1] ? `Open today until ${fmtHour(h[1])}` : "Closed for today. See you tomorrow!";
   $("addr").textContent = STORE.address;
   $("phone").textContent = STORE.phone;
   $("email").textContent = STORE.email;
-  $("year").textContent = new Date().getFullYear();
-  $("brand-count").textContent = new Set(PRODUCTS.map(p => p.brand)).size;
+  $("year").textContent = now.getFullYear();
 }
 
-renderTabs(); renderBrandOptions(); renderGrid(); renderMenu(); updateTicket(); renderVisit();
+renderTabs(); renderList(); renderMenu(); updateSlip(); renderVisit();
 </script>
 </body>
 </html>

@@ -360,14 +360,14 @@ footer svg { width: 60px; height: 32px; color: var(--violet); }
    STORE SETTINGS: edit these to match the real store.
    ========================================================================== */
 const STORE = {
-  address: "123 Main Street, Your Town, ST 00000",
-  phone: "(555) 123-4567",
-  email: "hello@toppawspetsupply.com",
-  // Hours per weekday, 24h clock. null = closed. Sunday is 0.
+  address: "1033 Main Street, Union Grove, WI 53182",
+  phone: "(262) 878-9393",
+  email: "", // add the store email here to show it on the site,
+  // Hours per weekday, 24h clock (17.5 = 5:30 PM). null = closed. Sunday is 0.
   hours: {
-    0: [10, 17],
-    1: [9, 19], 2: [9, 19], 3: [9, 19], 4: [9, 19], 5: [9, 19],
-    6: [9, 18],
+    0: null,
+    1: [8, 17.5], 2: [8, 17.5], 3: [8, 17.5], 4: [8, 17.5], 5: [8, 17.5],
+    6: [8, 14.5],
   },
   // Where bakery orders are sent. Paste a form endpoint here (for example a
   // Formspree URL like "https://formspree.io/f/xxxxxx") so orders reach the
@@ -699,6 +699,7 @@ function renderVisit() {
   $("phone").textContent = STORE.phone;
   $("strip-phone").textContent = STORE.phone;
   $("email").textContent = STORE.email;
+  $("email").hidden = !STORE.email;
   $("year").textContent = now.getFullYear();
 }
 

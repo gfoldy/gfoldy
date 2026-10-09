@@ -10,161 +10,202 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap">
 <style>
-/* Layout: logo-led header, hero with the logo and today's hours, shop as a brand-grouped price list,
-   bakery case with an order slip, visit info. Single light theme taken from the logo. */
+/* Layout: logo strip, sticky purple tab bar (Home / Shop / Bakery), one view shown at a time.
+   Palette runs the logo's plum from deep eggplant down to pale lilac, with the puppy's brown as a warm accent. */
 :root {
+  --eggplant: #2b1a33;
+  --plum-dk: #3f2a48;
+  --plum: #584060;     /* logo lettering */
+  --violet: #7a5590;
+  --orchid: #a582b8;
+  --lilac: #d9c9e6;
+  --mist: #f4eff8;
   --paper: #ffffff;
-  --mist: #f4f0f4;       /* lightest swoosh */
-  --lavender: #d6cdd6;   /* logo swoosh */
-  --lavender-dk: #a998aa;
-  --plum: #584060;       /* logo lettering */
-  --plum-dk: #3f2c46;
-  --brown: #885838;      /* puppy + paw prints */
-  --brown-dk: #3a2214;
-  --ink: #2e2232;
-  --muted: #6e6172;
-  --rule: #e4dde5;
-  --tongue: #c8443f;     /* puppy's tongue, used for "few left" */
+  --brown: #885838;    /* puppy + paw prints */
+  --ink: #2b1f30;
+  --muted: #6c5f73;
+  --rule: #e6dcee;
+  --tongue: #c8443f;
   --display: "Fredoka", "Arial Rounded MT Bold", "Trebuchet MS", sans-serif;
   --body: "Nunito", "Segoe UI", system-ui, sans-serif;
   color-scheme: light;
 }
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: 96px; }
-@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
-body { margin: 0; background: var(--paper); color: var(--ink); font: 400 17px/1.6 var(--body); }
+body { margin: 0; background: var(--mist); color: var(--ink); font: 400 17px/1.6 var(--body); }
 img { max-width: 100%; }
 [hidden] { display: none !important; }
-a { color: var(--plum); }
-:focus-visible { outline: 3px solid var(--lavender-dk); outline-offset: 2px; border-radius: 4px; }
-h1, h2, h3 { font-family: var(--display); font-weight: 600; color: var(--plum); line-height: 1.15; margin: 0; text-wrap: balance; }
-.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 20px; }
+a { color: var(--violet); }
+:focus-visible { outline: 3px solid var(--orchid); outline-offset: 2px; border-radius: 6px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; line-height: 1.15; margin: 0; text-wrap: balance; }
+.wrap { max-width: 1140px; margin: 0 auto; padding-inline: 20px; }
 .num { font-variant-numeric: tabular-nums; }
 
-/* Header */
-.site-header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--paper); border-bottom: 1px solid var(--rule); }
-.site-header .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; padding-block: 8px; flex-wrap: wrap; }
-.site-header .logo { height: 60px; width: auto; display: block; }
-.nav { display: flex; align-items: center; gap: 4px 22px; flex-wrap: wrap; font-weight: 800; }
-.nav a { text-decoration: none; color: var(--plum); }
-.nav a:hover { color: var(--brown); }
+/* Logo strip */
+.strip { background: var(--paper); }
+.strip .wrap { display: flex; align-items: center; justify-content: space-between; gap: 10px 24px; padding-block: 10px; flex-wrap: wrap; }
+.strip .logo { height: 76px; width: auto; display: block; }
+.strip-info { display: flex; gap: 6px 22px; flex-wrap: wrap; font-weight: 700; color: var(--plum); font-size: 15px; }
+.strip-info .open { color: var(--brown); display: inline-flex; align-items: center; gap: 7px; }
+.strip-info .open::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
 
-.btn { display: inline-block; font: 700 17px/1 var(--body); padding: 14px 22px; border-radius: 10px; border: 2px solid var(--plum); text-decoration: none; cursor: pointer; }
+/* Tab bar */
+.tabbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30; background: var(--plum); }
+.tabbar .wrap { display: flex; gap: 6px; padding-top: 10px; }
+.tabbar a {
+  font: 600 18px/1 var(--display); color: var(--lilac); text-decoration: none;
+  padding: 13px 26px 15px; border-radius: 14px 14px 0 0; display: inline-flex; align-items: center; gap: 8px;
+}
+.tabbar a:hover { color: #fff; background: var(--plum-dk); }
+.tabbar a[aria-current="page"] { background: var(--mist); color: var(--plum); }
+.tabbar svg { width: 18px; height: 18px; }
+
+/* Buttons */
+.btn { display: inline-block; font: 800 17px/1 var(--body); padding: 15px 24px; border-radius: 12px; border: 0; text-decoration: none; cursor: pointer; text-align: center; }
 .btn-plum { background: var(--plum); color: #fff; }
-.btn-plum:hover { background: var(--plum-dk); border-color: var(--plum-dk); }
-.btn-line { background: transparent; color: var(--plum); }
-.btn-line:hover { background: var(--mist); }
+.btn-plum:hover { background: var(--eggplant); }
+.btn-violet { background: var(--violet); color: #fff; }
+.btn-violet:hover { background: var(--plum); }
+.btn-lilac { background: var(--lilac); color: var(--eggplant); }
+.btn-lilac:hover { background: #fff; }
+.btn-ghost { background: transparent; color: var(--plum); box-shadow: inset 0 0 0 2px var(--orchid); }
+.btn-ghost:hover { background: var(--paper); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
-.nav .btn { padding: 10px 16px; font-size: 15px; color: #fff; }
 
-/* Hero */
-.hero { padding-block: 40px 56px; }
-.hero .wrap { display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 48px; align-items: center; }
-.hero-logo { width: 100%; max-width: 400px; image-rendering: auto; }
-.hero h1 { font-size: clamp(32px, 4.6vw, 50px); }
-.hero p { color: var(--muted); max-width: 33em; margin: 16px 0 22px; }
-.open-today { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; color: var(--brown); margin-bottom: 14px; }
-.open-today .dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
+/* Page title band used on Shop and Bakery */
+.band { background: var(--lilac); padding-block: 34px 30px; position: relative; overflow: hidden; }
+.band h1 { font-size: clamp(34px, 5vw, 50px); color: var(--eggplant); }
+.band p { margin: 8px 0 0; max-width: 42em; color: var(--plum-dk); }
+.band .swoosh { position: absolute; right: -60px; top: -30px; width: 460px; height: 220px; color: var(--orchid); opacity: 0.45; pointer-events: none; }
+.band .wrap { position: relative; }
+
+/* ---------- HOME ---------- */
+.hero { background: var(--lilac); position: relative; overflow: hidden; }
+.hero .swoosh { position: absolute; left: -120px; bottom: -80px; width: 820px; height: 380px; color: var(--orchid); opacity: 0.35; pointer-events: none; }
+.hero .wrap { position: relative; display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 44px; align-items: center; padding-block: 48px 56px; }
+.hero-logo { background: var(--paper); border-radius: 50%; aspect-ratio: 1; display: grid; place-items: center; padding: 40px; max-width: 420px; width: 100%; box-shadow: 0 0 0 10px var(--orchid), 0 0 0 20px var(--violet); }
+.hero h1 { font-size: clamp(34px, 5vw, 56px); color: var(--eggplant); }
+.hero p { color: var(--plum-dk); font-size: 19px; margin: 16px 0 26px; max-width: 32em; }
 .btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
 
-/* Section heads with a little paw trail, like the logo */
-.block { padding-block: 56px; }
-.head { display: flex; align-items: flex-end; gap: 14px; margin-bottom: 8px; }
-.head h2 { font-size: clamp(30px, 4vw, 40px); }
-.trail { width: 74px; height: 40px; color: var(--brown); flex: none; margin-bottom: 4px; }
-.sub { color: var(--muted); margin: 0 0 26px; max-width: 40em; }
+.doors { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; padding-block: 48px; }
+.door { border-radius: 22px; padding: 30px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.door h2 { font-size: 34px; }
+.door p { margin: 0; }
+.door-shop { background: var(--plum); color: #f3ecf6; }
+.door-shop h2 { color: #fff; }
+.door-bake { background: var(--violet); color: #f6f0f9; }
+.door-bake h2 { color: #fff; }
+.cat-links { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 6px 0; }
+.cat-links a { background: var(--plum-dk); color: #fff; text-decoration: none; border-radius: 12px; padding: 14px 16px; font-weight: 800; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.cat-links a:hover { background: var(--eggplant); }
+.cat-links a span { color: var(--orchid); font-weight: 700; font-size: 14px; white-space: nowrap; }
+.brand-names { margin: 0; color: var(--lilac); font-size: 15px; }
+.brand-names b { color: #fff; }
+.fresh { list-style: none; padding: 0; margin: 6px 0; display: grid; gap: 8px; }
+.fresh li { display: flex; justify-content: space-between; gap: 12px; background: rgba(255,255,255,0.12); border-radius: 12px; padding: 12px 16px; font-weight: 700; }
+.fresh li b { color: var(--lilac); font-variant-numeric: tabular-nums; }
+.door .btn { align-self: flex-start; margin-top: auto; }
 
-/* Shop */
-.shop-tools { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between; border-bottom: 2px solid var(--rule); margin-bottom: 30px; }
-.tabs { display: flex; flex-wrap: wrap; gap: 0 22px; }
-.tab { font: 700 17px/1 var(--body); background: none; border: 0; padding: 12px 0 13px; margin-bottom: -2px; color: var(--muted); cursor: pointer; border-bottom: 4px solid transparent; }
-.tab:hover { color: var(--plum); }
-.tab[aria-pressed="true"] { color: var(--plum); border-bottom-color: var(--brown); }
-.search { flex: 0 1 280px; min-width: 0; margin-bottom: 8px; }
-input, select, textarea { width: 100%; font: 600 16px/1.3 var(--body); color: var(--ink); background: var(--paper); border: 1.5px solid var(--lavender); border-radius: 8px; padding: 10px 12px; }
-input:focus, select:focus, textarea:focus { border-color: var(--plum); outline: none; box-shadow: 0 0 0 3px var(--mist); }
+.visit { background: var(--paper); padding-block: 48px; }
+.visit-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 36px; }
+.visit h2 { font-size: 24px; color: var(--plum); margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+.visit h2 svg { width: 24px; height: 24px; color: var(--brown); }
+.visit p { margin: 0 0 8px; }
+.hours { width: 100%; border-collapse: collapse; }
+.hours td { padding: 4px 0; border-bottom: 1px solid var(--rule); }
+.hours td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.hours tr.today td { font-weight: 800; color: var(--violet); }
 
-.cat + .cat { margin-top: 44px; }
-.cat > h3 { font-size: 28px; margin-bottom: 18px; }
-.brands { columns: 2; column-gap: 56px; }
-.brand-group { break-inside: avoid; margin-bottom: 26px; }
-.brand-group h4 { margin: 0 0 6px; font: 800 13px/1.2 var(--body); letter-spacing: 0.1em; text-transform: uppercase; color: var(--brown); }
-.item { display: flex; align-items: baseline; gap: 8px; padding-block: 6px; }
-.item .name { font-weight: 700; min-width: 0; }
-.item .size { display: block; font-size: 14px; font-weight: 400; color: var(--muted); }
-.item .few { font-size: 13px; font-weight: 800; color: var(--tongue); margin-left: 6px; white-space: nowrap; }
-.item .dots { flex: 1; border-bottom: 2px dotted var(--lavender); min-width: 20px; transform: translateY(-5px); }
-.item .price { font-weight: 800; color: var(--plum); font-variant-numeric: tabular-nums; }
-.no-match { color: var(--muted); padding: 20px 0; }
-.special { margin-top: 28px; color: var(--muted); }
+/* ---------- SHOP ---------- */
+.shop-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 32px; padding-block: 32px 56px; align-items: start; }
+.side { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 80px); display: grid; gap: 14px; }
+.side input { width: 100%; }
+.cats { display: grid; gap: 4px; }
+.cat-btn { font: 700 16px/1.2 var(--body); text-align: left; background: transparent; color: var(--plum); border: 0; border-radius: 10px; padding: 11px 14px; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; }
+.cat-btn:hover { background: var(--lilac); }
+.cat-btn[aria-pressed="true"] { background: var(--violet); color: #fff; }
+.cat-btn span { opacity: 0.7; font-variant-numeric: tabular-nums; }
+.result-note { color: var(--muted); font-weight: 700; margin: 0 0 14px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+.card { background: var(--paper); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+.card .top { padding: 12px 16px; font: 800 13px/1.2 var(--body); letter-spacing: 0.08em; text-transform: uppercase; }
+.card[data-cat="food"] .top { background: var(--plum); color: #fff; }
+.card[data-cat="toys"] .top { background: var(--violet); color: #fff; }
+.card[data-cat="treats"] .top { background: var(--orchid); color: var(--eggplant); }
+.card[data-cat="gear"] .top { background: var(--lilac); color: var(--eggplant); }
+.card .in { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.card h3 { font-family: var(--body); font-weight: 800; font-size: 17px; line-height: 1.3; color: var(--ink); }
+.card .desc { font-size: 14px; color: var(--muted); margin: 0; }
+.card .foot { margin-top: auto; padding-top: 12px; display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; }
+.card .price { font: 600 22px/1 var(--display); color: var(--plum); font-variant-numeric: tabular-nums; }
+.card .size { font-size: 13px; color: var(--muted); text-align: right; }
+.card .few { font-size: 12px; font-weight: 800; color: var(--tongue); }
+.special { margin: 26px 0 0; color: var(--muted); }
+.no-match { background: var(--paper); border-radius: 16px; padding: 30px; color: var(--muted); }
 
-/* Bakery */
-.bakery { background: var(--mist); }
-.bakery-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 40px; align-items: start; }
-.treat { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 18px; align-items: center; padding-block: 16px; border-bottom: 1px dashed var(--lavender-dk); }
-.treat:first-child { padding-top: 0; }
-.treat h3 { font-size: 22px; }
-.treat .unit { color: var(--muted); font-weight: 600; font-size: 15px; }
-.treat .unit b { color: var(--plum); font-weight: 800; }
-.treat .ing { grid-column: 1 / -1; color: var(--muted); font-size: 15px; margin: 0; }
-.treat .note { grid-column: 1 / -1; font-size: 14px; font-weight: 800; color: var(--brown); }
-.qty { display: inline-flex; align-items: center; gap: 4px; }
-.qty button { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--plum); background: var(--paper); color: var(--plum); font: 700 20px/1 var(--body); cursor: pointer; }
-.qty button:hover { background: var(--plum); color: #fff; }
-.qty button:disabled { opacity: 0.3; cursor: default; background: var(--paper); color: var(--plum); }
-.qty output { min-width: 2ch; text-align: center; font-weight: 800; font-variant-numeric: tabular-nums; }
-.keep { margin-top: 22px; font-size: 15px; color: var(--muted); }
+/* ---------- BAKERY ---------- */
+.bake-layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 30px; padding-block: 32px 56px; align-items: start; }
+.treats { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+.treat { background: var(--paper); border-radius: 18px; padding: 20px; display: flex; flex-direction: column; gap: 8px; position: relative; min-width: 0; }
+.treat .tag { position: absolute; top: 16px; right: 16px; width: 64px; height: 64px; border-radius: 50%; background: var(--violet); color: #fff; display: grid; place-items: center; font: 600 17px/1 var(--display); font-variant-numeric: tabular-nums; transform: rotate(8deg); }
+.treat h3 { font-size: 22px; color: var(--plum); padding-right: 74px; }
+.treat .unit { font-weight: 700; color: var(--muted); font-size: 15px; margin-top: -4px; }
+.treat .ing { font-size: 15px; color: var(--muted); margin: 0; }
+.treat .note { font-size: 13px; font-weight: 800; color: var(--brown); }
+.treat .qty { margin-top: auto; padding-top: 8px; }
+.qty { display: inline-flex; align-items: center; gap: 6px; }
+.qty button { width: 38px; height: 38px; border-radius: 50%; border: 0; background: var(--lilac); color: var(--plum); font: 800 20px/1 var(--body); cursor: pointer; }
+.qty button[data-d="1"] { background: var(--plum); color: #fff; }
+.qty button:hover { filter: brightness(1.08); }
+.qty button:disabled { opacity: 0.35; cursor: default; }
+.qty output { min-width: 2.2ch; text-align: center; font-weight: 800; font-size: 18px; font-variant-numeric: tabular-nums; }
+.keep { margin: 20px 0 0; font-size: 15px; color: var(--muted); }
 
-.slip { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 96px); background: var(--paper); border: 1px solid var(--lavender); border-radius: 12px; padding: 22px; }
-.slip h3 { font-size: 26px; display: flex; align-items: center; gap: 10px; }
-.slip h3 svg { width: 26px; height: 26px; color: var(--brown); }
+.slip { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 80px); background: var(--eggplant); color: #efe6f3; border-radius: 20px; padding: 24px; }
+.slip h2 { font-size: 26px; color: #fff; display: flex; align-items: center; gap: 10px; }
+.slip h2 svg { width: 24px; height: 24px; color: var(--orchid); }
 .lines { list-style: none; margin: 14px 0 10px; padding: 0; display: grid; gap: 6px; }
 .lines li { display: flex; justify-content: space-between; gap: 12px; }
 .lines li span:last-child { font-variant-numeric: tabular-nums; }
-.slip .empty { color: var(--muted); margin: 12px 0; }
-.total { display: flex; justify-content: space-between; font-weight: 800; font-size: 19px; color: var(--plum); border-top: 2px dashed var(--lavender); padding-top: 10px; }
+.slip .empty { color: var(--orchid); margin: 12px 0; }
+.total { display: flex; justify-content: space-between; font-weight: 800; font-size: 19px; color: #fff; border-top: 2px dashed var(--violet); padding-top: 10px; }
 .slip form { display: grid; gap: 12px; margin-top: 18px; }
-.field label { display: block; font-size: 14px; font-weight: 800; margin-bottom: 4px; }
-.field .opt { font-weight: 600; color: var(--muted); }
-.field .hint { font-size: 13px; color: var(--muted); margin-top: 3px; }
-.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.field label { display: block; font-size: 14px; font-weight: 800; margin-bottom: 4px; color: var(--lilac); }
+.field .opt { font-weight: 600; color: var(--orchid); }
+.field .hint { font-size: 13px; color: var(--orchid); margin-top: 3px; }
+input, select, textarea { width: 100%; font: 600 16px/1.3 var(--body); color: var(--ink); background: var(--paper); border: 2px solid var(--lilac); border-radius: 10px; padding: 10px 12px; }
+input:focus, select:focus, textarea:focus { border-color: var(--violet); outline: none; }
 textarea { resize: vertical; min-height: 60px; }
-.error { color: var(--tongue); font-weight: 700; font-size: 15px; margin: 0; }
-.pay { font-size: 14px; color: var(--muted); margin: 0; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.error { color: #ffb4b0; font-weight: 700; font-size: 15px; margin: 0; }
+.pay { font-size: 14px; color: var(--orchid); margin: 0; }
 .done { display: grid; gap: 10px; }
-.done .order-no { font-weight: 800; font-size: 20px; color: var(--brown); letter-spacing: 0.04em; }
+.done .order-no { font: 600 22px/1 var(--display); color: var(--lilac); letter-spacing: 0.04em; }
+.done .lines li:last-child { font-weight: 800; color: #fff; border-top: 2px dashed var(--violet); padding-top: 8px; }
 
-/* Visit */
-.visit { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; }
-.visit h3 { font-size: 22px; margin-bottom: 10px; }
-.visit p { margin: 0 0 8px; }
-.hours { width: 100%; border-collapse: collapse; }
-.hours td { padding: 3px 0; }
-.hours td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
-.hours tr.today td { font-weight: 800; color: var(--plum); }
-
-footer { background: var(--plum); color: #efe8f0; padding-block: 26px; font-size: 15px; }
+footer { background: var(--eggplant); color: var(--lilac); padding-block: 24px; font-size: 15px; }
 footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; }
-footer svg { width: 54px; height: 30px; color: var(--lavender); }
+footer svg { width: 60px; height: 32px; color: var(--violet); }
 
 @media (max-width: 880px) {
-  .hero .wrap, .bakery-grid { grid-template-columns: 1fr; }
-  .hero .wrap { gap: 24px; }
-  .hero-logo { max-width: 300px; }
-  .brands { columns: 1; }
-  .slip { position: static; }
-  .visit { grid-template-columns: 1fr; gap: 28px; }
+  .hero .wrap { grid-template-columns: 1fr; gap: 30px; padding-block: 36px 44px; }
+  .hero-logo { max-width: 240px; padding: 24px; margin: 12px auto 0; box-shadow: 0 0 0 7px var(--orchid), 0 0 0 14px var(--violet); }
+  .doors, .visit-grid, .shop-layout, .bake-layout { grid-template-columns: 1fr; }
+  .side, .slip { position: static; }
+  .cats { display: flex; flex-wrap: wrap; gap: 6px; }
+  .cat-btn { background: var(--paper); }
 }
 @media (max-width: 520px) {
   .wrap { padding-inline: 16px; }
-  .site-header .logo { height: 46px; }
-  .hero { padding-block: 24px 40px; }
-  .hero-logo { max-width: 230px; }
-  .nav { gap: 4px 14px; font-size: 15px; }
-  .nav .btn { padding: 8px 12px; font-size: 14px; }
-  .search { flex-basis: 100%; }
+  .strip .logo { height: 56px; }
+  .strip-info { font-size: 14px; }
+  .tabbar .wrap { gap: 4px; padding-top: 8px; }
+  .tabbar a { flex: 1; justify-content: center; padding: 12px 6px 14px; font-size: 16px; }
+  .tabbar svg { display: none; }
+  .door { padding: 22px; }
+  .cat-links { grid-template-columns: 1fr; }
   .two { grid-template-columns: 1fr; }
-  .block { padding-block: 40px; }
+  .band .swoosh { display: none; }
 }
 </style>
 </head>
@@ -173,102 +214,138 @@ footer svg { width: 54px; height: 30px; color: var(--lavender); }
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
     <symbol id="paw" viewBox="0 0 40 40"><g fill="currentColor"><ellipse cx="11" cy="14" rx="4" ry="5.2"/><ellipse cx="20" cy="9.5" rx="4" ry="5.2"/><ellipse cx="29" cy="14" rx="4" ry="5.2"/><ellipse cx="6" cy="23" rx="3.4" ry="4.4" transform="rotate(-22 6 23)"/><ellipse cx="34" cy="23" rx="3.4" ry="4.4" transform="rotate(22 34 23)"/><path d="M20 19c-6 0-11 7.5-11 12 0 4 3.2 5.8 6.6 5.2 2-.4 2.8-1.3 4.4-1.3s2.4.9 4.4 1.3c3.4.6 6.6-1.2 6.6-5.2 0-4.5-5-12-11-12z"/></g></symbol>
-    <symbol id="trail" viewBox="0 0 74 40"><use href="#paw" x="0" y="20" width="16" height="16" transform="rotate(-18 8 28)"/><use href="#paw" x="18" y="10" width="16" height="16" transform="rotate(-10 26 18)"/><use href="#paw" x="38" y="16" width="16" height="16" transform="rotate(-18 46 24)"/><use href="#paw" x="56" y="4" width="16" height="16" transform="rotate(-10 64 12)"/></symbol>
+    <symbol id="trail" viewBox="0 0 74 40"><use href="#paw" x="0" y="20" width="16" height="16"/><use href="#paw" x="18" y="10" width="16" height="16"/><use href="#paw" x="38" y="16" width="16" height="16"/><use href="#paw" x="56" y="4" width="16" height="16"/></symbol>
+    <symbol id="swoosh" viewBox="0 0 400 180"><g fill="none" stroke="currentColor" stroke-linecap="round"><path d="M20 120C80 40 260 10 380 50" stroke-width="34"/><path d="M40 160C140 110 280 100 370 120" stroke-width="18"/></g></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path fill="currentColor" d="M12 3 2 11h3v9h5v-6h4v6h5v-9h3z"/></symbol>
+    <symbol id="i-shop" viewBox="0 0 24 24"><path fill="currentColor" d="M6 7V6a6 6 0 0 1 12 0v1h3l-1 14H4L3 7zm2 0h8V6a4 4 0 0 0-8 0z"/></symbol>
+    <symbol id="i-bake" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2c1.5 0 2.6 1 2.9 2.3A4 4 0 0 1 20 8a4 4 0 0 1-2 3.5V12H6v-.5A4 4 0 0 1 4 8a4 4 0 0 1 5.1-3.7C9.4 3 10.5 2 12 2zM6 14h12l-1.5 8h-9z"/></symbol>
   </defs>
 </svg>
 
-<header class="site-header">
+<div class="strip">
   <div class="wrap">
-    <a href="#top" aria-label="Top Paws Pet Supply, back to top"><img class="logo" src="logo.png" alt="Top Paws"></a>
-    <nav class="nav" aria-label="Main">
-      <a href="#shop">Shop</a>
-      <a href="#visit">Hours &amp; location</a>
-      <a class="btn btn-plum" href="#bakery">Bakery orders</a>
-    </nav>
+    <a href="#home" data-go="home" aria-label="Top Paws Pet Supply home"><img class="logo" src="logo.png" alt="Top Paws"></a>
+    <div class="strip-info"><span class="open" id="open-today"></span><span class="num" id="strip-phone"></span></div>
   </div>
-</header>
+</div>
 
-<main id="top">
-  <section class="hero">
-    <div class="wrap">
-      <img class="hero-logo" src="logo.png" alt="Top Paws Pet Supply logo with a brown cartoon puppy">
-      <div>
-        <div class="open-today" id="open-today"><span class="dot"></span><span></span></div>
-        <h1>Everything your dog needs, plus treats we bake right here in the store.</h1>
-        <p>Top Paws is a family-run pet supply shop. We carry the food brands your vet recommends, toys that hold up to real chewers, and a bakery case full of homemade dog treats. Order ahead and we'll have your treats boxed up at the counter.</p>
-        <div class="btn-row">
-          <a class="btn btn-plum" href="#bakery">Order from the bakery</a>
-          <a class="btn btn-line" href="#shop">See what we carry</a>
-        </div>
-      </div>
-    </div>
-  </section>
+<nav class="tabbar" aria-label="Main">
+  <div class="wrap">
+    <a href="#home" data-go="home"><svg aria-hidden="true"><use href="#i-home"/></svg>Home</a>
+    <a href="#shop" data-go="shop"><svg aria-hidden="true"><use href="#i-shop"/></svg>Shop</a>
+    <a href="#bakery" data-go="bakery"><svg aria-hidden="true"><use href="#i-bake"/></svg>Bakery</a>
+  </div>
+</nav>
 
-  <section class="block" id="shop" aria-labelledby="shop-title">
-    <div class="wrap">
-      <div class="head"><h2 id="shop-title">What's on our shelves</h2><svg class="trail" aria-hidden="true"><use href="#trail"/></svg></div>
-      <p class="sub">In-store prices. Stock changes week to week, so give us a call if you want us to set something aside.</p>
-      <div class="shop-tools">
-        <div class="tabs" role="group" aria-label="Category" id="tabs"></div>
-        <div class="search"><input id="search" type="search" placeholder="Search a brand or item" aria-label="Search brands and items"></div>
-      </div>
-      <div id="list" aria-live="polite"></div>
-      <p class="special">Don't see your dog's food? Ask us. We can special-order most brands within a week.</p>
-    </div>
-  </section>
-
-  <section class="block bakery" id="bakery" aria-labelledby="bakery-title">
-    <div class="wrap">
-      <div class="head"><h2 id="bakery-title">The Top Paws bakery case</h2><svg class="trail" aria-hidden="true"><use href="#trail"/></svg></div>
-      <p class="sub">We bake every morning with simple, dog-safe ingredients. Nothing with chocolate, xylitol, raisins, onion or added sugar ever goes in the oven. Pick your treats, choose a pickup time, and pay when you come in.</p>
-      <div class="bakery-grid">
+<main>
+  <!-- HOME -->
+  <div class="view" id="view-home">
+    <section class="hero">
+      <svg class="swoosh" aria-hidden="true"><use href="#swoosh"/></svg>
+      <div class="wrap">
+        <div class="hero-logo"><img src="logo.png" alt="Top Paws Pet Supply logo with a brown cartoon puppy"></div>
         <div>
-          <div id="menu"></div>
-          <p class="keep">Treats keep about 5 days in the fridge or 3 months in the freezer. If your dog has allergies, put it in the notes and we'll call you to go over ingredients.</p>
+          <h1>Everything your dog needs, plus treats we bake right here.</h1>
+          <p>Top Paws is a family-run pet supply shop. We carry the food brands your vet recommends, toys that hold up to real chewers, and a bakery case full of homemade dog treats.</p>
+          <div class="btn-row">
+            <a class="btn btn-plum" href="#shop" data-go="shop">Browse the shop</a>
+            <a class="btn btn-violet" href="#bakery" data-go="bakery">Order bakery treats</a>
+          </div>
         </div>
+      </div>
+    </section>
 
-        <aside class="slip" aria-labelledby="slip-title">
-          <div id="slip-form">
-            <h3 id="slip-title"><svg aria-hidden="true"><use href="#paw"/></svg>Pickup order</h3>
-            <ul class="lines" id="lines"></ul>
-            <p class="empty" id="empty">Tap + next to a treat to add it.</p>
-            <div class="total"><span>Total</span><span class="num" id="total">$0.00</span></div>
-            <form id="order-form" novalidate>
-              <div class="two">
-                <div class="field"><label for="pickup-date">Pickup day</label><input id="pickup-date" type="date" required></div>
-                <div class="field"><label for="pickup-time">Time</label><select id="pickup-time" required></select></div>
-              </div>
-              <div class="field"><label for="cust-name">Your name</label><input id="cust-name" type="text" autocomplete="name" required></div>
-              <div class="field"><label for="cust-phone">Phone</label><input id="cust-phone" type="tel" autocomplete="tel" required><div class="hint">We'll text you when it's ready.</div></div>
-              <div class="field"><label for="dog-name">Dog's name <span class="opt">(optional)</span></label><input id="dog-name" type="text"><div class="hint">Goes on top of a Bark-day Cake.</div></div>
-              <div class="field"><label for="notes">Notes or allergies</label><textarea id="notes" rows="2"></textarea></div>
-              <p class="error" id="error" role="alert" hidden></p>
-              <button class="btn btn-plum" type="submit" id="submit-btn" disabled>Place pickup order</button>
-              <p class="pay">Pay at pickup with cash or card.</p>
-            </form>
-          </div>
-          <div class="done" id="slip-done" hidden>
-            <h3 id="done-title">Got it!</h3>
-            <div>Order <span class="order-no" id="done-no"></span></div>
-            <p id="done-text" style="margin:0"></p>
-            <ul class="lines" id="done-lines"></ul>
-            <button class="btn btn-line" type="button" id="new-order">Start another order</button>
-          </div>
-        </aside>
+    <div class="wrap doors">
+      <section class="door door-shop" aria-labelledby="door-shop-title">
+        <h2 id="door-shop-title">Shop the store</h2>
+        <p>Name-brand food, toys, chews and supplies, all at in-store prices.</p>
+        <div class="cat-links" id="cat-links"></div>
+        <p class="brand-names" id="brand-names"></p>
+        <a class="btn btn-lilac" href="#shop" data-go="shop">See everything</a>
+      </section>
+      <section class="door door-bake" aria-labelledby="door-bake-title">
+        <h2 id="door-bake-title">Fresh from the bakery</h2>
+        <p>Baked every morning with dog-safe ingredients. Order a day ahead and pick up at the counter.</p>
+        <ul class="fresh" id="fresh"></ul>
+        <a class="btn btn-lilac" href="#bakery" data-go="bakery">Start a pickup order</a>
+      </section>
+    </div>
+
+    <section class="visit" aria-label="Visit us">
+      <div class="wrap visit-grid">
+        <div><h2><svg aria-hidden="true"><use href="#paw"/></svg>Hours</h2><table class="hours" id="hours"></table></div>
+        <div><h2><svg aria-hidden="true"><use href="#paw"/></svg>Where we are</h2><p id="addr"></p><p>Dogs on a leash are always welcome inside. Ask at the register for a free biscuit.</p></div>
+        <div><h2><svg aria-hidden="true"><use href="#paw"/></svg>Get in touch</h2><p>Call <span class="num" id="phone"></span></p><p id="email"></p><p>Calling about a bakery order? Have your order number handy.</p></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- SHOP -->
+  <div class="view" id="view-shop" hidden>
+    <section class="band">
+      <svg class="swoosh" aria-hidden="true"><use href="#swoosh"/></svg>
+      <div class="wrap">
+        <h1>Shop</h1>
+        <p>In-store prices. Stock changes week to week, so give us a call if you'd like something set aside.</p>
+      </div>
+    </section>
+    <div class="wrap shop-layout">
+      <aside class="side" aria-label="Filter products">
+        <input id="search" type="search" placeholder="Search brand or item" aria-label="Search brands and items">
+        <div class="cats" role="group" aria-label="Category" id="cats"></div>
+      </aside>
+      <div>
+        <p class="result-note" id="result-note" aria-live="polite"></p>
+        <div class="cards" id="cards"></div>
+        <p class="special">Don't see your dog's food? Ask us. We can special-order most brands within a week.</p>
       </div>
     </div>
-  </section>
+  </div>
 
-  <section class="block" id="visit" aria-labelledby="visit-title">
-    <div class="wrap">
-      <div class="head"><h2 id="visit-title">Come see us</h2><svg class="trail" aria-hidden="true"><use href="#trail"/></svg></div>
-      <div class="visit" style="margin-top:24px">
-        <div><h3>Hours</h3><table class="hours" id="hours"></table></div>
-        <div><h3>Where we are</h3><p id="addr"></p><p>Dogs on a leash are always welcome inside. Ask at the register for a free biscuit.</p></div>
-        <div><h3>Get in touch</h3><p>Call <span class="num" id="phone"></span></p><p id="email"></p><p>Calling about a bakery order? Have your order number handy.</p></div>
+  <!-- BAKERY -->
+  <div class="view" id="view-bakery" hidden>
+    <section class="band">
+      <svg class="swoosh" aria-hidden="true"><use href="#swoosh"/></svg>
+      <div class="wrap">
+        <h1>Bakery</h1>
+        <p>We bake every morning with simple, dog-safe ingredients. Nothing with chocolate, xylitol, raisins, onion or added sugar ever goes in the oven. Pick your treats, choose a pickup time, and pay when you come in.</p>
       </div>
+    </section>
+    <div class="wrap bake-layout">
+      <div>
+        <div class="treats" id="menu"></div>
+        <p class="keep">Treats keep about 5 days in the fridge or 3 months in the freezer. If your dog has allergies, put it in the notes and we'll call you to go over ingredients.</p>
+      </div>
+      <aside class="slip" aria-labelledby="slip-title">
+        <div id="slip-form">
+          <h2 id="slip-title"><svg aria-hidden="true"><use href="#paw"/></svg>Pickup order</h2>
+          <ul class="lines" id="lines"></ul>
+          <p class="empty" id="empty">Tap + on a treat to add it.</p>
+          <div class="total"><span>Total</span><span class="num" id="total">$0.00</span></div>
+          <form id="order-form" novalidate>
+            <div class="two">
+              <div class="field"><label for="pickup-date">Pickup day</label><input id="pickup-date" type="date" required></div>
+              <div class="field"><label for="pickup-time">Time</label><select id="pickup-time" required></select></div>
+            </div>
+            <div class="field"><label for="cust-name">Your name</label><input id="cust-name" type="text" autocomplete="name" required></div>
+            <div class="field"><label for="cust-phone">Phone</label><input id="cust-phone" type="tel" autocomplete="tel" required><div class="hint">We'll text you when it's ready.</div></div>
+            <div class="field"><label for="dog-name">Dog's name <span class="opt">(optional)</span></label><input id="dog-name" type="text"><div class="hint">Goes on top of a Bark-day Cake.</div></div>
+            <div class="field"><label for="notes">Notes or allergies</label><textarea id="notes" rows="2"></textarea></div>
+            <p class="error" id="error" role="alert" hidden></p>
+            <button class="btn btn-lilac" type="submit" id="submit-btn" disabled>Place pickup order</button>
+            <p class="pay">Pay at pickup with cash or card.</p>
+          </form>
+        </div>
+        <div class="done" id="slip-done" hidden>
+          <h2 id="done-title">Got it!</h2>
+          <div>Order <span class="order-no" id="done-no"></span></div>
+          <p id="done-text" style="margin:0"></p>
+          <ul class="lines" id="done-lines"></ul>
+          <button class="btn btn-lilac" type="button" id="new-order">Start another order</button>
+        </div>
+      </aside>
     </div>
-  </section>
+  </div>
 </main>
 
 <footer>
@@ -377,41 +454,71 @@ const money = n => "$" + n.toFixed(2);
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+/* ---------- Tabs ---------- */
+const VIEWS = ["home", "shop", "bakery"];
+function show(view) {
+  if (!VIEWS.includes(view)) view = "home";
+  VIEWS.forEach(v => $("view-" + v).hidden = v !== view);
+  document.querySelectorAll(".tabbar a").forEach(a =>
+    a.dataset.go === view ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
+  window.scrollTo(0, 0);
+}
+document.addEventListener("click", e => {
+  const a = e.target.closest("[data-go]");
+  if (!a) return;
+  e.preventDefault();
+  if (a.dataset.cat) { activeCat = a.dataset.cat; $("search").value = ""; renderCats(); renderCards(); }
+  try { history.replaceState(null, "", "#" + a.dataset.go); } catch (_) {}
+  show(a.dataset.go);
+});
+window.addEventListener("hashchange", () => show(location.hash.slice(1)));
+
 /* ---------- Shop ---------- */
 let activeCat = "all";
+const countFor = key => key === "all" ? PRODUCTS.length : PRODUCTS.filter(p => p.cat === key).length;
 
-function renderTabs() {
-  $("tabs").innerHTML = CATS.map(c =>
-    `<button class="tab" type="button" data-cat="${c.key}" aria-pressed="${c.key === activeCat}">${c.label}</button>`).join("");
+function renderCats() {
+  $("cats").innerHTML = CATS.map(c =>
+    `<button class="cat-btn" type="button" data-cat="${c.key}" aria-pressed="${c.key === activeCat}">${c.label}<span>${countFor(c.key)}</span></button>`).join("");
 }
 
-function renderList() {
+function renderCards() {
   const q = $("search").value.trim().toLowerCase();
-  const cats = CATS.filter(c => c.key !== "all" && (activeCat === "all" || c.key === activeCat));
-  let html = "";
-  for (const c of cats) {
-    const items = PRODUCTS.filter(p => p.cat === c.key &&
-      (!q || (p.brand + " " + p.name + " " + p.desc).toLowerCase().includes(q)));
-    if (!items.length) continue;
-    const brands = [...new Set(items.map(p => p.brand))];
-    html += `<div class="cat"><h3>${c.label}</h3><div class="brands">` + brands.map(b => `
-      <div class="brand-group"><h4>${esc(b)}</h4>` + items.filter(p => p.brand === b).map(p => `
-        <div class="item" title="${esc(p.desc)}">
-          <span class="name">${esc(p.name)}${p.stock === "low" ? `<span class="few">few left</span>` : ""}<span class="size">${esc(p.size)}</span></span>
-          <span class="dots"></span>
-          <span class="price">${money(p.price)}</span>
-        </div>`).join("") + `</div>`).join("") + `</div></div>`;
-  }
-  $("list").innerHTML = html || `<p class="no-match">Nothing matches "${esc(q)}". Try a different word, or call and ask. We may be able to order it.</p>`;
+  const list = PRODUCTS.filter(p => (activeCat === "all" || p.cat === activeCat) &&
+    (!q || (p.brand + " " + p.name + " " + p.desc).toLowerCase().includes(q)));
+  const label = CATS.find(c => c.key === activeCat).label;
+  $("result-note").textContent = `${label}: ${list.length} item${list.length === 1 ? "" : "s"}` + (q ? ` matching "${$("search").value.trim()}"` : "");
+  $("cards").innerHTML = list.length ? list.map(p => `
+    <article class="card" data-cat="${p.cat}">
+      <div class="top">${esc(p.brand)}</div>
+      <div class="in">
+        <h3>${esc(p.name)}</h3>
+        <p class="desc">${esc(p.desc)}</p>
+        <div class="foot">
+          <div><div class="price">${money(p.price)}</div>${p.stock === "low" ? `<div class="few">Only a few left</div>` : ""}</div>
+          <div class="size">${esc(p.size)}</div>
+        </div>
+      </div>
+    </article>`).join("")
+    : `<div class="no-match">Nothing matches that. Try a different word, or call and ask. We may be able to order it.</div>`;
 }
 
-$("tabs").addEventListener("click", e => {
-  const b = e.target.closest(".tab");
+$("cats").addEventListener("click", e => {
+  const b = e.target.closest(".cat-btn");
   if (!b) return;
   activeCat = b.dataset.cat;
-  renderTabs(); renderList();
+  renderCats(); renderCards();
 });
-$("search").addEventListener("input", renderList);
+$("search").addEventListener("input", renderCards);
+
+function renderHomeDoors() {
+  $("cat-links").innerHTML = CATS.filter(c => c.key !== "all").map(c =>
+    `<a href="#shop" data-go="shop" data-cat="${c.key}">${c.label}<span>${countFor(c.key)} items</span></a>`).join("");
+  const brands = [...new Set(PRODUCTS.map(p => p.brand))];
+  $("brand-names").innerHTML = `<b>Brands we carry:</b> ${brands.slice(0, 12).map(esc).join(", ")} and more.`;
+  $("fresh").innerHTML = BAKERY.slice(0, 4).map(t =>
+    `<li><span>${esc(t.name)}</span><b>${money(t.price)}</b></li>`).join("");
+}
 
 /* ---------- Bakery ---------- */
 const cart = {};
@@ -420,16 +527,18 @@ function renderMenu() {
   $("menu").innerHTML = BAKERY.map(t => {
     const notes = [...t.badges, t.needs48 ? "Needs 48 hours' notice" : ""].filter(Boolean).join(" · ");
     return `
-    <div class="treat">
-      <div><h3>${esc(t.name)}</h3><div class="unit"><b>${money(t.price)}</b> ${esc(t.unit)}</div></div>
+    <article class="treat">
+      <div class="tag">${money(t.price).replace(".00", "")}</div>
+      <h3>${esc(t.name)}</h3>
+      <div class="unit">${esc(t.unit)}</div>
+      <p class="ing">${esc(t.ingredients)}</p>
+      ${notes ? `<div class="note">${esc(notes)}</div>` : ""}
       <div class="qty" role="group" aria-label="How many ${esc(t.name)}">
         <button type="button" data-id="${t.id}" data-d="-1" aria-label="One less ${esc(t.name)}">−</button>
         <output id="qty-${t.id}" aria-live="polite">0</output>
         <button type="button" data-id="${t.id}" data-d="1" aria-label="One more ${esc(t.name)}">+</button>
       </div>
-      <p class="ing">${esc(t.ingredients)}</p>
-      ${notes ? `<div class="note">${esc(notes)}</div>` : ""}
-    </div>`;
+    </article>`;
   }).join("");
 }
 
@@ -560,8 +669,7 @@ $("order-form").addEventListener("submit", async e => {
   $("done-text").textContent = sent
     ? `Thanks, ${name}. Your treats will be boxed up at the counter on ${when}. We'll text ${phone} if anything changes.`
     : `Online ordering isn't hooked up yet. Please call ${STORE.phone} and read us order ${orderNo} for pickup on ${when}.`;
-  $("done-lines").innerHTML = lines.map(lineHtml).join("")
-    + `<li style="font-weight:800;color:var(--plum);border-top:2px dashed var(--lavender);padding-top:8px"><span>Pay at pickup</span><span>${order.total}</span></li>`;
+  $("done-lines").innerHTML = lines.map(lineHtml).join("") + `<li><span>Pay at pickup</span><span>${order.total}</span></li>`;
   $("slip-form").hidden = true;
   $("slip-done").hidden = false;
 });
@@ -583,17 +691,19 @@ function renderVisit() {
     return `<tr class="${i === today ? "today" : ""}"><td>${days[i]}</td><td>${x ? fmtHour(x[0]) + " – " + fmtHour(x[1]) : "Closed"}</td></tr>`;
   }).join("");
   const hr = now.getHours() + now.getMinutes() / 60;
-  $("open-today").lastElementChild.textContent =
+  $("open-today").textContent =
     !h ? "Closed today" :
     hr < h[0] ? `Opens today at ${fmtHour(h[0])}` :
-    hr < h[1] ? `Open today until ${fmtHour(h[1])}` : "Closed for today. See you tomorrow!";
+    hr < h[1] ? `Open today until ${fmtHour(h[1])}` : "Closed for today";
   $("addr").textContent = STORE.address;
   $("phone").textContent = STORE.phone;
+  $("strip-phone").textContent = STORE.phone;
   $("email").textContent = STORE.email;
   $("year").textContent = now.getFullYear();
 }
 
-renderTabs(); renderList(); renderMenu(); updateSlip(); renderVisit();
+renderCats(); renderCards(); renderHomeDoors(); renderMenu(); updateSlip(); renderVisit();
+show(location.hash.slice(1));
 </script>
 </body>
 </html>

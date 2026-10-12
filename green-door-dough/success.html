@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Order confirmed · Green Door Dough</title>
+  <meta name="theme-color" content="#2f5d3a" />
+  <link rel="icon" href="./assets/logo.svg" type="image/svg+xml" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700&family=Work+Sans:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="page">
+    <img src="./assets/logo.svg" alt="" width="80" height="80" style="margin: 0 auto" />
+    <h1>You're on the bake list!</h1>
+    <p class="lede" style="margin: 0 auto" data-thanks>Thanks for your order. A receipt is on its way to your email.</p>
+    <div class="card">
+      <p><strong>Pickup:</strong> <span data-when></span></p>
+      <p><strong>Where:</strong> <span data-where></span></p>
+      <p class="muted" data-note></p>
+    </div>
+    <a class="btn" href="./">Back to the menu</a>
+  </main>
+  <script type="module">
+    import { SHOP } from './shop.js';
+    try { localStorage.removeItem('gdd-cart'); } catch {}
+    let last = {};
+    try { last = JSON.parse(sessionStorage.getItem('gdd-last-order')) || {}; } catch {}
+    const when = last.pickupDate
+      ? new Date(last.pickupDate + 'T12:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'long', month: 'long', day: 'numeric' })
+      : 'Saturday (see your receipt)';
+    if (last.name) document.querySelector('[data-thanks]').textContent =
+      `Thanks, ${last.name}! A receipt is on its way to your email.`;
+    document.querySelector('[data-when]').textContent = `${when}, ${SHOP.pickup.window}`;
+    document.querySelector('[data-where]').textContent = SHOP.pickup.location;
+    document.querySelector('[data-note]').textContent = SHOP.pickup.note;
+  </script>
+</body>
+</html>

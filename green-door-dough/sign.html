@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>QR Sign · Green Door Dough</title>
+  <link rel="icon" href="./assets/logo.svg" type="image/svg+xml" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700&family=Work+Sans:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+  <style>
+    body { background: #fff; }
+    .sign {
+      max-width: 520px; margin: 24px auto; padding: 40px 32px; text-align: center;
+      border: 6px solid var(--green); border-radius: 260px 260px 24px 24px; background: var(--cream);
+    }
+    .sign h1 { font-size: 2.6rem; color: var(--green-deep); margin: 12px 0 4px; }
+    .sign .sub { font-size: 1.2rem; margin: 0 0 20px; }
+    .qr { background: #fff; padding: 16px; border-radius: 16px; display: inline-block; width: 280px; }
+    .qr svg { display: block; width: 100%; height: auto; }
+    .sign .big { font: 700 1.5rem var(--display); color: var(--green-deep); margin: 18px 0 4px; }
+    .tools { max-width: 520px; margin: 0 auto; display: grid; gap: 10px; padding: 0 16px 40px; }
+    .tools input { font: inherit; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 10px; width: 100%; }
+    @media print { .tools { display: none; } .sign { margin: 0 auto; } }
+  </style>
+</head>
+<body>
+  <div class="sign">
+    <img src="./assets/logo.svg" alt="" width="90" height="90" style="margin: 0 auto" />
+    <h1>Green Door Dough</h1>
+    <p class="sub">Fresh sourdough, baked to order</p>
+    <div class="qr" data-qr></div>
+    <p class="big">Scan to preorder</p>
+    <p data-pickup-line></p>
+  </div>
+  <div class="tools">
+    <label>Website address in the QR code <input data-url /></label>
+    <button class="btn" onclick="print()">Print sign</button>
+    <button class="btn" style="background: var(--crust)" data-download>Download QR code (SVG)</button>
+  </div>
+  <script src="./assets/vendor/qrcode.js"></script>
+  <script type="module">
+    import { SHOP } from './shop.js';
+    const day = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][SHOP.pickup.weekday];
+    document.querySelector('[data-pickup-line]').textContent = `Pickup ${day}s · ${SHOP.pickup.window}`;
+    const input = document.querySelector('[data-url]');
+    input.value = new URL('./', location.href).href;
+    let svg = '';
+    const draw = () => {
+      const qr = qrcode(0, 'M');
+      qr.addData(input.value.trim());
+      qr.make();
+      svg = qr.createSvgTag({ cellSize: 8, margin: 0, scalable: true });
+      document.querySelector('[data-qr]').innerHTML = svg;
+    };
+    input.addEventListener('input', draw);
+    draw();
+    document.querySelector('[data-download]').addEventListener('click', () => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+      a.download = 'green-door-dough-qr.svg';
+      a.click();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "green-door-dough",
+  "private": true,
+  "type": "module",
+  "description": "Preorder website for Green Door Dough (Saturday pickup, Stripe checkout).",
+  "scripts": {
+    "dev": "vercel dev",
+    "test": "node test.js"
+  },
+  "dependencies": {
+    "stripe": "^17.7.0"
+  }
+}

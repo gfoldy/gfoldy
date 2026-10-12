@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Green Door Dough · Sourdough Preorders</title>
+  <meta name="description" content="Naturally leavened sourdough, baked fresh for Saturday pickup. Preorder online during the week." />
+  <meta name="theme-color" content="#2f5d3a" />
+  <link rel="icon" href="./assets/logo.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#top">
+      <img src="./assets/logo.svg" alt="" width="36" height="36" />
+      <span>Green Door Dough</span>
+    </a>
+    <a class="btn btn-small" href="#menu">Order now</a>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="hero-inner">
+        <p class="eyebrow">Preorder only · Saturday pickup</p>
+        <h1>Sourdough worth<br />knocking for.</h1>
+        <p class="lede" data-tagline></p>
+        <div class="status" data-status></div>
+        <a class="btn" href="#menu">See this week's menu</a>
+      </div>
+      <div class="hero-door" aria-hidden="true">
+        <div class="door"><span class="knob"></span></div>
+      </div>
+    </section>
+
+    <section class="how">
+      <h2>How it works</h2>
+      <ol class="steps">
+        <li>
+          <span class="step-num">1</span>
+          <h3>Order during the week</h3>
+          <p>Pick your loaves and bakes below and pay online. Orders close <strong data-cutoff-rule></strong>.</p>
+        </li>
+        <li>
+          <span class="step-num">2</span>
+          <h3>We bake to order</h3>
+          <p>Everything is mixed, fermented and baked just for that Saturday. No leftovers, no day-olds.</p>
+        </li>
+        <li>
+          <span class="step-num">3</span>
+          <h3>Pick up Saturday</h3>
+          <p><strong data-pickup-window></strong> at <span data-pickup-location></span>. Your order is bagged with your name.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section class="menu" id="menu">
+      <h2>This week's menu</h2>
+      <div data-menu></div>
+    </section>
+
+    <section class="checkout" id="order">
+      <h2>Your order</h2>
+      <div class="checkout-grid">
+        <div class="cart-card">
+          <ul class="cart-lines" data-cart-lines></ul>
+          <div class="cart-total"><span>Total</span><strong data-cart-total>$0</strong></div>
+        </div>
+
+        <form class="order-form" data-order-form novalidate>
+          <label>
+            Pickup Saturday
+            <select name="pickupDate" data-pickup-select required></select>
+          </label>
+          <label>
+            Name for the order
+            <input name="name" autocomplete="name" maxlength="80" required />
+          </label>
+          <label>
+            Email (for your receipt)
+            <input name="email" type="email" autocomplete="email" maxlength="120" required />
+          </label>
+          <label>
+            Phone (in case we need to reach you)
+            <input name="phone" type="tel" autocomplete="tel" maxlength="20" required />
+          </label>
+          <label>
+            <span>Notes <span class="muted">(optional)</span></span>
+            <textarea name="notes" rows="2" maxlength="300" placeholder="Allergies, sliced, someone else picking up…"></textarea>
+          </label>
+          <p class="form-error" data-form-error role="alert"></p>
+          <button class="btn btn-block" type="submit" data-submit>Continue to payment</button>
+          <p class="fine">Secure card, Apple Pay &amp; Google Pay checkout by Stripe. You'll get an email receipt.</p>
+        </form>
+      </div>
+    </section>
+
+    <section class="faq">
+      <h2>Good to know</h2>
+      <details>
+        <summary>When can I pick up?</summary>
+        <p>Saturdays only, <span data-pickup-window></span> at <span data-pickup-location></span>. <span data-pickup-note></span></p>
+      </details>
+      <details>
+        <summary>When do orders close?</summary>
+        <p>Orders for each Saturday close <span data-cutoff-rule></span>. After that, you can still order for the following Saturday.</p>
+      </details>
+      <details>
+        <summary>What if I can't make it?</summary>
+        <p>Email us before the order cutoff and we'll move your order to another Saturday. Bread is baked to order, so we can't refund missed pickups after baking.</p>
+      </details>
+      <details>
+        <summary>Allergens?</summary>
+        <p>Everything is made in a home kitchen that handles wheat, dairy, eggs, seeds and nuts. Let us know about allergies in your order notes.</p>
+      </details>
+      <details>
+        <summary>How should I store my bread?</summary>
+        <p>Cut-side down on the counter for 2–3 days, or slice and freeze. Revive a day-old loaf with 5 minutes in a hot oven.</p>
+      </details>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <img src="./assets/logo.svg" alt="" width="44" height="44" />
+    <p><strong>Green Door Dough</strong><br />Small-batch sourdough, baked to order.</p>
+    <p data-contact></p>
+  </footer>
+
+  <a class="cart-bar" href="#order" data-cart-bar hidden>
+    <span data-cart-count>0 items</span>
+    <strong>Checkout · <span data-cart-bar-total>$0</span></strong>
+  </a>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

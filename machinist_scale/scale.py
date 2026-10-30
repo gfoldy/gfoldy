@@ -19,7 +19,7 @@ IN = 25.4
 # ---- Parameters (inches) ----
 LENGTH = 6.0
 WIDTH = 0.75
-THICK = 1 / 16         # matches common 1/16" x 3/4" 6061 flat bar
+THICK = 1 / 8          # matches common 1/8" x 3/4" 6061 flat bar
 DEPTH = 0.003          # engraving depth
 LINE_W = 0.005         # engraved width (30 deg V-bit, 0.1 mm tip, at DEPTH)
 INCH_LEN = 0.20        # line lengths by level

@@ -21,8 +21,8 @@ so the tool enters and leaves off the part.
 
 ## Stock and tools
 
-- **Stock:** 1/16" × 3/4" 6061 aluminum flat bar, about 7" long. The model
-  is 1/16" thick to match it. Change `THICK` in `scale.py` if you use other
+- **Stock:** 1/8" × 3/4" 6061 aluminum flat bar, about 7" long. The model
+  is 1/8" thick to match it. Change `THICK` in `scale.py` if you use other
   stock.
 - **Engraving bit:** 30° V-bit with a 0.1 mm tip. At 0.003" deep it cuts
   a line about 0.005" wide (`LINE_W` in the script).
@@ -39,7 +39,7 @@ for heavy cuts in aluminum. These cuts are very light, but keep them that way.
 1. Start a new design and set the units to **inches**.
 2. Use **Insert → Insert DXF**. Pick the side's DXF, put it on the **XY plane**,
    and keep it at the origin.
-3. **Extrude** the OUTLINE rectangle **0.0625" in the −Z direction**. The top
+3. **Extrude** the OUTLINE rectangle **0.125" in the −Z direction**. The top
    face is then at Z0, and the DXF sketch lies on that top face.
 
 The front and back are set up the same way, so one design per side keeps the

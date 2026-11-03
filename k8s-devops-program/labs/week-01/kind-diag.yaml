@@ -1,0 +1,10 @@
+# Disposable 3-node cluster for the Week 1 diagnostic.
+# kubeadm-based, so it behaves like the CKA exam environment
+# (static pods, etcd on the control plane, systemd kubelet on every node).
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: diag
+nodes:
+  - role: control-plane
+  - role: worker
+  - role: worker

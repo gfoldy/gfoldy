@@ -1,0 +1,41 @@
+item,domain,earned,max,source,note
+Q1,D1,,2,partA,
+Q2,D1,,2,partA,
+Q3,D1,,2,partA,
+Q4,D1,,2,partA,
+Q5,D2,,2,partA,
+Q6,D2,,2,partA,
+Q7,D3,,2,partA,
+Q8,D3,,2,partA,
+Q9,D3,,2,partA,
+Q10,D4,,2,partA,
+Q11,D4,,2,partA,
+Q12,D4,,2,partA,
+Q13,D5,,2,partA,
+Q14,D5,,2,partA,
+Q15,D6,,2,partA,
+Q16,D6,,2,partA,
+Q17,D6,,2,partA,
+Q18,D7,,2,partA,
+Q19,D7,,2,partA,
+Q20,D7,,2,partA,
+Q21,D8,,2,partA,
+Q22,D8,,2,partA,
+Q23,D9,,2,partA,
+Q24,D9,,2,partA,
+Q25,D9,,2,partA,
+Q26,D10,,2,partA,
+Q27,D10,,2,partA,
+Q28,D11,,2,partA,
+Q29,D11,,2,partA,
+Q30,D12,,2,partA,
+Q31,D12,,2,partA,
+A1,D12,,2,partB-admin,cluster facts (written)
+T1,D9,,6,partD,Terraform S3 module (rubric)
+G1,D10,,6,partD,GitHub Actions workflow (rubric)
+S1,D13,,4,drill,kubectl speed drill 01 (time table)
+J1,D14,,2,career,resume
+J2,D14,,2,career,GitHub portfolio
+J3,D14,,2,career,LinkedIn
+J4,D14,,2,career,target roles defined
+J5,D14,,2,career,90-second pitch

@@ -12,7 +12,7 @@ _Started in Week 1, Session 0 (2026-11-04). The coach reads this at the start of
 
 ## Homelab
 - **Machine:** MacBook Air. **?** Chip and RAM
-- **Container runtime:** **?** (Docker Desktop / OrbStack / Colima)
+- **Container runtime:** Docker Desktop. Give it 4 CPUs and 6-8 GB RAM for kind-diag (Settings → Resources)
 - **Cluster type and K8s version:** **?**
 - **CNI, ingress controller, storage class:** not sure
 - **What's running:** not sure. Lots of past experiments, and it's messy. → Inventory it with `kubectl hl` and `kubectl hl images`, then decide what to keep and what to tear down (planned for Week 2).

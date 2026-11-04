@@ -13,7 +13,10 @@ _Started in Week 1, Session 0 (2026-11-04). The coach reads this at the start of
 ## Homelab
 - **Machine:** MacBook Air 13" (2025), Apple M4, 16 GB RAM, macOS Sequoia 15.6.1
 - **Container runtime:** Docker Desktop (give it 4 CPUs and 8 GB for kind-diag). **Rancher Desktop is also installed.** Run only one at a time, because they fight over the Docker socket
-- **Clusters (kubectl contexts):** `docker-desktop` (current) and `rancher-desktop` (k3s). **?** Which one has the past experiments, and its K8s version
+- **Clusters (kubectl contexts):**
+  - `docker-desktop`: Docker Desktop's kind-based cluster, 4 nodes (control-plane + 3 workers), v1.34.3, kindnet CNI, local-path storage. **Only system pods (15). No old experiments here.** Clean, so a good candidate for the long-lived homelab.
+  - `rancher-desktop`: k3s. **?** Not checked yet; the old experiments are probably here.
+  - `kind-diag`: Week 1 diagnostic cluster, 3 nodes, v1.35.0. Created by setup.sh on 2026-11-04 ✅
 - **CNI, ingress controller, storage class:** not sure
 - **What's running:** not sure. Lots of past experiments, and it's messy. → Inventory it with `kubectl hl` and `kubectl hl images`, then decide what to keep and what to tear down (planned for Week 2).
 

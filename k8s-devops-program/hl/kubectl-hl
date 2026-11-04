@@ -21,7 +21,7 @@ import sys
 from collections import namedtuple
 from datetime import datetime, timedelta, timezone
 
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 
 RESTART_WARN = 5          # restarts within 24h before a pod is flagged
 NOT_READY_GRACE_MIN = 2   # minutes a Running pod may be unready before flagging
@@ -81,6 +81,8 @@ class Kube:
         return json.loads(self.runner(args))
 
     def current_context(self):
+        if self.context:
+            return self.context
         try:
             return self.runner(["config", "current-context"]).strip()
         except KubeError:
@@ -269,8 +271,15 @@ def check_nodes(nodes, pods):
     return rows, findings
 
 
+def is_runtime_restart(last):
+    """exit 255 + reason Unknown: the container died because its node or container
+    runtime restarted (Docker Desktop restart, Mac sleep, node reboot), not an app bug."""
+    return last.get("reason") == "Unknown" and last.get("exitCode") == 255
+
+
 def check_pods(pods, now):
     out = []
+    runtime_restarts = set()
     for p in pods:
         ns, name = meta(p)
         st = p.get("status", {})
@@ -329,10 +338,17 @@ def check_pods(pods, now):
             last = (cs.get("lastState") or {}).get("terminated") or {}
             fin = parse_ts(last.get("finishedAt"))
             if rc >= RESTART_WARN and fin and now - fin < timedelta(hours=24):
+                if is_runtime_restart(last):
+                    runtime_restarts.add("%s/%s" % (ns, name))
+                    continue
                 out.append(Finding("warn", "pod", ns, name,
                                    "container %s restarted %dx, last %s ago (%s, exit %s)" % (
                                        cs.get("name"), rc, human_age(now - fin),
                                        last.get("reason", "?"), last.get("exitCode", "?")), why))
+    if runtime_restarts:
+        out.append(Finding("info", "pod", "", "%d pod(s)" % len(runtime_restarts),
+                           "restarted with their node (exit 255): normal after sleep/restart",
+                           "a Docker Desktop restart or Mac sleep kills every container; worry only if it happens while awake"))
     return out
 
 
@@ -471,7 +487,14 @@ def exit_code(findings):
     return 2 if "crit" in sevs else 1 if "warn" in sevs else 0
 
 
-def render_status(ctx, rows, findings, events, errors, npods, s, quiet=False, event_minutes=60):
+def term_width():
+    return max(80, min(shutil.get_terminal_size((120, 40)).columns, 200))
+
+
+def render_status(ctx, rows, findings, events, errors, npods, s, quiet=False, event_minutes=60, width=None):
+    width = width or term_width()
+    obj_w = 38
+    msg_w = max(30, width - obj_w - 14)
     lines = []
     w = lines.append
     w(s.bold("hl status") + s.dim("  ·  context %s  ·  %s" % (ctx, datetime.now().strftime("%a %b %d %H:%M"))))
@@ -493,17 +516,17 @@ def render_status(ctx, rows, findings, events, errors, npods, s, quiet=False, ev
         w(s.sev(sev, s.bold("%s (%d)" % (title, len(group)))))
         for f in group:
             obj = "%s/%s" % (f.ns, f.name) if f.ns else f.name
-            w("  %s %-7s %-44s %s" % (s.sev(sev, {"crit": "✗", "warn": "!", "info": "·"}[sev]),
-                                       f.area, short(obj, 44), f.message))
+            w("  %s %-7s %-*s %s" % (s.sev(sev, {"crit": "✗", "warn": "!", "info": "·"}[sev]),
+                                      f.area, obj_w, short(obj, obj_w), short(f.message, msg_w)))
             if f.hint:
-                w("    " + s.dim("→ " + f.hint))
+                w("    " + s.dim("→ " + short(f.hint, width - 6)))
     if events and not quiet:
         w("")
         w(s.bold("WARNING EVENTS (last %dm)" % event_minutes))
         for (ns, kind, name, reason), g in events[:10]:
-            w("  %-4s %-20s %-40s %s" % ("x%d" % g["count"], reason,
+            w("  %-4s %-20s %-40s %s" % ("x%d" % g["count"], short(reason, 20),
                                          short("%s/%s/%s" % (ns, kind.lower(), name), 40),
-                                         s.dim(short(g["message"], 70))))
+                                         s.dim(short(g["message"], max(20, width - 70)))))
         if len(events) > 10:
             w(s.dim("  … %d more: kubectl get events -A --field-selector type=Warning" % (len(events) - 10)))
     for e in errors:

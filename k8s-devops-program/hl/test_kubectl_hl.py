@@ -482,5 +482,35 @@ class TestCLI(unittest.TestCase):
         self.assertIn("Can't reach the cluster", out)
 
 
+class TestLiveFeedback(unittest.TestCase):
+    """Regressions found on the first live run (Docker Desktop, 2026-11-04)."""
+
+    def test_context_flag_wins_over_current_context(self):
+        k = hl.Kube(context="docker-desktop", runner=lambda a: "kind-diag\n")
+        self.assertEqual(k.current_context(), "docker-desktop")
+
+    def test_runtime_restarts_collapse_to_one_info(self):
+        def restarted(name, reason, code):
+            return pod(name, ns="kube-system", statuses=[{
+                "name": "c", "ready": True, "restartCount": 11, "state": {"running": {}},
+                "lastState": {"terminated": {"exitCode": code, "reason": reason,
+                                             "finishedAt": ts(timedelta(hours=2))}}}])
+        pods = [restarted("coredns-%d" % i, "Unknown", 255) for i in range(12)]
+        pods.append(restarted("local-path-provisioner", "Error", 1))
+        f = hl.check_pods(pods, NOW)
+        self.assertEqual(len(f), 2)
+        info = [x for x in f if x.severity == "info"][0]
+        self.assertEqual(info.name, "12 pod(s)")
+        self.assertIn("Docker Desktop", info.hint)
+        self.assertEqual([x.name for x in f if x.severity == "warn"], ["local-path-provisioner"])
+
+    def test_lines_fit_terminal_width(self):
+        long_f = hl.Finding("warn", "pod", "kube-system", "kube-controller-manager-desktop-control-plane",
+                            "container kube-controller-manager restarted 11x, last 2h ago (Error, exit 1)",
+                            "kubectl hl why -n kube-system kube-controller-manager-desktop-control-plane")
+        out = hl.render_status("ctx", [], [long_f], [], [], 1, hl.Style(False), width=100)
+        self.assertTrue(all(len(l) <= 100 for l in out.splitlines()), out)
+
+
 if __name__ == "__main__":
     unittest.main()

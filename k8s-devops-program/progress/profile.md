@@ -4,16 +4,16 @@ _Started in Week 1, Session 0 (2026-11-04). The coach reads this at the start of
 
 ## Background
 - **DevOps experience:** about 1 year of self-teaching. **?** Which tools were used and what was built (Docker, Terraform, CI, Linux)?
-- **IT work experience:** **?** (help desk, support, sysadmin, or none)
-- **AWS:** no hands-on experience. **?** Does an AWS account exist?
+- **IT work experience:** none. The portfolio, the CKA, and the `kubectl hl` tool are the main proof of skill.
+- **AWS:** no hands-on experience. awscli installed 2026-11-04. **?** Does an AWS account exist?
 - **Kubernetes before this program:** homelab only
 - **Certifications:** none
 - **Degree:** none
 
 ## Homelab
-- **Machine:** MacBook Air. **?** Chip and RAM
-- **Container runtime:** Docker Desktop. Give it 4 CPUs and 6-8 GB RAM for kind-diag (Settings → Resources)
-- **Cluster type and K8s version:** **?**
+- **Machine:** MacBook Air 13" (2025), Apple M4, 16 GB RAM, macOS Sequoia 15.6.1
+- **Container runtime:** Docker Desktop (give it 4 CPUs and 8 GB for kind-diag). **Rancher Desktop is also installed.** Run only one at a time, because they fight over the Docker socket
+- **Clusters (kubectl contexts):** `docker-desktop` (current) and `rancher-desktop` (k3s). **?** Which one has the past experiments, and its K8s version
 - **CNI, ingress controller, storage class:** not sure
 - **What's running:** not sure. Lots of past experiments, and it's messy. → Inventory it with `kubectl hl` and `kubectl hl images`, then decide what to keep and what to tear down (planned for Week 2).
 

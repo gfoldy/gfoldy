@@ -18,4 +18,5 @@ _The coach adds one entry per session, newest at the bottom._
 - **Evidence:** screenshots of the clone and install. **Missing:** output from `env-check.sh`, `setup.sh`, and `kubectl hl`; pushed `self-ratings.csv`.
 - **Redo:** none
 - **Blockers:** none
+- **Update:** Screenshots show awscli was installed and `git pull` worked. But `git commit` printed "nothing to commit", so **self-ratings were not saved**. Also, **there's no `kind-diag` context, so `setup.sh` hasn't completed.** Contexts are docker-desktop and rancher-desktop. Machine: M4, 16 GB. No IT job history.
 - **Next:** collect the missing evidence and remaining profile items, then Session 1 (Part A, 60 min, closed book).

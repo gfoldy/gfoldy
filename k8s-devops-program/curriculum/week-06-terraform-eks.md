@@ -18,6 +18,9 @@
 ## Capstone milestone
 Terraform for VPC + EKS (tier 2-3)
 
+## kubectl hl check (~30 min)
+Multi-context report (homelab + EKS), with a test. See `hl/README.md`.
+
 ## Tier variants (filled in at build-out)
 - **Foundation:** pre-work primer + guided lab before the core labs
 - **Standard:** as above

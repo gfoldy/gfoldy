@@ -19,6 +19,9 @@
 ## Capstone milestone
 RBAC for CI, runbook started. **Checkpoint 1** (mini-diagnostic D3-D7)
 
+## kubectl hl check (~30 min)
+`hl rbac`: cluster-admin bindings, wildcard verbs, with a test. See `hl/README.md`.
+
 ## Tier variants (filled in at build-out)
 - **Foundation:** pre-work primer + guided lab before the core labs
 - **Standard:** as above

@@ -1,0 +1,1097 @@
+#!/usr/bin/env python3
+"""kubectl-hl: a daily driver for your homelab Kubernetes cluster.
+
+  kubectl hl                      morning health report (exit 0 ok / 1 warn / 2 crit)
+  kubectl hl why <target>         walk the troubleshooting method for a pod,
+                                  deploy/NAME, sts/NAME, ds/NAME, job/NAME or svc/NAME
+  kubectl hl clean [--yes]        list (or delete) failed pods and finished jobs
+  kubectl hl images               every image running in the cluster, flags :latest
+
+Install: symlink this file onto your PATH as `kubectl-hl` (see README.md).
+Stdlib only; works with macOS's system python3 (3.9+). Talks to the cluster only
+through `kubectl`, so it uses your normal kubeconfig, contexts and RBAC.
+"""
+import argparse
+import base64
+import json
+import os
+import shutil
+import subprocess
+import sys
+from collections import namedtuple
+from datetime import datetime, timedelta, timezone
+
+VERSION = "0.1.0"
+
+RESTART_WARN = 5          # restarts within 24h before a pod is flagged
+NOT_READY_GRACE_MIN = 2   # minutes a Running pod may be unready before flagging
+PENDING_GRACE_MIN = 5     # minutes a scheduled pod may sit in Pending
+NODE_ALLOC_WARN = 90      # % of allocatable requested before a node is flagged
+CERT_WARN_DAYS = 30
+CERT_CRIT_DAYS = 7
+
+BAD_WAITING = {
+    "CrashLoopBackOff", "ImagePullBackOff", "ErrImagePull", "InvalidImageName",
+    "CreateContainerConfigError", "CreateContainerError", "RunContainerError",
+}
+
+Finding = namedtuple("Finding", "severity area ns name message hint")
+SEV_ORDER = {"crit": 0, "warn": 1, "info": 2}
+# Root causes first: a dead node explains its pods; a stuck workload explains its pods.
+AREA_ORDER = {"node": 0, "pvc": 1, "cert": 2, "deploy": 3, "sts": 4, "ds": 5, "pod": 6}
+
+
+# --------------------------------------------------------------------- helpers
+class KubeError(Exception):
+    pass
+
+
+class Kube:
+    """Thin wrapper around kubectl. `runner` is injectable for tests."""
+
+    def __init__(self, context=None, runner=None):
+        self.context = context
+        self.runner = runner or self._run
+
+    def _run(self, args):
+        cmd = ["kubectl"] + (["--context", self.context] if self.context else []) + args
+        try:
+            p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               universal_newlines=True)
+        except FileNotFoundError:
+            raise KubeError("kubectl not found on PATH")
+        if p.returncode != 0:
+            raise KubeError(p.stderr.strip() or "kubectl exited %d" % p.returncode)
+        return p.stdout
+
+    def run(self, args):
+        return self.runner(args)
+
+    def get(self, kind, ns=None, selector=None, field_selector=None):
+        args = ["get", kind, "-o", "json"]
+        args += ["-n", ns] if ns else ["-A"]
+        if selector:
+            args += ["-l", selector]
+        if field_selector:
+            args += ["--field-selector", field_selector]
+        return json.loads(self.runner(args) or "{}").get("items", [])
+
+    def get_one(self, kind, name, ns=None):
+        args = ["get", kind, name, "-o", "json"] + (["-n", ns] if ns else [])
+        return json.loads(self.runner(args))
+
+    def current_context(self):
+        try:
+            return self.runner(["config", "current-context"]).strip()
+        except KubeError:
+            return "?"
+
+    def current_namespace(self):
+        try:
+            ns = self.runner(["config", "view", "--minify", "-o",
+                              "jsonpath={..namespace}"]).strip()
+        except KubeError:
+            ns = ""
+        return ns or "default"
+
+
+def parse_ts(s):
+    if not s:
+        return None
+    s = s.split(".")[0].rstrip("Z")
+    try:
+        return datetime.strptime(s, "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+def human_age(delta):
+    secs = int(delta.total_seconds())
+    if secs < 0:
+        secs = 0
+    if secs < 120:
+        return "%ds" % secs
+    if secs < 7200:
+        return "%dm" % (secs // 60)
+    if secs < 172800:
+        return "%dh" % (secs // 3600)
+    return "%dd" % (secs // 86400)
+
+
+_BIN = {"Ki": 2 ** 10, "Mi": 2 ** 20, "Gi": 2 ** 30, "Ti": 2 ** 40, "Pi": 2 ** 50, "Ei": 2 ** 60}
+_DEC = {"n": 1e-9, "u": 1e-6, "m": 1e-3, "k": 1e3, "M": 1e6, "G": 1e9, "T": 1e12,
+        "P": 1e15, "E": 1e18}
+
+
+def parse_quantity(q):
+    """Kubernetes resource quantity -> float (cores or bytes)."""
+    if q is None:
+        return 0.0
+    s = str(q).strip()
+    if not s:
+        return 0.0
+    try:
+        return float(s)            # "2", "0.5", "1e3"
+    except ValueError:
+        pass
+    if s[-2:] in _BIN:
+        return float(s[:-2]) * _BIN[s[-2:]]
+    if s[-1] in _DEC:
+        return float(s[:-1]) * _DEC[s[-1]]
+    raise ValueError("bad quantity: %r" % q)
+
+
+def fmt_bytes(b):
+    for unit, size in (("Gi", 2 ** 30), ("Mi", 2 ** 20), ("Ki", 2 ** 10)):
+        if b >= size:
+            return "%.1f%s" % (b / size, unit)
+    return "%d" % b
+
+
+def cond(status, ctype):
+    for c in (status or {}).get("conditions", []) or []:
+        if c.get("type") == ctype:
+            return c
+    return None
+
+
+def short(msg, n=110):
+    msg = " ".join((msg or "").split())
+    return msg if len(msg) <= n else msg[: n - 1] + "…"
+
+
+def meta(obj):
+    md = obj.get("metadata", {})
+    return md.get("namespace", ""), md.get("name", "")
+
+
+def selector_matches(selector, labels):
+    return bool(selector) and all(labels.get(k) == v for k, v in selector.items())
+
+
+def selector_string(selector):
+    return ",".join("%s=%s" % (k, v) for k, v in sorted(selector.items()))
+
+
+def pod_requests(pod):
+    spec = pod.get("spec", {})
+
+    def total(containers, key):
+        return sum(parse_quantity(c.get("resources", {}).get("requests", {}).get(key))
+                   for c in containers)
+
+    def peak(containers, key):
+        vals = [parse_quantity(c.get("resources", {}).get("requests", {}).get(key))
+                for c in containers]
+        return max(vals) if vals else 0.0
+
+    main, init = spec.get("containers", []), spec.get("initContainers", [])
+    return (max(total(main, "cpu"), peak(init, "cpu")),
+            max(total(main, "memory"), peak(init, "memory")))
+
+
+def event_time(e):
+    return (parse_ts(e.get("lastTimestamp"))
+            or parse_ts((e.get("series") or {}).get("lastObservedTime"))
+            or parse_ts(e.get("eventTime"))
+            or parse_ts(e.get("metadata", {}).get("creationTimestamp")))
+
+
+def event_count(e):
+    return e.get("count") or (e.get("series") or {}).get("count") or 1
+
+
+# --------------------------------------------------------------------- colors
+class Style:
+    def __init__(self, enabled):
+        self.enabled = enabled
+
+    def _w(self, code, s):
+        return "\033[%sm%s\033[0m" % (code, s) if self.enabled else s
+
+    def red(self, s): return self._w("31", s)
+    def yellow(self, s): return self._w("33", s)
+    def green(self, s): return self._w("32", s)
+    def dim(self, s): return self._w("2", s)
+    def bold(self, s): return self._w("1", s)
+
+    def sev(self, sev, s):
+        return {"crit": self.red, "warn": self.yellow}.get(sev, self.dim)(s)
+
+
+def make_style(force_off=False):
+    return Style(sys.stdout.isatty() and not os.environ.get("NO_COLOR") and not force_off)
+
+
+# --------------------------------------------------------------------- checks
+def check_nodes(nodes, pods):
+    used = {}
+    for p in pods:
+        node = p.get("spec", {}).get("nodeName")
+        if not node or p.get("status", {}).get("phase") in ("Succeeded", "Failed"):
+            continue
+        cpu, mem = pod_requests(p)
+        u = used.setdefault(node, [0.0, 0.0])
+        u[0] += cpu
+        u[1] += mem
+
+    rows, findings = [], []
+    for n in nodes:
+        name = n["metadata"]["name"]
+        st = n.get("status", {})
+        ready = (cond(st, "Ready") or {}).get("status", "Unknown")
+        alloc = st.get("allocatable", {})
+        cpu_alloc, mem_alloc = parse_quantity(alloc.get("cpu")), parse_quantity(alloc.get("memory"))
+        cpu_used, mem_used = used.get(name, [0.0, 0.0])
+        cpu_pct = 100 * cpu_used / cpu_alloc if cpu_alloc else 0
+        mem_pct = 100 * mem_used / mem_alloc if mem_alloc else 0
+        cordoned = bool(n.get("spec", {}).get("unschedulable"))
+        rows.append({
+            "name": name, "ready": ready == "True", "cordoned": cordoned,
+            "version": st.get("nodeInfo", {}).get("kubeletVersion", "?"),
+            "cpu_pct": cpu_pct, "mem_pct": mem_pct,
+        })
+        if ready != "True":
+            findings.append(Finding("crit", "node", "", name, "NotReady (Ready=%s)" % ready,
+                                    "kubectl describe node %s  # then check kubelet on the node" % name))
+        for ctype in ("MemoryPressure", "DiskPressure", "PIDPressure"):
+            if (cond(st, ctype) or {}).get("status") == "True":
+                findings.append(Finding("warn", "node", "", name, ctype, "kubectl describe node %s" % name))
+        if cordoned:
+            findings.append(Finding("warn", "node", "", name, "cordoned (SchedulingDisabled)",
+                                    "kubectl uncordon %s  # if maintenance is done" % name))
+        hot = [lbl for lbl, pct in (("cpu", cpu_pct), ("memory", mem_pct)) if pct >= NODE_ALLOC_WARN]
+        if hot:
+            findings.append(Finding("warn", "node", "", name,
+                                    "requests at %s of allocatable; new pods may not schedule" %
+                                    " / ".join("%s %.0f%%" % (h, cpu_pct if h == "cpu" else mem_pct) for h in hot),
+                                    "kubectl describe node %s | grep -A8 'Allocated resources'" % name))
+    return rows, findings
+
+
+def check_pods(pods, now):
+    out = []
+    for p in pods:
+        ns, name = meta(p)
+        st = p.get("status", {})
+        phase = st.get("phase", "")
+        why = "kubectl hl why -n %s %s" % (ns, name)
+        if phase == "Succeeded":
+            continue
+        if phase == "Failed":
+            reason = st.get("reason", "")
+            if reason == "Evicted":
+                out.append(Finding("info", "pod", ns, name, "Evicted: " + short(st.get("message"), 80),
+                                   "kubectl hl clean"))
+            else:
+                out.append(Finding("warn", "pod", ns, name, "Failed" + (" (%s)" % reason if reason else ""), why))
+            continue
+        if phase == "Unknown":
+            out.append(Finding("crit", "pod", ns, name, "status Unknown (node unreachable?)", why))
+            continue
+
+        statuses = (st.get("initContainerStatuses") or []) + (st.get("containerStatuses") or [])
+        bad = None
+        for cs in statuses:
+            w = (cs.get("state") or {}).get("waiting")
+            if w and w.get("reason") in BAD_WAITING:
+                bad = (cs, w)
+                break
+        if bad:
+            cs, w = bad
+            msg = "%s in container %s" % (w["reason"], cs.get("name"))
+            last = (cs.get("lastState") or {}).get("terminated")
+            if last:
+                msg += " (last exit %s%s)" % (last.get("exitCode"),
+                                              " " + last["reason"] if last.get("reason") else "")
+            out.append(Finding("crit", "pod", ns, name, msg, why))
+            continue
+
+        if phase == "Pending":
+            sched = cond(st, "PodScheduled")
+            if sched and sched.get("status") == "False":
+                out.append(Finding("crit", "pod", ns, name, "Unschedulable: " + short(sched.get("message"), 90), why))
+            else:
+                created = parse_ts(p["metadata"].get("creationTimestamp"))
+                if created and now - created > timedelta(minutes=PENDING_GRACE_MIN):
+                    out.append(Finding("warn", "pod", ns, name, "Pending for %s" % human_age(now - created), why))
+            continue
+
+        ready = cond(st, "Ready")
+        if ready and ready.get("status") == "False":
+            since = parse_ts(ready.get("lastTransitionTime"))
+            if since is None or now - since > timedelta(minutes=NOT_READY_GRACE_MIN):
+                out.append(Finding("warn", "pod", ns, name,
+                                   "Running but not Ready for %s" % (human_age(now - since) if since else "?"), why))
+
+        for cs in st.get("containerStatuses") or []:
+            rc = cs.get("restartCount", 0)
+            last = (cs.get("lastState") or {}).get("terminated") or {}
+            fin = parse_ts(last.get("finishedAt"))
+            if rc >= RESTART_WARN and fin and now - fin < timedelta(hours=24):
+                out.append(Finding("warn", "pod", ns, name,
+                                   "container %s restarted %dx, last %s ago (%s, exit %s)" % (
+                                       cs.get("name"), rc, human_age(now - fin),
+                                       last.get("reason", "?"), last.get("exitCode", "?")), why))
+    return out
+
+
+def check_workloads(deploys, stss, dss):
+    out = []
+    for d in deploys:
+        ns, name = meta(d)
+        want = d.get("spec", {}).get("replicas", 1)
+        if not want:
+            continue
+        st = d.get("status", {})
+        avail = st.get("availableReplicas", 0)
+        why = "kubectl hl why -n %s deploy/%s" % (ns, name)
+        prog = cond(st, "Progressing")
+        if prog and prog.get("reason") == "ProgressDeadlineExceeded":
+            out.append(Finding("crit", "deploy", ns, name,
+                               "rollout stuck (ProgressDeadlineExceeded), %d/%d available" % (avail, want), why))
+        elif avail < want:
+            out.append(Finding("crit" if avail == 0 else "warn", "deploy", ns, name,
+                               "%d/%d available" % (avail, want), why))
+    for s in stss:
+        ns, name = meta(s)
+        want = s.get("spec", {}).get("replicas", 1)
+        ready = s.get("status", {}).get("readyReplicas", 0)
+        if want and ready < want:
+            out.append(Finding("crit" if ready == 0 else "warn", "sts", ns, name,
+                               "%d/%d ready" % (ready, want), "kubectl hl why -n %s sts/%s" % (ns, name)))
+    for d in dss:
+        ns, name = meta(d)
+        st = d.get("status", {})
+        want = st.get("desiredNumberScheduled", 0)
+        ready = st.get("numberReady", 0)
+        if want and ready < want:
+            out.append(Finding("crit" if ready == 0 else "warn", "ds", ns, name,
+                               "%d/%d ready" % (ready, want), "kubectl hl why -n %s ds/%s" % (ns, name)))
+    return out
+
+
+def check_pvcs(pvcs):
+    out = []
+    for c in pvcs:
+        ns, name = meta(c)
+        phase = c.get("status", {}).get("phase", "")
+        if phase == "Lost":
+            out.append(Finding("crit", "pvc", ns, name, "Lost (backing PV is gone)", "kubectl describe pvc -n %s %s" % (ns, name)))
+        elif phase != "Bound":
+            out.append(Finding("warn", "pvc", ns, name, "%s" % (phase or "unbound"),
+                               "kubectl describe pvc -n %s %s" % (ns, name)))
+    return out
+
+
+def openssl_not_after(pem_bytes):
+    """Leaf certificate's notAfter via the openssl CLI (ships with macOS)."""
+    if not shutil.which("openssl"):
+        return None
+    p = subprocess.run(["openssl", "x509", "-noout", "-enddate"], input=pem_bytes,
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if p.returncode != 0:
+        return None
+    val = p.stdout.decode().strip().split("=", 1)[-1]          # "Jan  1 00:00:00 2027 GMT"
+    return datetime.strptime(" ".join(val.split()), "%b %d %H:%M:%S %Y GMT").replace(tzinfo=timezone.utc)
+
+
+def check_certs(secrets, now, reader=openssl_not_after):
+    out = []
+    for s in secrets:
+        if s.get("type") != "kubernetes.io/tls":
+            continue
+        crt = (s.get("data") or {}).get("tls.crt")
+        if not crt:
+            continue
+        ns, name = meta(s)
+        try:
+            not_after = reader(base64.b64decode(crt))
+        except Exception:
+            continue
+        if not not_after:
+            continue
+        days = (not_after - now).total_seconds() / 86400
+        hint = "kubectl get secret -n %s %s -o jsonpath='{.data.tls\\.crt}' | base64 -d | openssl x509 -noout -subject -enddate" % (ns, name)
+        if days < 0:
+            out.append(Finding("crit", "cert", ns, name, "TLS cert EXPIRED %d days ago" % -days, hint))
+        elif days <= CERT_CRIT_DAYS:
+            out.append(Finding("crit", "cert", ns, name, "TLS cert expires in %.0f days" % days, hint))
+        elif days <= CERT_WARN_DAYS:
+            out.append(Finding("warn", "cert", ns, name, "TLS cert expires in %.0f days" % days, hint))
+    return out
+
+
+def recent_warning_events(events, now, minutes):
+    groups = {}
+    cutoff = now - timedelta(minutes=minutes)
+    for e in events:
+        if e.get("type") != "Warning":
+            continue
+        t = event_time(e)
+        if not t or t < cutoff:
+            continue
+        io = e.get("involvedObject", {})
+        key = (io.get("namespace", ""), io.get("kind", ""), io.get("name", ""), e.get("reason", ""))
+        g = groups.setdefault(key, {"count": 0, "last": t, "message": e.get("message", "")})
+        g["count"] += event_count(e)
+        if t >= g["last"]:
+            g["last"], g["message"] = t, e.get("message", "")
+    return sorted(((k, v) for k, v in groups.items()), key=lambda kv: kv[1]["last"], reverse=True)
+
+
+# --------------------------------------------------------------------- status
+def gather(kube, ns):
+    data, errors = {}, []
+    specs = [("nodes", "nodes", None), ("pods", "pods", None), ("deploys", "deployments", None),
+             ("stss", "statefulsets", None), ("dss", "daemonsets", None),
+             ("pvcs", "persistentvolumeclaims", None), ("events", "events", None),
+             ("secrets", "secrets", "type=kubernetes.io/tls")]
+    for key, kind, fsel in specs:
+        try:
+            data[key] = kube.get(kind, None if kind == "nodes" else ns, field_selector=fsel)
+        except (KubeError, ValueError) as e:
+            data[key] = []
+            errors.append("%s: %s" % (kind, short(str(e), 80)))
+    return data, errors
+
+
+def build_status(data, now, event_minutes=60):
+    rows, node_findings = check_nodes(data["nodes"], data["pods"])
+    findings = (node_findings + check_pods(data["pods"], now)
+                + check_workloads(data["deploys"], data["stss"], data["dss"])
+                + check_pvcs(data["pvcs"]) + check_certs(data["secrets"], now))
+    findings.sort(key=lambda f: (SEV_ORDER[f.severity], AREA_ORDER.get(f.area, 9), f.ns, f.name))
+    events = recent_warning_events(data["events"], now, event_minutes)
+    return rows, findings, events
+
+
+def exit_code(findings):
+    sevs = {f.severity for f in findings}
+    return 2 if "crit" in sevs else 1 if "warn" in sevs else 0
+
+
+def render_status(ctx, rows, findings, events, errors, npods, s, quiet=False, event_minutes=60):
+    lines = []
+    w = lines.append
+    w(s.bold("hl status") + s.dim("  ·  context %s  ·  %s" % (ctx, datetime.now().strftime("%a %b %d %H:%M"))))
+    if not quiet:
+        w("")
+        w(s.bold("NODES"))
+        for r in rows:
+            mark = s.green("✓") if r["ready"] else s.red("✗")
+            state = "Ready" if r["ready"] else "NotReady"
+            if r["cordoned"]:
+                state += ",Cordoned"
+            w("  %s %-24s %-18s %-10s cpu req %3.0f%%   mem req %3.0f%%" % (
+                mark, r["name"], state, r["version"], r["cpu_pct"], r["mem_pct"]))
+    for sev, title in (("crit", "CRITICAL"), ("warn", "WARNINGS"), ("info", "INFO")):
+        group = [f for f in findings if f.severity == sev]
+        if not group:
+            continue
+        w("")
+        w(s.sev(sev, s.bold("%s (%d)" % (title, len(group)))))
+        for f in group:
+            obj = "%s/%s" % (f.ns, f.name) if f.ns else f.name
+            w("  %s %-7s %-44s %s" % (s.sev(sev, {"crit": "✗", "warn": "!", "info": "·"}[sev]),
+                                       f.area, short(obj, 44), f.message))
+            if f.hint:
+                w("    " + s.dim("→ " + f.hint))
+    if events and not quiet:
+        w("")
+        w(s.bold("WARNING EVENTS (last %dm)" % event_minutes))
+        for (ns, kind, name, reason), g in events[:10]:
+            w("  %-4s %-20s %-40s %s" % ("x%d" % g["count"], reason,
+                                         short("%s/%s/%s" % (ns, kind.lower(), name), 40),
+                                         s.dim(short(g["message"], 70))))
+        if len(events) > 10:
+            w(s.dim("  … %d more: kubectl get events -A --field-selector type=Warning" % (len(events) - 10)))
+    for e in errors:
+        w(s.yellow("  skipped %s" % e))
+    crit = sum(1 for f in findings if f.severity == "crit")
+    warn = sum(1 for f in findings if f.severity == "warn")
+    w("")
+    if crit or warn:
+        w(s.bold("%s critical, %s warning" % (s.red(str(crit)) if crit else crit,
+                                             s.yellow(str(warn)) if warn else warn))
+          + s.dim("  ·  %d nodes · %d pods" % (len(rows), npods)))
+    else:
+        w(s.green(s.bold("All clear")) + s.dim("  ·  %d nodes · %d pods" % (len(rows), npods)))
+    return "\n".join(lines)
+
+
+def notify_macos(title, message):
+    if sys.platform != "darwin" or not shutil.which("osascript"):
+        return False
+    script = 'display notification "%s" with title "%s"' % (
+        message.replace('"', "'"), title.replace('"', "'"))
+    subprocess.run(["osascript", "-e", script], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return True
+
+
+def cmd_status(kube, args):
+    s = make_style(args.no_color)
+    data, errors = gather(kube, args.namespace)
+    now = datetime.now(timezone.utc)
+    rows, findings, events = build_status(data, now, args.events)
+    if not data["nodes"] and errors:
+        print(s.red("Can't reach the cluster:"), errors[0])
+        return 3
+    print(render_status(kube.current_context(), rows, findings, events, errors,
+                        len(data["pods"]), s, quiet=args.quiet, event_minutes=args.events))
+    code = exit_code(findings)
+    if args.notify and code:
+        crit = sum(1 for f in findings if f.severity == "crit")
+        warn = sum(1 for f in findings if f.severity == "warn")
+        top = next((f for f in findings if f.severity in ("crit", "warn")), None)
+        notify_macos("homelab: %d critical, %d warning" % (crit, warn),
+                     "%s/%s %s" % (top.ns or top.area, top.name, top.message) if top else "")
+    return code
+
+
+# --------------------------------------------------------------------- why
+KIND_ALIASES = {
+    "po": "pod", "pod": "pod", "pods": "pod",
+    "deploy": "deployment", "deployment": "deployment", "deployments": "deployment",
+    "sts": "statefulset", "statefulset": "statefulset", "statefulsets": "statefulset",
+    "ds": "daemonset", "daemonset": "daemonset", "daemonsets": "daemonset",
+    "job": "job", "jobs": "job",
+    "svc": "service", "service": "service", "services": "service",
+}
+
+
+def container_ports(container):
+    ports = container.get("ports") or []
+    return {p.get("containerPort") for p in ports}, {p.get("name") for p in ports if p.get("name")}
+
+
+def probe_port_problems(container):
+    nums, names = container_ports(container)
+    problems = []
+    if not nums:
+        return problems
+    for kind in ("readinessProbe", "livenessProbe", "startupProbe"):
+        probe = container.get(kind) or {}
+        handler = probe.get("httpGet") or probe.get("tcpSocket") or probe.get("grpc")
+        if not handler or "port" not in handler:
+            continue
+        port = handler["port"]
+        if isinstance(port, int) and port not in nums:
+            problems.append("%s in container %s targets port %s, but the container declares %s"
+                            % (kind, container["name"], port, sorted(nums)))
+        elif isinstance(port, str) and not port.isdigit() and port not in names:
+            problems.append("%s in container %s targets named port '%s', which the container doesn't define"
+                            % (kind, container["name"], port))
+    return problems
+
+
+def service_port_problems(svc, pods):
+    """targetPorts that no selected pod's containers declare."""
+    problems = []
+    nums, names = set(), set()
+    for p in pods:
+        for c in p.get("spec", {}).get("containers", []):
+            n, nm = container_ports(c)
+            nums |= n
+            names |= nm
+    if not nums:
+        return problems
+    for sp in svc.get("spec", {}).get("ports", []):
+        tp = sp.get("targetPort", sp.get("port"))
+        if isinstance(tp, int) and tp not in nums:
+            problems.append("Service %s port %s → targetPort %s, but pods only declare %s"
+                            % (svc["metadata"]["name"], sp.get("port"), tp, sorted(nums)))
+        elif isinstance(tp, str) and not tp.isdigit() and tp not in names:
+            problems.append("Service %s targetPort '%s' doesn't match any named container port"
+                            % (svc["metadata"]["name"], tp))
+    return problems
+
+
+def diagnose_pod(pod, events, node=None, services=()):
+    """Return likely causes, most important first. Pure function."""
+    hints = []
+    st = pod.get("status", {})
+    spec = pod.get("spec", {})
+    containers = {c["name"]: c for c in spec.get("containers", []) + spec.get("initContainers", [])}
+
+    if node is not None and (cond(node.get("status"), "Ready") or {}).get("status") != "True":
+        hints.append("Node %s is NotReady, so nothing on it will run. Check the kubelet there "
+                     "(systemctl status kubelet / journalctl -u kubelet)." % node["metadata"]["name"])
+
+    sched = cond(st, "PodScheduled")
+    if st.get("phase") == "Pending" and sched and sched.get("status") == "False":
+        msg = sched.get("message", "")
+        if "Insufficient" in msg:
+            cpu, mem = pod_requests(pod)
+            hints.append("Requests are larger than any node has free (cpu %.2f cores, memory %s). "
+                         "Lower requests or free capacity. Scheduler said: %s" % (cpu, fmt_bytes(mem), short(msg, 140)))
+        elif "affinity" in msg or "selector" in msg:
+            hints.append("No node matches the pod's nodeSelector/affinity %s. Label a node or fix the selector."
+                         % json.dumps(spec.get("nodeSelector") or spec.get("affinity", {}).get("nodeAffinity", {}))[:160])
+        elif "taint" in msg:
+            hints.append("Nodes have taints this pod doesn't tolerate: " + short(msg, 160))
+        elif "PersistentVolumeClaim" in msg:
+            hints.append("A PVC isn't bound. kubectl get pvc -n %s; check StorageClass and provisioner." % pod["metadata"].get("namespace"))
+        else:
+            hints.append("Unschedulable: " + short(msg, 180))
+
+    for cs in (st.get("initContainerStatuses") or []) + (st.get("containerStatuses") or []):
+        name = cs.get("name")
+        c = containers.get(name, {})
+        w = (cs.get("state") or {}).get("waiting") or {}
+        reason = w.get("reason", "")
+        last = (cs.get("lastState") or {}).get("terminated") or {}
+        if reason in ("ImagePullBackOff", "ErrImagePull", "InvalidImageName"):
+            pull_msgs = [e.get("message", "") for e in events if e.get("reason") in ("Failed", "ErrImagePull")]
+            hints.append("Image '%s' can't be pulled. Check the name and tag, registry access, and imagePullSecrets.%s"
+                         % (cs.get("image") or c.get("image"), " Kubelet said: " + short(pull_msgs[-1], 140) if pull_msgs else ""))
+        elif reason in ("CreateContainerConfigError", "CreateContainerError"):
+            hints.append("Container %s can't be created. Usually a missing ConfigMap/Secret or key: %s"
+                         % (name, short(w.get("message"), 160)))
+        elif reason == "CrashLoopBackOff" or (cs.get("restartCount", 0) and last):
+            code, lreason = last.get("exitCode"), last.get("reason", "")
+            limit = (c.get("resources", {}).get("limits", {}) or {}).get("memory", "none")
+            if lreason == "OOMKilled":
+                hints.append("Container %s was OOMKilled. Memory limit is %s: raise it, or find the leak." % (name, limit))
+            elif code == 137:
+                hints.append("Container %s was SIGKILLed (exit 137). Usually a failing liveness probe or memory pressure; check the events below." % name)
+            elif code == 0:
+                hints.append("Container %s exits successfully (code 0) and gets restarted. Its command finishes instead of "
+                             "staying in the foreground." % name)
+            elif code is not None:
+                hints.append("Container %s exits with code %s. The answer is usually in the previous logs above "
+                             "(kubectl logs --previous)." % (name, code))
+
+    for c in spec.get("containers", []):
+        hints.extend(probe_port_problems(c))
+    probe_events = [e for e in events if "probe failed" in (e.get("message") or "").lower()]
+    if probe_events:
+        hints.append("Probe failing: " + short(probe_events[-1].get("message"), 160))
+
+    for svc in services:
+        hints.extend(service_port_problems(svc, [pod]))
+
+    if not hints:
+        ready = (cond(st, "Ready") or {}).get("status") == "True"
+        hints.append("No problems detected; the pod is Running and Ready." if ready
+                     else "Nothing obvious. Read the events and logs above, then try kubectl exec into the pod.")
+    return hints
+
+
+def pod_badness(pod):
+    st = pod.get("status", {})
+    for cs in (st.get("initContainerStatuses") or []) + (st.get("containerStatuses") or []):
+        if ((cs.get("state") or {}).get("waiting") or {}).get("reason") in BAD_WAITING:
+            return 0
+    if st.get("phase") == "Pending":
+        return 1
+    if (cond(st, "Ready") or {}).get("status") != "True":
+        return 2
+    if any(cs.get("restartCount", 0) for cs in st.get("containerStatuses") or []):
+        return 3
+    return 4
+
+
+def pod_one_liner(pod, now):
+    st = pod.get("status", {})
+    css = st.get("containerStatuses") or []
+    ready = sum(1 for c in css if c.get("ready"))
+    restarts = sum(c.get("restartCount", 0) for c in css)
+    state = st.get("phase", "?")
+    for cs in (st.get("initContainerStatuses") or []) + css:
+        w = (cs.get("state") or {}).get("waiting")
+        if w and w.get("reason"):
+            state = w["reason"]
+            break
+    created = parse_ts(pod["metadata"].get("creationTimestamp"))
+    return "%-48s %d/%d  %-26s restarts %-3d %s" % (
+        pod["metadata"]["name"], ready, len(css), state, restarts,
+        human_age(now - created) if created else "")
+
+
+def describe_container(cs, c, s):
+    lines = []
+    state = cs.get("state") or {}
+    if "running" in state:
+        st = s.green("running")
+    elif "waiting" in state:
+        w = state["waiting"]
+        st = s.red("waiting: %s" % w.get("reason", "")) + (s.dim(" (" + short(w.get("message"), 80) + ")") if w.get("message") else "")
+    elif "terminated" in state:
+        t = state["terminated"]
+        st = "terminated: %s exit %s" % (t.get("reason", ""), t.get("exitCode"))
+    else:
+        st = "?"
+    lines.append("  %s  %s  ready=%s  restarts=%s" % (s.bold(cs.get("name", "?")), st,
+                                                      cs.get("ready"), cs.get("restartCount", 0)))
+    lines.append("    image %s" % (cs.get("image") or c.get("image")))
+    last = (cs.get("lastState") or {}).get("terminated")
+    if last:
+        lines.append("    last termination: %s exit %s at %s" % (last.get("reason", "?"), last.get("exitCode"), last.get("finishedAt")))
+    res = c.get("resources") or {}
+    if res:
+        lines.append("    requests %s  limits %s" % (res.get("requests", {}), res.get("limits", {})))
+    for kind in ("readinessProbe", "livenessProbe", "startupProbe"):
+        p = c.get(kind)
+        if p:
+            h = p.get("httpGet")
+            if h:
+                desc = "http GET :%s%s" % (h.get("port"), h.get("path", "/"))
+            elif p.get("tcpSocket"):
+                desc = "tcp :%s" % p["tcpSocket"].get("port")
+            elif p.get("exec"):
+                desc = "exec %s" % " ".join(p["exec"].get("command", []))[:60]
+            else:
+                desc = "grpc"
+            lines.append("    %s %s" % (kind, desc))
+    return lines
+
+
+def print_pod_diagnosis(kube, pod, ns, s, log_lines, now):
+    name = pod["metadata"]["name"]
+    st, spec = pod.get("status", {}), pod.get("spec", {})
+    node = None
+    if spec.get("nodeName"):
+        try:
+            node = kube.get_one("node", spec["nodeName"])
+        except KubeError:
+            pass
+    node_state = ""
+    if node is not None:
+        node_state = " (Ready)" if (cond(node.get("status"), "Ready") or {}).get("status") == "True" else s.red(" (NotReady)")
+    created = parse_ts(pod["metadata"].get("creationTimestamp"))
+    print(s.bold("POD %s/%s" % (ns, name)) + "  phase %s  node %s%s  ip %s  age %s" % (
+        st.get("phase"), spec.get("nodeName", "-"), node_state, st.get("podIP", "-"),
+        human_age(now - created) if created else "?"))
+
+    print("\n" + s.bold("1. CONTAINERS"))
+    containers = {c["name"]: c for c in spec.get("containers", []) + spec.get("initContainers", [])}
+    statuses = (st.get("initContainerStatuses") or []) + (st.get("containerStatuses") or [])
+    if not statuses:
+        print("  (no container statuses yet; the pod hasn't started)")
+    for cs in statuses:
+        for line in describe_container(cs, containers.get(cs.get("name"), {}), s):
+            print(line)
+
+    try:
+        events = kube.get("events", ns, field_selector="involvedObject.name=%s" % name)
+    except KubeError:
+        events = []
+    events.sort(key=lambda e: event_time(e) or now)
+    print("\n" + s.bold("2. EVENTS") + s.dim("  (kubectl describe pod shows the same)"))
+    if not events:
+        print("  none (events expire after ~1h)")
+    for e in events[-12:]:
+        t = event_time(e)
+        typ = e.get("type", "")
+        print("  %-5s %s %-18s %s" % (human_age(now - t) if t else "?",
+                                      s.yellow("W") if typ == "Warning" else s.dim("N"),
+                                      e.get("reason", ""), short(e.get("message"), 100)))
+
+    print("\n" + s.bold("3. LOGS") + s.dim("  (last %d lines of containers that aren't ready)" % log_lines))
+    shown = False
+    for cs in st.get("containerStatuses") or []:
+        if cs.get("ready") and not cs.get("restartCount"):
+            continue
+        previous = cs.get("restartCount", 0) > 0 and "running" not in (cs.get("state") or {})
+        args = ["logs", "-n", ns, name, "-c", cs["name"], "--tail", str(log_lines)]
+        if previous:
+            args.append("--previous")
+        try:
+            out = kube.run(args).rstrip()
+        except KubeError as e:
+            out = s.dim("(no logs: %s)" % short(str(e), 80))
+        print("  %s%s" % (s.bold(cs["name"]), s.dim(" (previous instance)") if previous else ""))
+        for line in (out.splitlines() or [s.dim("(empty)")]):
+            print("    " + line)
+        shown = True
+    if not shown:
+        print("  all containers ready; skipped (kubectl logs -n %s %s)" % (ns, name))
+
+    services = []
+    try:
+        services = [svc for svc in kube.get("services", ns)
+                    if selector_matches(svc.get("spec", {}).get("selector"), pod["metadata"].get("labels", {}))]
+    except KubeError:
+        pass
+    print("\n" + s.bold("4. SERVICES selecting this pod"))
+    if not services:
+        print("  none")
+    for svc in services:
+        ports = ", ".join("%s→%s" % (p.get("port"), p.get("targetPort", p.get("port"))) for p in svc["spec"].get("ports", []))
+        print("  %-30s %-10s %s" % (svc["metadata"]["name"], svc["spec"].get("type", ""), ports))
+
+    print("\n" + s.bold("5. LIKELY CAUSE"))
+    for h in diagnose_pod(pod, events, node, services):
+        print("  • " + h)
+
+
+def endpoint_counts(kube, ns, svc_name):
+    try:
+        slices = kube.get("endpointslices", ns, selector="kubernetes.io/service-name=%s" % svc_name)
+    except KubeError:
+        return None, None
+    ready = total = 0
+    for sl in slices:
+        for ep in sl.get("endpoints") or []:
+            total += 1
+            if (ep.get("conditions") or {}).get("ready", True):
+                ready += 1
+    return ready, total
+
+
+def why_service(kube, ns, name, s, now):
+    svc = kube.get_one("service", name, ns)
+    spec = svc.get("spec", {})
+    sel = spec.get("selector") or {}
+    ports = ", ".join("%s→%s" % (p.get("port"), p.get("targetPort", p.get("port"))) for p in spec.get("ports", []))
+    print(s.bold("SERVICE %s/%s" % (ns, name)) + "  type %s  clusterIP %s  ports %s" % (
+        spec.get("type"), spec.get("clusterIP"), ports))
+    if spec.get("type") == "ExternalName":
+        print("  ExternalName → %s (DNS CNAME, no endpoints)" % spec.get("externalName"))
+        return 0
+    print("  selector: %s" % (selector_string(sel) or s.yellow("(none: endpoints are managed by hand)")))
+    pods = kube.get("pods", ns, selector=selector_string(sel)) if sel else []
+    print("\n" + s.bold("1. PODS matching the selector") + "  (%d)" % len(pods))
+    for p in pods:
+        print("  " + pod_one_liner(p, now))
+    ready, total = endpoint_counts(kube, ns, name)
+    print("\n" + s.bold("2. ENDPOINTS") + "  %s ready / %s total" % (ready if ready is not None else "?", total if total is not None else "?"))
+
+    hints = []
+    if sel and not pods:
+        all_pods = kube.get("pods", ns)
+        seen = sorted({selector_string({k: v}) for p in all_pods for k, v in (p["metadata"].get("labels") or {}).items()
+                       if k in sel})
+        hints.append("The selector %s matches no pods in %s. Labels with the same keys that do exist: %s"
+                     % (selector_string(sel), ns, ", ".join(seen) or "none"))
+    elif pods and ready == 0:
+        hints.append("Pods match, but none are Ready, so traffic has nowhere to go. Run kubectl hl why on one of them.")
+    hints.extend(service_port_problems(svc, pods))
+    if not hints:
+        hints.append("Selector, endpoints and ports look right. Next: test from inside the cluster "
+                     "(kubectl run t --rm -it --image=busybox:1.36 -- wget -qO- %s.%s:%s) and check NetworkPolicies "
+                     "(kubectl get netpol -n %s)." % (name, ns, (spec.get("ports") or [{}])[0].get("port", ""), ns))
+    print("\n" + s.bold("3. LIKELY CAUSE"))
+    for h in hints:
+        print("  • " + h)
+    return 0
+
+
+def cmd_why(kube, args):
+    s = make_style(args.no_color)
+    ns = args.namespace or kube.current_namespace()
+    now = datetime.now(timezone.utc)
+    target = args.target
+    if "/" in target:
+        k, name = target.split("/", 1)
+        kind = KIND_ALIASES.get(k.lower())
+        if not kind:
+            print("unsupported kind '%s' (use pod, deploy, sts, ds, job, svc)" % k)
+            return 64
+    else:
+        kind, name = "pod", target
+    try:
+        if kind == "service":
+            return why_service(kube, ns, name, s, now)
+        if kind == "pod":
+            print_pod_diagnosis(kube, kube.get_one("pod", name, ns), ns, s, args.lines, now)
+            return 0
+        obj = kube.get_one(kind, name, ns)
+    except KubeError as e:
+        print(s.red(short(str(e), 200)))
+        return 1
+
+    spec, st = obj.get("spec", {}), obj.get("status", {})
+    sel = (spec.get("selector") or {}).get("matchLabels") or {}
+    print(s.bold("%s %s/%s" % (kind.upper(), ns, name)) + "  " + s.dim(json.dumps(
+        {k: v for k, v in st.items() if k.lower().endswith(("replicas", "ready", "scheduled", "available",
+                                                           "unavailable", "active", "succeeded", "failed"))})))
+    for c in st.get("conditions") or []:
+        if c.get("status") != "True" or c.get("reason") in ("ProgressDeadlineExceeded",):
+            print("  condition %s=%s %s: %s" % (c.get("type"), c.get("status"), c.get("reason", ""), short(c.get("message"), 100)))
+    try:
+        ev = [e for e in kube.get("events", ns)
+              if e.get("type") == "Warning" and (e.get("involvedObject", {}).get("name", "") == name
+                                                  or e.get("involvedObject", {}).get("name", "").startswith(name + "-"))
+              and e.get("involvedObject", {}).get("kind") != "Pod"]
+    except KubeError:
+        ev = []
+    for e in sorted(ev, key=lambda e: event_time(e) or now)[-5:]:
+        print("  %s %s/%s %s: %s" % (s.yellow("W"), e["involvedObject"].get("kind"), e["involvedObject"].get("name"),
+                                     e.get("reason"), short(e.get("message"), 100)))
+    pods = kube.get("pods", ns, selector=selector_string(sel)) if sel else []
+    print("\n" + s.bold("PODS") + " (%d, selector %s)" % (len(pods), selector_string(sel)))
+    if not pods:
+        print("  • No pods exist. Look at the warning events above (FailedCreate: quota, PSA, missing SA, admission webhooks).")
+        return 1
+    pods.sort(key=pod_badness)
+    for p in pods:
+        print("  " + pod_one_liner(p, now))
+    worst = pods[0]
+    if pod_badness(worst) == 4 and not args.all:
+        print("\n" + s.green("All pods healthy.") + s.dim(" Use --all to diagnose one anyway."))
+        return 0
+    print("\n" + s.dim("─" * 60 + " diagnosing the worst pod"))
+    print_pod_diagnosis(kube, worst, ns, s, args.lines, now)
+    return 0
+
+
+# --------------------------------------------------------------------- clean
+def find_cleanable(pods, jobs, now, older_than_hours):
+    items = []
+    cutoff = now - timedelta(hours=older_than_hours)
+    for p in pods:
+        ns, name = meta(p)
+        st = p.get("status", {})
+        owners = p["metadata"].get("ownerReferences") or []
+        owner_kinds = {o.get("kind") for o in owners}
+        if "Job" in owner_kinds:
+            continue                      # the Job (and its TTL/history) owns these
+        if st.get("phase") == "Failed":
+            items.append(("pod", ns, name, st.get("reason") or "Failed"))
+        elif st.get("phase") == "Succeeded" and not owners:
+            items.append(("pod", ns, name, "Completed (bare pod)"))
+    for j in jobs:
+        ns, name = meta(j)
+        if any(o.get("kind") == "CronJob" for o in j["metadata"].get("ownerReferences") or []):
+            continue                      # CronJob history limits handle these
+        if j.get("spec", {}).get("ttlSecondsAfterFinished") is not None:
+            continue
+        st = j.get("status", {})
+        done = parse_ts(st.get("completionTime"))
+        failed = cond(st, "Failed")
+        if done and done < cutoff:
+            items.append(("job", ns, name, "Complete %s ago" % human_age(now - done)))
+        elif failed and failed.get("status") == "True":
+            t = parse_ts(failed.get("lastTransitionTime"))
+            if t and t < cutoff:
+                items.append(("job", ns, name, "Failed %s ago" % human_age(now - t)))
+    return items
+
+
+def cmd_clean(kube, args):
+    s = make_style(args.no_color)
+    now = datetime.now(timezone.utc)
+    items = find_cleanable(kube.get("pods", args.namespace), kube.get("jobs", args.namespace), now, args.older_than)
+    if not items:
+        print(s.green("Nothing to clean."))
+        return 0
+    for kind, ns, name, why in items:
+        print("  %-4s %-50s %s" % (kind, short("%s/%s" % (ns, name), 50), s.dim(why)))
+    if not args.yes:
+        print(s.yellow("\nDry run: %d object(s). Re-run with --yes to delete them." % len(items)))
+        return 0
+    failed = 0
+    for kind, ns, name, _ in items:
+        try:
+            kube.run(["delete", kind, "-n", ns, name, "--wait=false"])
+        except KubeError as e:
+            failed += 1
+            print(s.red("  failed %s/%s: %s" % (ns, name, short(str(e), 80))))
+    print(s.green("\nDeleted %d object(s)." % (len(items) - failed)))
+    return 1 if failed else 0
+
+
+# --------------------------------------------------------------------- images
+def collect_images(pods):
+    images = {}
+    for p in pods:
+        if p.get("status", {}).get("phase") in ("Succeeded", "Failed"):
+            continue
+        ns, _ = meta(p)
+        spec = p.get("spec", {})
+        for c in spec.get("containers", []) + spec.get("initContainers", []):
+            img = c.get("image", "")
+            e = images.setdefault(img, {"pods": 0, "namespaces": set()})
+            e["pods"] += 1
+            e["namespaces"].add(ns)
+    return images
+
+
+def image_flag(img):
+    if "@sha256:" in img:
+        return "pinned"
+    last = img.rsplit("/", 1)[-1]
+    if ":" not in last:
+        return "no tag (= latest)"
+    if last.endswith(":latest"):
+        return "latest"
+    return ""
+
+
+def cmd_images(kube, args):
+    s = make_style(args.no_color)
+    images = collect_images(kube.get("pods", args.namespace))
+    flagged = 0
+    for img in sorted(images):
+        e = images[img]
+        flag = image_flag(img)
+        if flag in ("latest", "no tag (= latest)"):
+            flagged += 1
+            flag = s.yellow(flag)
+        elif flag:
+            flag = s.green(flag)
+        print("  %-70s %3d pod(s)  %-28s %s" % (short(img, 70), e["pods"],
+                                                 short(",".join(sorted(e["namespaces"])), 28), flag))
+    print(s.dim("\n%d images · %d floating tags (pin them: upgrades become deliberate)" % (len(images), flagged)))
+    return 0
+
+
+# --------------------------------------------------------------------- main
+def build_parser():
+    # SUPPRESS defaults so flags work before *or* after the subcommand
+    # (otherwise the subparser's defaults overwrite what was given first).
+    S = argparse.SUPPRESS
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--context", default=S, help="kubeconfig context (default: current)")
+    common.add_argument("-n", "--namespace", default=S, help="limit to one namespace")
+    common.add_argument("--no-color", action="store_true", default=S)
+
+    p = argparse.ArgumentParser(prog="kubectl hl", parents=[common],
+                                description="Daily homelab Kubernetes helper.")
+    p.add_argument("--version", action="version", version="kubectl-hl " + VERSION)
+    sub = p.add_subparsers(dest="cmd")
+
+    st = sub.add_parser("status", parents=[common], help="health report (default)")
+    for target in (p, st):
+        target.add_argument("-q", "--quiet", action="store_true", default=S, help="findings only")
+        target.add_argument("--events", type=int, default=S, metavar="MIN",
+                            help="warning-event window in minutes (default 60)")
+        target.add_argument("--notify", action="store_true", default=S,
+                            help="macOS notification if anything is wrong")
+
+    why = sub.add_parser("why", parents=[common], help="troubleshoot a pod / deploy/x / sts/x / ds/x / job/x / svc/x")
+    why.add_argument("target")
+    why.add_argument("--lines", type=int, default=20, help="log lines to show (default 20)")
+    why.add_argument("--all", action="store_true", help="diagnose even if every pod is healthy")
+
+    cl = sub.add_parser("clean", parents=[common], help="failed pods and finished jobs (dry run unless --yes)")
+    cl.add_argument("--yes", action="store_true", help="actually delete")
+    cl.add_argument("--older-than", type=float, default=24, metavar="HOURS",
+                    help="only jobs finished more than this long ago (default 24)")
+
+    sub.add_parser("images", parents=[common], help="images running in the cluster")
+    return p
+
+
+def main(argv=None, kube=None):
+    args = build_parser().parse_args(argv)
+    for key, default in (("context", None), ("namespace", None), ("no_color", False),
+                         ("quiet", False), ("events", 60), ("notify", False)):
+        if not hasattr(args, key):
+            setattr(args, key, default)
+    kube = kube or Kube(context=args.context)
+    handlers = {None: cmd_status, "status": cmd_status, "why": cmd_why,
+                "clean": cmd_clean, "images": cmd_images}
+    try:
+        return handlers[args.cmd](kube, args)
+    except KubeError as e:
+        print("kubectl error: %s" % short(str(e), 300), file=sys.stderr)
+        return 3
+    except KeyboardInterrupt:
+        return 130
+
+
+if __name__ == "__main__":
+    sys.exit(main())

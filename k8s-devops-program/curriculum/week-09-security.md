@@ -19,6 +19,9 @@
 ## Capstone milestone
 Hardening. Job applications start
 
+## kubectl hl check (~30 min)
+`hl audit`: privileged, root, hostPath, with a test. See `hl/README.md`.
+
 ## Tier variants (filled in at build-out)
 - **Foundation:** pre-work primer + guided lab before the core labs
 - **Standard:** as above

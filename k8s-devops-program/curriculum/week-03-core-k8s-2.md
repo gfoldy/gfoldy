@@ -19,6 +19,9 @@
 ## Capstone milestone
 Config, persistent storage, Ingress/Gateway
 
+## kubectl hl check (~30 min)
+`hl netpol`: namespaces without default-deny; routes with no backend, with a test. See `hl/README.md`.
+
 ## Tier variants (filled in at build-out)
 - **Foundation:** pre-work primer + guided lab before the core labs
 - **Standard:** as above

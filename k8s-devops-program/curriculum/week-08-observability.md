@@ -18,6 +18,9 @@
 ## Capstone milestone
 Dashboards + alerts. **Checkpoint 2** (CKA mini-mock, decides the exam booking)
 
+## kubectl hl check (~30 min)
+`hl alerts`: firing Prometheus alerts, with a test. See `hl/README.md`.
+
 ## Tier variants (filled in at build-out)
 - **Foundation:** pre-work primer + guided lab before the core labs
 - **Standard:** as above

@@ -20,6 +20,9 @@
 ## Capstone milestone
 Repo created, app containerized, Deployment + Service on the homelab
 
+## kubectl hl check (~30 min)
+Pods with no resource requests/limits; `-o json` output, with a test. See `hl/README.md`.
+
 ## Tier variants (filled in at build-out)
 - **Foundation:** pre-work primer + guided lab before the core labs
 - **Standard:** as above

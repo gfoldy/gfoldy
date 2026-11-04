@@ -18,6 +18,9 @@
 ## Capstone milestone
 Light touch only
 
+## kubectl hl check (~30 min)
+Control-plane cert expiry + etcd backup age, with a test. See `hl/README.md`.
+
 ## Tier variants (filled in at build-out)
 - **Foundation:** pre-work primer + guided lab before the core labs
 - **Standard:** as above

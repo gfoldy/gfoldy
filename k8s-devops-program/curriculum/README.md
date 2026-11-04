@@ -15,8 +15,9 @@
 | 11 | CKA prep II | CKA domains | killer.sh #2 | `week-11-cka-prep-2.md` |
 | 12 | CKA exam & polish | | **Exam** | `week-12-exam-polish.md` |
 
-Two tracks run alongside the weeks:
+Three tracks run alongside the weeks:
 - **Capstone:** about 1-1.5 h/week from Week 2. See `../capstone/README.md`.
+- **`kubectl hl`:** daily use, plus one new check per week (~30 min). See `../hl/README.md`.
 - **Job search:** 1 h/week from Week 6 (or Week 2 if the diagnostic says so). See `../job-search/README.md`.
 
 ## How a typical week splits up (9 h, Standard tier)

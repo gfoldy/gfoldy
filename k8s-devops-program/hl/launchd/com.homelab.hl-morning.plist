@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Morning homelab check: runs kubectl-hl with the notify flag at 08:00 every day and pops
+  a macOS notification only if something is wrong. Full report goes to the log.
+
+  Install:
+    1. Replace YOUR_USER below (3 places) and check the PATH matches `which kubectl`.
+    2. cp launchd/com.homelab.hl-morning.plist ~/Library/LaunchAgents/
+    3. launchctl load ~/Library/LaunchAgents/com.homelab.hl-morning.plist
+    Test now:  launchctl start com.homelab.hl-morning && cat /tmp/hl-morning.log
+    Remove:    launchctl unload ~/Library/LaunchAgents/com.homelab.hl-morning.plist
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.homelab.hl-morning</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/YOUR_USER/.local/bin/kubectl-hl</string>
+    <string>--notify</string>
+    <string>--no-color</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    <key>KUBECONFIG</key>
+    <string>/Users/YOUR_USER/.kube/config</string>
+    <key>HOME</key>
+    <string>/Users/YOUR_USER</string>
+  </dict>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key><integer>8</integer>
+    <key>Minute</key><integer>0</integer>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>/tmp/hl-morning.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/hl-morning.log</string>
+</dict>
+</plist>

@@ -48,7 +48,7 @@
 - 1 pt: pod CIDR (`kubectl get nodes -o jsonpath='{.items[*].spec.podCIDR}'`, or `--cluster-cidr` in the kube-controller-manager manifest) **and** service CIDR (`--service-cluster-ip-range` in `/etc/kubernetes/manifests/kube-apiserver.yaml`) **and** the static pod path `/etc/kubernetes/manifests` (`staticPodPath` in `/var/lib/kubelet/config.yaml`).
 - Partial: 1 pt if 2 of the 3 items in that second point are right.
 
-## Part C: root causes (for reviewing his notes)
+## Part C: root causes (for reviewing their notes)
 
 | # | Root cause | Expected fix |
 |---|---|---|
@@ -61,7 +61,7 @@
 | C7 | `backend-svc` targetPort 8080, container listens on 80 | targetPort 80 |
 | C8 | kubelet stopped **and disabled** on `diag-worker` | `docker exec -it diag-worker bash` → `systemctl enable --now kubelet`; check with `journalctl -u kubelet` |
 
-Watch for in the review: did he look at **Events** first? Did he fix C6 by widening permissions (a cluster-wide grant, `*` verbs)? That loses the least-privilege point and is worth discussing.
+Watch for in the review: did they look at **Events** first? Did they fix C6 by widening permissions (a cluster-wide grant, `*` verbs)? That loses the least-privilege point and is worth discussing.
 
 ## Part D rubrics
 

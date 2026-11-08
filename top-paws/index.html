@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Top Paws Pet Supply</title>
-<meta name="description" content="Top Paws Pet Supply: name-brand dog food, toys, treats and gear, plus fresh-baked dog treats for in-store pickup.">
+<meta name="description" content="Top Paws Pet Supply in Union Grove, WI: quality pet food brands, the TopPaws Bakery and Doggie Diner, curbside pickup, free delivery and a dog Birthday Club.">
 <link rel="icon" href="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap">
 <style>
-/* Layout: logo strip, sticky purple tab bar (Home / Shop / Bakery), one view shown at a time.
+/* Layout: logo strip, sticky purple tab bar (Home / Shop / Bakery / Birthday Club), one view at a time.
    Palette runs the logo's plum from deep eggplant down to pale lilac, with the puppy's brown as a warm accent. */
 :root {
   --eggplant: #2b1a33;
@@ -32,28 +32,31 @@
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--mist); color: var(--ink); font: 400 17px/1.6 var(--body); }
-img { max-width: 100%; }
+img { max-width: 100%; display: block; }
 [hidden] { display: none !important; }
 a { color: var(--violet); }
 :focus-visible { outline: 3px solid var(--orchid); outline-offset: 2px; border-radius: 6px; }
 h1, h2, h3 { font-family: var(--display); font-weight: 600; line-height: 1.15; margin: 0; text-wrap: balance; }
+p { margin: 0; }
 .wrap { max-width: 1140px; margin: 0 auto; padding-inline: 20px; }
 .num { font-variant-numeric: tabular-nums; }
+.hp { display: none; }
 
 /* Logo strip */
 .strip { background: var(--paper); }
 .strip .wrap { display: flex; align-items: center; justify-content: space-between; gap: 10px 24px; padding-block: 10px; flex-wrap: wrap; }
-.strip .logo { height: 76px; width: auto; display: block; }
+.strip .logo { height: 76px; width: auto; }
 .strip-info { display: flex; gap: 6px 22px; flex-wrap: wrap; font-weight: 700; color: var(--plum); font-size: 15px; }
 .strip-info .open { color: var(--brown); display: inline-flex; align-items: center; gap: 7px; }
 .strip-info .open::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+.strip-info a { color: inherit; text-decoration: none; }
 
 /* Tab bar */
 .tabbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30; background: var(--plum); }
 .tabbar .wrap { display: flex; gap: 6px; padding-top: 10px; }
 .tabbar a {
   font: 600 18px/1 var(--display); color: var(--lilac); text-decoration: none;
-  padding: 13px 26px 15px; border-radius: 14px 14px 0 0; display: inline-flex; align-items: center; gap: 8px;
+  padding: 13px 24px 15px; border-radius: 14px 14px 0 0; display: inline-flex; align-items: center; gap: 8px;
 }
 .tabbar a:hover { color: #fff; background: var(--plum-dk); }
 .tabbar a[aria-current="page"] { background: var(--mist); color: var(--plum); }
@@ -67,145 +70,188 @@ h1, h2, h3 { font-family: var(--display); font-weight: 600; line-height: 1.15; m
 .btn-violet:hover { background: var(--plum); }
 .btn-lilac { background: var(--lilac); color: var(--eggplant); }
 .btn-lilac:hover { background: #fff; }
-.btn-ghost { background: transparent; color: var(--plum); box-shadow: inset 0 0 0 2px var(--orchid); }
-.btn-ghost:hover { background: var(--paper); }
-.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn:disabled { opacity: 0.5; cursor: wait; }
+.btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
 
-/* Page title band used on Shop and Bakery */
+/* Title band used on inner tabs */
 .band { background: var(--lilac); padding-block: 34px 30px; position: relative; overflow: hidden; }
 .band h1 { font-size: clamp(34px, 5vw, 50px); color: var(--eggplant); }
-.band p { margin: 8px 0 0; max-width: 42em; color: var(--plum-dk); }
+.band p { margin-top: 8px; max-width: 44em; color: var(--plum-dk); }
 .band .swoosh { position: absolute; right: -60px; top: -30px; width: 460px; height: 220px; color: var(--orchid); opacity: 0.45; pointer-events: none; }
 .band .wrap { position: relative; }
+.notice { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; background: var(--paper); color: var(--plum); font-weight: 800; border-radius: 999px; padding: 8px 16px; font-size: 15px; }
+.notice svg { width: 18px; height: 18px; color: var(--brown); flex: none; }
+
+.section { padding-block: 44px; }
+.section-title { font-size: clamp(28px, 3.6vw, 36px); color: var(--plum); margin-bottom: 8px; }
+.lede { color: var(--muted); max-width: 44em; margin-bottom: 24px; }
 
 /* ---------- HOME ---------- */
 .hero { background: var(--lilac); position: relative; overflow: hidden; }
 .hero .swoosh { position: absolute; left: -120px; bottom: -80px; width: 820px; height: 380px; color: var(--orchid); opacity: 0.35; pointer-events: none; }
-.hero .wrap { position: relative; display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 44px; align-items: center; padding-block: 48px 56px; }
-.hero-logo { background: var(--paper); border-radius: 50%; aspect-ratio: 1; display: grid; place-items: center; padding: 40px; max-width: 420px; width: 100%; box-shadow: 0 0 0 10px var(--orchid), 0 0 0 20px var(--violet); }
-.hero h1 { font-size: clamp(34px, 5vw, 56px); color: var(--eggplant); }
+.hero .wrap { position: relative; display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 44px; align-items: center; padding-block: 44px 52px; }
+.hero-logo { background: var(--paper); border-radius: 50%; aspect-ratio: 1; display: grid; place-items: center; padding: 40px; max-width: 400px; width: 100%; box-shadow: 0 0 0 10px var(--orchid), 0 0 0 20px var(--violet); }
+.hero h1 { font-size: clamp(34px, 5vw, 54px); color: var(--eggplant); }
 .hero p { color: var(--plum-dk); font-size: 19px; margin: 16px 0 26px; max-width: 32em; }
-.btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
 
-.doors { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; padding-block: 48px; }
-.door { border-radius: 22px; padding: 30px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-.door h2 { font-size: 34px; }
-.door p { margin: 0; }
-.door-shop { background: var(--plum); color: #f3ecf6; }
-.door-shop h2 { color: #fff; }
-.door-bake { background: var(--violet); color: #f6f0f9; }
-.door-bake h2 { color: #fff; }
-.cat-links { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 6px 0; }
-.cat-links a { background: var(--plum-dk); color: #fff; text-decoration: none; border-radius: 12px; padding: 14px 16px; font-weight: 800; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.cat-links a:hover { background: var(--eggplant); }
-.cat-links a span { color: var(--orchid); font-weight: 700; font-size: 14px; white-space: nowrap; }
-.brand-names { margin: 0; color: var(--lilac); font-size: 15px; }
-.brand-names b { color: #fff; }
-.fresh { list-style: none; padding: 0; margin: 6px 0; display: grid; gap: 8px; }
-.fresh li { display: flex; justify-content: space-between; gap: 12px; background: rgba(255,255,255,0.12); border-radius: 12px; padding: 12px 16px; font-weight: 700; }
-.fresh li b { color: var(--lilac); font-variant-numeric: tabular-nums; }
+.perks { background: var(--plum); color: #f3ecf6; }
+.perks .wrap { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; padding-block: 22px; }
+.perk { display: flex; gap: 12px; align-items: flex-start; }
+.perk svg { width: 28px; height: 28px; color: var(--orchid); flex: none; margin-top: 2px; }
+.perk b { display: block; font: 600 19px/1.2 var(--display); color: #fff; }
+.perk span { font-size: 15px; color: var(--lilac); }
+
+.doors { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; padding-block: 44px 20px; }
+.door { border-radius: 22px; padding: 26px; display: flex; flex-direction: column; gap: 12px; min-width: 0; color: #f3ecf6; }
+.door h2 { font-size: 28px; color: #fff; }
 .door .btn { align-self: flex-start; margin-top: auto; }
+.door-shop { background: var(--plum); }
+.door-bake { background: var(--violet); }
+.door-bday { background: var(--eggplant); }
+.door ul { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.door li { background: rgba(255,255,255,0.13); border-radius: 999px; padding: 4px 12px; font-size: 14px; font-weight: 700; }
 
-.visit { background: var(--paper); padding-block: 48px; }
+.diner { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 36px; align-items: center; padding-block: 36px 52px; }
+.collage { display: grid; grid-template-columns: 1.2fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; }
+.collage img { width: 100%; height: 100%; object-fit: cover; border-radius: 16px; }
+.collage img:first-child { grid-row: span 2; aspect-ratio: 3 / 4; }
+.diner h2 { font-size: clamp(30px, 4vw, 40px); color: var(--plum); }
+.diner .kicker { font: 600 18px/1.2 var(--display); color: var(--brown); margin-bottom: 6px; }
+.diner p { color: var(--muted); margin: 12px 0 20px; }
+.diner .tag-line { font-family: var(--display); font-size: 20px; color: var(--violet); margin-bottom: 20px; }
+
+.visit { background: var(--paper); padding-block: 44px; }
 .visit-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 36px; }
 .visit h2 { font-size: 24px; color: var(--plum); margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
 .visit h2 svg { width: 24px; height: 24px; color: var(--brown); }
-.visit p { margin: 0 0 8px; }
+.visit p { margin-bottom: 8px; }
 .hours { width: 100%; border-collapse: collapse; }
 .hours td { padding: 4px 0; border-bottom: 1px solid var(--rule); }
 .hours td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
 .hours tr.today td { font-weight: 800; color: var(--violet); }
 
 /* ---------- SHOP ---------- */
-.shop-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 32px; padding-block: 32px 56px; align-items: start; }
-.side { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 80px); display: grid; gap: 14px; }
-.side input { width: 100%; }
-.cats { display: grid; gap: 4px; }
-.cat-btn { font: 700 16px/1.2 var(--body); text-align: left; background: transparent; color: var(--plum); border: 0; border-radius: 10px; padding: 11px 14px; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; }
-.cat-btn:hover { background: var(--lilac); }
-.cat-btn[aria-pressed="true"] { background: var(--violet); color: #fff; }
-.cat-btn span { opacity: 0.7; font-variant-numeric: tabular-nums; }
-.result-note { color: var(--muted); font-weight: 700; margin: 0 0 14px; }
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
-.card { background: var(--paper); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
-.card .top { padding: 12px 16px; font: 800 13px/1.2 var(--body); letter-spacing: 0.08em; text-transform: uppercase; }
-.card[data-cat="food"] .top { background: var(--plum); color: #fff; }
-.card[data-cat="toys"] .top { background: var(--violet); color: #fff; }
-.card[data-cat="treats"] .top { background: var(--orchid); color: var(--eggplant); }
-.card[data-cat="gear"] .top { background: var(--lilac); color: var(--eggplant); }
-.card .in { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
-.card h3 { font-family: var(--body); font-weight: 800; font-size: 17px; line-height: 1.3; color: var(--ink); }
-.card .desc { font-size: 14px; color: var(--muted); margin: 0; }
-.card .foot { margin-top: auto; padding-top: 12px; display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; }
-.card .price { font: 600 22px/1 var(--display); color: var(--plum); font-variant-numeric: tabular-nums; }
-.card .size { font-size: 13px; color: var(--muted); text-align: right; }
-.card .few { font-size: 12px; font-weight: 800; color: var(--tongue); }
-.special { margin: 26px 0 0; color: var(--muted); }
-.no-match { background: var(--paper); border-radius: 16px; padding: 30px; color: var(--muted); }
+.brand-group + .brand-group { margin-top: 30px; }
+#brand-groups + .brand-group { margin-top: 30px; }
+.brand-group h2 { font-size: 24px; color: var(--plum); margin-bottom: 12px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.tile { border-radius: 16px; padding: 22px 18px; min-height: 92px; display: flex; align-items: flex-end; font: 600 21px/1.15 var(--display); min-width: 0; overflow-wrap: anywhere; }
+.tile[data-g="0"] { background: var(--plum); color: #fff; }
+.tile[data-g="1"] { background: var(--violet); color: #fff; }
+.tile[data-g="2"] { background: var(--orchid); color: var(--eggplant); }
+.tile[data-g="3"] { background: var(--lilac); color: var(--eggplant); }
+.extras { display: flex; flex-wrap: wrap; gap: 8px; }
+.extras span { background: var(--paper); border: 2px solid var(--lilac); color: var(--plum); font-weight: 800; border-radius: 999px; padding: 8px 16px; }
+
+.order-wrap { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: 28px; align-items: start; }
+.how { background: var(--plum); color: #f1e9f5; border-radius: 22px; padding: 26px; display: grid; gap: 18px; }
+.how h3 { font-size: 22px; color: #fff; display: flex; align-items: center; gap: 10px; }
+.how h3 svg { width: 22px; height: 22px; color: var(--orchid); }
+.how p { color: var(--lilac); font-size: 16px; margin-top: 4px; }
+
+/* ---------- Forms ---------- */
+.form-card { background: var(--paper); border-radius: 22px; padding: 28px; }
+.form-card form { display: grid; gap: 22px; }
+fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 14px; min-width: 0; }
+legend { font: 600 22px/1.2 var(--display); color: var(--plum); padding: 0; margin-bottom: 12px; }
+legend small { font: 700 14px/1.3 var(--body); color: var(--muted); display: block; margin-top: 4px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.field label, .label { display: block; font-size: 15px; font-weight: 800; margin-bottom: 5px; color: var(--ink); }
+.field .opt { font-weight: 600; color: var(--muted); }
+.hint { font-size: 14px; color: var(--muted); margin-top: 4px; }
+input[type="text"], input[type="tel"], input[type="email"], input[type="date"], input[type="number"], select, textarea {
+  width: 100%; font: 600 16px/1.3 var(--body); color: var(--ink); background: var(--paper);
+  border: 2px solid var(--lilac); border-radius: 10px; padding: 11px 12px;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--violet); outline: none; }
+textarea { resize: vertical; min-height: 84px; }
+.divider { border: 0; border-top: 2px dashed var(--rule); margin: 0; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { position: relative; }
+.chip input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.chip span { display: inline-block; padding: 9px 16px; border-radius: 999px; border: 2px solid var(--lilac); background: var(--mist); color: var(--plum); font-weight: 800; font-size: 15px; }
+.chip input:checked + span { background: var(--violet); border-color: var(--violet); color: #fff; }
+.chip input:focus-visible + span { outline: 3px solid var(--orchid); outline-offset: 2px; }
+.choice { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.choice .chip span { display: block; border-radius: 14px; padding: 14px 16px; text-align: left; }
+.choice .chip span small { display: block; font-weight: 600; font-size: 14px; opacity: 0.85; margin-top: 2px; }
+
+.qty-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.qty-row .field input { max-width: 110px; }
+.cake-toggle { display: flex; gap: 10px; align-items: center; font-weight: 800; color: var(--plum); cursor: pointer; }
+.cake-toggle input { width: 22px; height: 22px; accent-color: var(--violet); }
+.cake-box { background: var(--mist); border-radius: 16px; padding: 18px; display: grid; gap: 14px; }
+
+.dog-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 0.7fr) auto; gap: 10px; align-items: end; background: var(--mist); border-radius: 14px; padding: 14px; }
+.dog-row .remove { background: none; border: 0; color: var(--tongue); font: 800 14px/1 var(--body); padding: 14px 4px; cursor: pointer; }
+.add-dog { justify-self: start; background: none; border: 2px dashed var(--orchid); color: var(--violet); font: 800 15px/1 var(--body); padding: 12px 16px; border-radius: 12px; cursor: pointer; }
+
+.error { color: var(--tongue); font-weight: 800; font-size: 15px; }
+.fine { font-size: 14px; color: var(--muted); }
+.done-panel { display: grid; gap: 12px; }
+.done-panel .check { width: 52px; height: 52px; border-radius: 50%; background: var(--violet); color: #fff; display: grid; place-items: center; }
+.done-panel .check svg { width: 28px; height: 28px; }
+.done-panel h2 { font-size: 28px; color: var(--plum); }
+.done-panel ul { margin: 0; padding: 14px 18px 14px 34px; background: var(--mist); border-radius: 14px; display: grid; gap: 4px; }
 
 /* ---------- BAKERY ---------- */
-.bake-layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 30px; padding-block: 32px 56px; align-items: start; }
-.treats { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
-.treat { background: var(--paper); border-radius: 18px; padding: 20px; display: flex; flex-direction: column; gap: 8px; position: relative; min-width: 0; }
-.treat .tag { position: absolute; top: 16px; right: 16px; width: 64px; height: 64px; border-radius: 50%; background: var(--violet); color: #fff; display: grid; place-items: center; font: 600 17px/1 var(--display); font-variant-numeric: tabular-nums; transform: rotate(8deg); }
-.treat h3 { font-size: 22px; color: var(--plum); padding-right: 74px; }
-.treat .unit { font-weight: 700; color: var(--muted); font-size: 15px; margin-top: -4px; }
-.treat .ing { font-size: 15px; color: var(--muted); margin: 0; }
-.treat .note { font-size: 13px; font-weight: 800; color: var(--brown); }
-.treat .qty { margin-top: auto; padding-top: 8px; }
-.qty { display: inline-flex; align-items: center; gap: 6px; }
-.qty button { width: 38px; height: 38px; border-radius: 50%; border: 0; background: var(--lilac); color: var(--plum); font: 800 20px/1 var(--body); cursor: pointer; }
-.qty button[data-d="1"] { background: var(--plum); color: #fff; }
-.qty button:hover { filter: brightness(1.08); }
-.qty button:disabled { opacity: 0.35; cursor: default; }
-.qty output { min-width: 2.2ch; text-align: center; font-weight: 800; font-size: 18px; font-variant-numeric: tabular-nums; }
-.keep { margin: 20px 0 0; font-size: 15px; color: var(--muted); }
+.menu { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.menu-card { background: var(--paper); border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+.menu-card img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+.menu-card .swatch { aspect-ratio: 4 / 3; display: grid; place-items: center; }
+.menu-card .swatch svg { width: 64px; height: 64px; color: rgba(255,255,255,0.85); }
+.menu-card .in { padding: 16px 18px 20px; display: grid; gap: 8px; }
+.menu-card h3 { font-size: 22px; color: var(--plum); }
+.menu-card p { color: var(--muted); font-size: 15px; }
+.menu-card ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.menu-card li { background: var(--mist); color: var(--plum); border-radius: 999px; padding: 3px 10px; font-size: 14px; font-weight: 700; }
 
-.slip { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 80px); background: var(--eggplant); color: #efe6f3; border-radius: 20px; padding: 24px; }
-.slip h2 { font-size: 26px; color: #fff; display: flex; align-items: center; gap: 10px; }
-.slip h2 svg { width: 24px; height: 24px; color: var(--orchid); }
-.lines { list-style: none; margin: 14px 0 10px; padding: 0; display: grid; gap: 6px; }
-.lines li { display: flex; justify-content: space-between; gap: 12px; }
-.lines li span:last-child { font-variant-numeric: tabular-nums; }
-.slip .empty { color: var(--orchid); margin: 12px 0; }
-.total { display: flex; justify-content: space-between; font-weight: 800; font-size: 19px; color: #fff; border-top: 2px dashed var(--violet); padding-top: 10px; }
-.slip form { display: grid; gap: 12px; margin-top: 18px; }
-.field label { display: block; font-size: 14px; font-weight: 800; margin-bottom: 4px; color: var(--lilac); }
-.field .opt { font-weight: 600; color: var(--orchid); }
-.field .hint { font-size: 13px; color: var(--orchid); margin-top: 3px; }
-input, select, textarea { width: 100%; font: 600 16px/1.3 var(--body); color: var(--ink); background: var(--paper); border: 2px solid var(--lilac); border-radius: 10px; padding: 10px 12px; }
-input:focus, select:focus, textarea:focus { border-color: var(--violet); outline: none; }
-textarea { resize: vertical; min-height: 60px; }
-.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.error { color: #ffb4b0; font-weight: 700; font-size: 15px; margin: 0; }
-.pay { font-size: 14px; color: var(--orchid); margin: 0; }
-.done { display: grid; gap: 10px; }
-.done .order-no { font: 600 22px/1 var(--display); color: var(--lilac); letter-spacing: 0.04em; }
-.done .lines li:last-child { font-weight: 800; color: #fff; border-top: 2px dashed var(--violet); padding-top: 8px; }
+.bake-order { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 28px; align-items: start; }
+.diner-side { background: var(--violet); color: #f6f0f9; border-radius: 22px; overflow: hidden; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 80px); }
+.diner-side img { width: 100%; aspect-ratio: 1; object-fit: cover; }
+.diner-side .in { padding: 20px; display: grid; gap: 8px; }
+.diner-side h3 { font-size: 24px; color: #fff; }
+.diner-side p { font-size: 15px; color: var(--lilac); }
+
+/* ---------- BIRTHDAY ---------- */
+.bday { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 28px; align-items: start; }
+.bday-side { background: var(--eggplant); color: #efe6f3; border-radius: 22px; overflow: hidden; }
+.bday-side img { width: 100%; aspect-ratio: 1; object-fit: cover; object-position: center 30%; }
+.bday-side .in { padding: 22px; display: grid; gap: 14px; }
+.bday-side h3 { font-size: 24px; color: #fff; }
+.bday-side ol { margin: 0; padding-left: 22px; display: grid; gap: 8px; color: var(--lilac); }
+.bday-side ol b { color: #fff; }
 
 footer { background: var(--eggplant); color: var(--lilac); padding-block: 24px; font-size: 15px; }
 footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; }
 footer svg { width: 60px; height: 32px; color: var(--violet); }
 
+@media (max-width: 960px) {
+  .menu { grid-template-columns: 1fr 1fr; }
+  .doors { grid-template-columns: 1fr; }
+}
 @media (max-width: 880px) {
   .hero .wrap { grid-template-columns: 1fr; gap: 30px; padding-block: 36px 44px; }
   .hero-logo { max-width: 240px; padding: 24px; margin: 12px auto 0; box-shadow: 0 0 0 7px var(--orchid), 0 0 0 14px var(--violet); }
-  .doors, .visit-grid, .shop-layout, .bake-layout { grid-template-columns: 1fr; }
-  .side, .slip { position: static; }
-  .cats { display: flex; flex-wrap: wrap; gap: 6px; }
-  .cat-btn { background: var(--paper); }
+  .perks .wrap, .visit-grid, .diner, .order-wrap, .bake-order, .bday { grid-template-columns: 1fr; }
+  .diner-side { position: static; display: grid; grid-template-columns: 140px 1fr; }
+  .diner-side img { height: 100%; }
 }
-@media (max-width: 520px) {
+@media (max-width: 560px) {
   .wrap { padding-inline: 16px; }
   .strip .logo { height: 56px; }
   .strip-info { font-size: 14px; }
-  .tabbar .wrap { gap: 4px; padding-top: 8px; }
-  .tabbar a { flex: 1; justify-content: center; padding: 12px 6px 14px; font-size: 16px; }
-  .tabbar svg { display: none; }
-  .door { padding: 22px; }
-  .cat-links { grid-template-columns: 1fr; }
-  .two { grid-template-columns: 1fr; }
+  .tabbar .wrap { gap: 2px; padding-top: 8px; }
+  .tabbar a { flex: 1; justify-content: center; padding: 12px 2px 14px; font-size: 15px; }
+  .tabbar svg, .tabbar .long { display: none; }
   .band .swoosh { display: none; }
+  .menu, .grid2, .grid3, .choice { grid-template-columns: 1fr; }
+  .form-card { padding: 20px; }
+  .dog-row { grid-template-columns: 1fr 1fr; }
+  .dog-row .field:first-child { grid-column: 1 / -1; }
+  .diner-side { grid-template-columns: 110px 1fr; }
 }
 </style>
 </head>
@@ -219,6 +265,11 @@ footer svg { width: 60px; height: 32px; color: var(--violet); }
     <symbol id="i-home" viewBox="0 0 24 24"><path fill="currentColor" d="M12 3 2 11h3v9h5v-6h4v6h5v-9h3z"/></symbol>
     <symbol id="i-shop" viewBox="0 0 24 24"><path fill="currentColor" d="M6 7V6a6 6 0 0 1 12 0v1h3l-1 14H4L3 7zm2 0h8V6a4 4 0 0 0-8 0z"/></symbol>
     <symbol id="i-bake" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2c1.5 0 2.6 1 2.9 2.3A4 4 0 0 1 20 8a4 4 0 0 1-2 3.5V12H6v-.5A4 4 0 0 1 4 8a4 4 0 0 1 5.1-3.7C9.4 3 10.5 2 12 2zM6 14h12l-1.5 8h-9z"/></symbol>
+    <symbol id="i-gift" viewBox="0 0 24 24"><path fill="currentColor" d="M20 7h-2.2A3 3 0 0 0 12 3.8 3 3 0 0 0 6.2 7H4a1 1 0 0 0-1 1v3h18V8a1 1 0 0 0-1-1zM9 5a1 1 0 0 1 2 2H9a1 1 0 0 1 0-2zm6 0a1 1 0 0 1 0 2h-2a1 1 0 0 1 2-2zM4 13h7v8H5a1 1 0 0 1-1-1zm9 0h7v7a1 1 0 0 1-1 1h-6z"/></symbol>
+    <symbol id="i-car" viewBox="0 0 24 24"><path fill="currentColor" d="M5 11l1.6-4.4A2 2 0 0 1 8.5 5h7a2 2 0 0 1 1.9 1.6L19 11a2 2 0 0 1 2 2v4h-2v2h-3v-2H8v2H5v-2H3v-4a2 2 0 0 1 2-2zm2.2 0h9.6l-1.1-3.4a.9.9 0 0 0-.8-.6H9.1a.9.9 0 0 0-.8.6zM6.5 15a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm11 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/></symbol>
+    <symbol id="i-truck" viewBox="0 0 24 24"><path fill="currentColor" d="M2 6a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1v2h3.5a1 1 0 0 1 .8.4l2.5 3.3a1 1 0 0 1 .2.6V16a1 1 0 0 1-1 1h-1a2.5 2.5 0 0 1-5 0h-5a2.5 2.5 0 0 1-5 0H3a1 1 0 0 1-1-1zm13 4v3h4.8l-2.3-3zM6.5 18a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm10 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><path fill="currentColor" d="M7 2h2v2h6V2h2v2h3a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h3zm-2 8v9h14v-9z"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
   </defs>
 </svg>
 
@@ -234,123 +285,291 @@ footer svg { width: 60px; height: 32px; color: var(--violet); }
     <a href="#home" data-go="home"><svg aria-hidden="true"><use href="#i-home"/></svg>Home</a>
     <a href="#shop" data-go="shop"><svg aria-hidden="true"><use href="#i-shop"/></svg>Shop</a>
     <a href="#bakery" data-go="bakery"><svg aria-hidden="true"><use href="#i-bake"/></svg>Bakery</a>
+    <a href="#birthday" data-go="birthday"><svg aria-hidden="true"><use href="#i-gift"/></svg>Birthday<span class="long">&nbsp;Club</span></a>
   </div>
 </nav>
 
 <main>
-  <!-- HOME -->
+  <!-- ==================== HOME ==================== -->
   <div class="view" id="view-home">
     <section class="hero">
       <svg class="swoosh" aria-hidden="true"><use href="#swoosh"/></svg>
       <div class="wrap">
         <div class="hero-logo"><img src="logo.png" alt="Top Paws Pet Supply logo with a brown cartoon puppy"></div>
         <div>
-          <h1>Everything your dog needs, plus treats we bake right here.</h1>
-          <p>Top Paws is a family-run pet supply shop. We carry the food brands your vet recommends, toys that hold up to real chewers, and a bakery case full of homemade dog treats.</p>
+          <h1>Quality food, fresh-baked treats, and a seat at the Doggie Diner.</h1>
+          <p>Top Paws is Union Grove's family-run pet supply shop. We carry trusted food brands, everyday supplies, and treats from our own TopPaws Bakery.</p>
           <div class="btn-row">
-            <a class="btn btn-plum" href="#shop" data-go="shop">Browse the shop</a>
-            <a class="btn btn-violet" href="#bakery" data-go="bakery">Order bakery treats</a>
+            <a class="btn btn-plum" href="#shop" data-go="shop">See our brands</a>
+            <a class="btn btn-violet" href="#bakery" data-go="bakery">Order from the bakery</a>
           </div>
         </div>
       </div>
     </section>
 
+    <section class="perks" aria-label="Ways to shop">
+      <div class="wrap">
+        <div class="perk"><svg aria-hidden="true"><use href="#i-car"/></svg><div><b>Curbside pickup</b><span>Park in our lot and we'll bring your order out.</span></div></div>
+        <div class="perk"><svg aria-hidden="true"><use href="#i-truck"/></svg><div><b>Free delivery</b><span>No minimum order. Pay with Venmo.</span></div></div>
+        <div class="perk"><svg aria-hidden="true"><use href="#i-cal"/></svg><div><b>Birthday Club</b><span>Sign up your dog for a birthday coupon.</span></div></div>
+      </div>
+    </section>
+
     <div class="wrap doors">
       <section class="door door-shop" aria-labelledby="door-shop-title">
-        <h2 id="door-shop-title">Shop the store</h2>
-        <p>Name-brand food, toys, chews and supplies, all at in-store prices.</p>
-        <div class="cat-links" id="cat-links"></div>
-        <p class="brand-names" id="brand-names"></p>
-        <a class="btn btn-lilac" href="#shop" data-go="shop">See everything</a>
+        <h2 id="door-shop-title">Brands we carry</h2>
+        <ul id="home-brands"></ul>
+        <a class="btn btn-lilac" href="#shop" data-go="shop">See all brands</a>
       </section>
       <section class="door door-bake" aria-labelledby="door-bake-title">
-        <h2 id="door-bake-title">Fresh from the bakery</h2>
-        <p>Baked every morning with dog-safe ingredients. Order a day ahead and pick up at the counter.</p>
-        <ul class="fresh" id="fresh"></ul>
-        <a class="btn btn-lilac" href="#bakery" data-go="bakery">Start a pickup order</a>
+        <h2 id="door-bake-title">TopPaws Bakery</h2>
+        <p>Pupcakes, doggie donuts, muffins, cookies and custom cakes for birthdays and Gotcha Days.</p>
+        <a class="btn btn-lilac" href="#bakery" data-go="bakery">Order bakery treats</a>
+      </section>
+      <section class="door door-bday" aria-labelledby="door-bday-title">
+        <h2 id="door-bday-title">Birthday Club</h2>
+        <p>Tell us your dog's birthday and we'll send you a coupon to celebrate.</p>
+        <a class="btn btn-lilac" href="#birthday" data-go="birthday">Join the club</a>
       </section>
     </div>
+
+    <section class="wrap diner" aria-labelledby="diner-title">
+      <div class="collage">
+        <img src="img/diner-party-hat.jpg" alt="A yellow lab in a party hat sitting at the Doggie Diner table">
+        <img src="img/diner-eating.jpg" alt="The same dog eating a treat off a placemat">
+        <img src="img/bandana.jpg" alt="A bandana that reads I ate at Top Paws with a paw print">
+      </div>
+      <div>
+        <div class="kicker">Now open</div>
+        <h2 id="diner-title">The TopPaws Doggie Diner</h2>
+        <p>Pull up a seat and let your dog enjoy a treat from the TopPaws Bakery at our very own diner table. Whether you're celebrating a special day or just because, we've got something waiting. Snap some photos and make memories together.</p>
+        <div class="tag-line">Because every good dog deserves dessert!</div>
+        <a class="btn btn-plum" href="#bakery" data-go="bakery">Plan a diner visit</a>
+      </div>
+    </section>
 
     <section class="visit" aria-label="Visit us">
       <div class="wrap visit-grid">
         <div><h2><svg aria-hidden="true"><use href="#paw"/></svg>Hours</h2><table class="hours" id="hours"></table></div>
-        <div><h2><svg aria-hidden="true"><use href="#paw"/></svg>Where we are</h2><p id="addr"></p><p>Dogs on a leash are always welcome inside. Ask at the register for a free biscuit.</p></div>
-        <div><h2><svg aria-hidden="true"><use href="#paw"/></svg>Get in touch</h2><p>Call <span class="num" id="phone"></span></p><p id="email"></p><p>Calling about a bakery order? Have your order number handy.</p></div>
+        <div><h2><svg aria-hidden="true"><use href="#paw"/></svg>Where we are</h2><p id="addr"></p><p>Plenty of parking in our lot. Ask for curbside and we'll bring your order to your car.</p></div>
+        <div><h2><svg aria-hidden="true"><use href="#paw"/></svg>Get in touch</h2><p>Call <span class="num" id="phone"></span></p><p id="email-line">Email <a id="email"></a></p></div>
       </div>
     </section>
   </div>
 
-  <!-- SHOP -->
+  <!-- ==================== SHOP ==================== -->
   <div class="view" id="view-shop" hidden>
     <section class="band">
       <svg class="swoosh" aria-hidden="true"><use href="#swoosh"/></svg>
       <div class="wrap">
         <h1>Shop</h1>
-        <p>In-store prices. Stock changes week to week, so give us a call if you'd like something set aside.</p>
+        <p>These are the brands on our shelves. Stop in, or send us an order below for curbside pickup or free delivery.</p>
       </div>
     </section>
-    <div class="wrap shop-layout">
-      <aside class="side" aria-label="Filter products">
-        <input id="search" type="search" placeholder="Search brand or item" aria-label="Search brands and items">
-        <div class="cats" role="group" aria-label="Category" id="cats"></div>
-      </aside>
-      <div>
-        <p class="result-note" id="result-note" aria-live="polite"></p>
-        <div class="cards" id="cards"></div>
-        <p class="special">Don't see your dog's food? Ask us. We can special-order most brands within a week.</p>
+
+    <section class="wrap section" aria-label="Brands we carry">
+      <div id="brand-groups"></div>
+      <div class="brand-group">
+        <h2>Also on our shelves</h2>
+        <div class="extras" id="extras"></div>
       </div>
-    </div>
+    </section>
+
+    <section class="wrap section" id="shop-order" aria-labelledby="shop-order-title" style="padding-top:8px">
+      <h2 class="section-title" id="shop-order-title">Curbside pickup &amp; free delivery</h2>
+      <p class="lede">Tell us what you need and we'll get it ready.</p>
+      <div class="order-wrap">
+        <div class="how">
+          <div><h3><svg aria-hidden="true"><use href="#i-car"/></svg>Curbside pickup</h3><p>Park in our lot and give us a call when you get here. We'll bring your order out to your car.</p></div>
+          <div><h3><svg aria-hidden="true"><use href="#i-truck"/></svg>Free delivery</h3><p>We deliver for free with no minimum order. We'll text you to set up a time.</p></div>
+          <div><h3><svg aria-hidden="true"><use href="#paw"/></svg>Paying</h3><p>We'll text you your total. Pay with Venmo<span class="venmo-line"></span>.</p></div>
+        </div>
+        <div class="form-card">
+          <div id="shop-form-view">
+            <form id="shop-form" novalidate>
+              <input type="checkbox" name="botcheck" class="hp" tabindex="-1" autocomplete="off">
+              <fieldset>
+                <legend>How do you want it?</legend>
+                <div class="choice">
+                  <label class="chip"><input type="radio" name="method" value="Curbside pickup" checked><span>Curbside pickup<small>Pick up in our lot</small></span></label>
+                  <label class="chip"><input type="radio" name="method" value="Free delivery"><span>Free delivery<small>No minimum</small></span></label>
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>Your info</legend>
+                <div class="grid2">
+                  <div class="field"><label for="so-name">Name</label><input id="so-name" name="name" type="text" autocomplete="name"></div>
+                  <div class="field"><label for="so-phone">Phone</label><input id="so-phone" name="phone" type="tel" autocomplete="tel"></div>
+                </div>
+                <div class="field"><label for="so-email">Email <span class="opt">(optional)</span></label><input id="so-email" name="email" type="email" autocomplete="email"></div>
+                <div class="field" id="so-address-field" hidden><label for="so-address">Delivery address</label><input id="so-address" name="address" type="text" autocomplete="street-address" placeholder="Street, town"></div>
+              </fieldset>
+              <fieldset>
+                <legend>What do you need?<small>Brand, recipe, bag size and how many.</small></legend>
+                <div class="field"><textarea aria-label="What do you need?" id="so-items" name="items" rows="4" placeholder="Example: Fromm Gold Adult, 30 lb bag, 1"></textarea></div>
+                <div class="grid2">
+                  <div class="field"><label for="so-date">Day you'd like it <span class="opt">(optional)</span></label><input id="so-date" name="date" type="date"></div>
+                </div>
+                <div class="field"><label for="so-notes">Anything else? <span class="opt">(optional)</span></label><textarea id="so-notes" name="notes" rows="2"></textarea></div>
+              </fieldset>
+              <p class="error" id="shop-error" role="alert" hidden></p>
+              <div class="btn-row" style="align-items:center"><button class="btn btn-plum" type="submit" id="shop-submit">Send my order</button><span class="fine">We'll text you to confirm.</span></div>
+            </form>
+          </div>
+          <div class="done-panel" id="shop-done" hidden></div>
+        </div>
+      </div>
+    </section>
   </div>
 
-  <!-- BAKERY -->
+  <!-- ==================== BAKERY ==================== -->
   <div class="view" id="view-bakery" hidden>
     <section class="band">
       <svg class="swoosh" aria-hidden="true"><use href="#swoosh"/></svg>
       <div class="wrap">
-        <h1>Bakery</h1>
-        <p>We bake every morning with simple, dog-safe ingredients. Nothing with chocolate, xylitol, raisins, onion or added sugar ever goes in the oven. Pick your treats, choose a pickup time, and pay when you come in.</p>
+        <h1>TopPaws Bakery</h1>
+        <p>Fresh-baked treats made for dogs. Whether you're celebrating a special day or just because, we've got something special waiting.</p>
+        <div class="notice"><svg aria-hidden="true"><use href="#i-cal"/></svg><span>Please allow <span id="notice-days"></span> days for bakery orders.</span></div>
       </div>
     </section>
-    <div class="wrap bake-layout">
-      <div>
-        <div class="treats" id="menu"></div>
-        <p class="keep">Treats keep about 5 days in the fridge or 3 months in the freezer. If your dog has allergies, put it in the notes and we'll call you to go over ingredients.</p>
-      </div>
-      <aside class="slip" aria-labelledby="slip-title">
-        <div id="slip-form">
-          <h2 id="slip-title"><svg aria-hidden="true"><use href="#paw"/></svg>Pickup order</h2>
-          <ul class="lines" id="lines"></ul>
-          <p class="empty" id="empty">Tap + on a treat to add it.</p>
-          <div class="total"><span>Total</span><span class="num" id="total">$0.00</span></div>
-          <form id="order-form" novalidate>
-            <div class="two">
-              <div class="field"><label for="pickup-date">Pickup day</label><input id="pickup-date" type="date" required></div>
-              <div class="field"><label for="pickup-time">Time</label><select id="pickup-time" required></select></div>
-            </div>
-            <div class="field"><label for="cust-name">Your name</label><input id="cust-name" type="text" autocomplete="name" required></div>
-            <div class="field"><label for="cust-phone">Phone</label><input id="cust-phone" type="tel" autocomplete="tel" required><div class="hint">We'll text you when it's ready.</div></div>
-            <div class="field"><label for="dog-name">Dog's name <span class="opt">(optional)</span></label><input id="dog-name" type="text"><div class="hint">Goes on top of a Bark-day Cake.</div></div>
-            <div class="field"><label for="notes">Notes or allergies</label><textarea id="notes" rows="2"></textarea></div>
-            <p class="error" id="error" role="alert" hidden></p>
-            <button class="btn btn-lilac" type="submit" id="submit-btn" disabled>Place pickup order</button>
-            <p class="pay">Pay at pickup with cash or card.</p>
-          </form>
+
+    <section class="wrap section" aria-label="Bakery menu">
+      <div class="menu" id="menu"></div>
+    </section>
+
+    <section class="wrap section" id="bake-order" aria-labelledby="bake-order-title" style="padding-top:8px">
+      <h2 class="section-title" id="bake-order-title">Bakery order form</h2>
+      <p class="lede">Fill this out and we'll call or text to confirm your order and total.</p>
+      <div class="bake-order">
+        <div class="form-card">
+          <div id="bake-form-view">
+            <form id="bake-form" novalidate>
+              <input type="checkbox" name="botcheck" class="hp" tabindex="-1" autocomplete="off">
+              <fieldset>
+                <legend>Your info</legend>
+                <div class="grid3">
+                  <div class="field"><label for="bo-name">Name</label><input id="bo-name" name="name" type="text" autocomplete="name"></div>
+                  <div class="field"><label for="bo-phone">Phone number</label><input id="bo-phone" name="phone" type="tel" autocomplete="tel"></div>
+                  <div class="field"><label for="bo-email">Email <span class="opt">(optional)</span></label><input id="bo-email" name="email" type="email" autocomplete="email"></div>
+                </div>
+                <div class="grid2">
+                  <div class="field"><label for="bo-date">Date needed</label><input id="bo-date" name="date" type="date"><div class="hint" id="bo-date-hint"></div></div>
+                  <div class="field"><span class="label">Pickup</span>
+                    <div class="chips">
+                      <label class="chip"><input type="radio" name="pickup" value="In the store" checked><span>In the store</span></label>
+                      <label class="chip"><input type="radio" name="pickup" value="Curbside"><span>Curbside</span></label>
+                    </div>
+                  </div>
+                </div>
+              </fieldset>
+              <hr class="divider">
+              <fieldset>
+                <legend>Pupcakes &amp; doggie donuts<small>Combine any flavors.</small></legend>
+                <div class="qty-row">
+                  <div class="field"><label for="bo-pupcakes">Pupcakes</label><input id="bo-pupcakes" name="pupcakes" type="number" min="0" max="99" inputmode="numeric" placeholder="0"></div>
+                  <div class="field"><label for="bo-donuts">Doggie donuts</label><input id="bo-donuts" name="donuts" type="number" min="0" max="99" inputmode="numeric" placeholder="0"></div>
+                </div>
+                <div><span class="label">Flavors</span><div class="chips" id="flavor-chips"></div></div>
+              </fieldset>
+              <hr class="divider">
+              <fieldset>
+                <legend>Muffins<small>How many of each?</small></legend>
+                <div class="qty-row" id="muffin-qty"></div>
+              </fieldset>
+              <hr class="divider">
+              <fieldset>
+                <legend>Fresh-baked cookies</legend>
+                <div class="qty-row"><div class="field"><label for="bo-cookies">How many?</label><input id="bo-cookies" name="cookies" type="number" min="0" max="99" inputmode="numeric" placeholder="0"></div></div>
+              </fieldset>
+              <hr class="divider">
+              <fieldset>
+                <legend>Custom cake</legend>
+                <label class="cake-toggle"><input type="checkbox" id="bo-cake" name="cake">I'd like a custom cake</label>
+                <div class="cake-box" id="cake-box" hidden>
+                  <div class="field"><span class="label">What are we celebrating?</span><div class="chips" id="cake-chips"></div></div>
+                  <div class="grid2">
+                    <div class="field"><label for="bo-cake-dog">Dog's name</label><input id="bo-cake-dog" name="cakeDog" type="text"></div>
+                    <div class="field"><label for="bo-cake-flavor">Flavor</label><input id="bo-cake-flavor" name="cakeFlavor" type="text" placeholder="Peanut butter, banana…"></div>
+                  </div>
+                  <div class="field"><label for="bo-cake-colors">Colors</label><input id="bo-cake-colors" name="cakeColors" type="text" placeholder="Pink and purple"></div>
+                  <div class="field"><label for="bo-cake-details">Tell us about the celebration <span class="opt">(optional)</span></label><textarea id="bo-cake-details" name="cakeDetails" rows="2" placeholder="Max is turning 5!"></textarea></div>
+                </div>
+              </fieldset>
+              <hr class="divider">
+              <fieldset>
+                <legend>Special instructions<small>Please include any allergies.</small></legend>
+                <div class="field"><textarea aria-label="Special instructions" id="bo-notes" name="notes" rows="3"></textarea></div>
+              </fieldset>
+              <p class="error" id="bake-error" role="alert" hidden></p>
+              <div class="btn-row" style="align-items:center"><button class="btn btn-plum" type="submit" id="bake-submit">Send bakery order</button><span class="fine">We'll call or text to confirm.</span></div>
+            </form>
+          </div>
+          <div class="done-panel" id="bake-done" hidden></div>
         </div>
-        <div class="done" id="slip-done" hidden>
-          <h2 id="done-title">Got it!</h2>
-          <div>Order <span class="order-no" id="done-no"></span></div>
-          <p id="done-text" style="margin:0"></p>
-          <ul class="lines" id="done-lines"></ul>
-          <button class="btn btn-lilac" type="button" id="new-order">Start another order</button>
+
+        <aside class="diner-side" aria-labelledby="diner-side-title">
+          <img src="img/diner-eating.jpg" alt="A dog eating a treat at the Doggie Diner">
+          <div class="in">
+            <h3 id="diner-side-title">Eat in at the Doggie Diner</h3>
+            <p>Want your dog to enjoy their treat at our diner table? Mention it in the special instructions and we'll have the table ready when you arrive.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </div>
+
+  <!-- ==================== BIRTHDAY CLUB ==================== -->
+  <div class="view" id="view-birthday" hidden>
+    <section class="band">
+      <svg class="swoosh" aria-hidden="true"><use href="#swoosh"/></svg>
+      <div class="wrap">
+        <h1>Birthday Club</h1>
+        <p>Every dog deserves a birthday party. Sign up and we'll send you a coupon when your dog's big day comes around.</p>
+      </div>
+    </section>
+
+    <section class="wrap section bday">
+      <aside class="bday-side" aria-labelledby="bday-how">
+        <img src="img/diner-party-hat.jpg" alt="A yellow lab wearing a party hat at the Doggie Diner">
+        <div class="in">
+          <h3 id="bday-how">How it works</h3>
+          <ol>
+            <li><b>Sign up</b> with your dog's name and birthday. It's free.</li>
+            <li><b>Around their birthday</b>, we'll email you a birthday coupon.</li>
+            <li><b>Celebrate at Top Paws</b>. Use it in the store or on a bakery treat at the Doggie Diner.</li>
+          </ol>
         </div>
       </aside>
-    </div>
+      <div class="form-card">
+        <div id="bday-form-view">
+          <form id="bday-form" novalidate>
+            <input type="checkbox" name="botcheck" class="hp" tabindex="-1" autocomplete="off">
+            <fieldset>
+              <legend>About you</legend>
+              <div class="grid2">
+                <div class="field"><label for="bd-name">Your name</label><input id="bd-name" name="name" type="text" autocomplete="name"></div>
+                <div class="field"><label for="bd-email">Email</label><input id="bd-email" name="email" type="email" autocomplete="email"><div class="hint">This is where we'll send the coupon.</div></div>
+              </div>
+              <div class="field"><label for="bd-phone">Phone <span class="opt">(optional)</span></label><input id="bd-phone" name="phone" type="tel" autocomplete="tel"></div>
+            </fieldset>
+            <fieldset>
+              <legend>Your dogs</legend>
+              <div id="dogs" style="display:grid;gap:10px"></div>
+              <button class="add-dog" type="button" id="add-dog">+ Add another dog</button>
+            </fieldset>
+            <p class="error" id="bday-error" role="alert" hidden></p>
+            <div class="btn-row"><button class="btn btn-violet" type="submit" id="bday-submit">Join the Birthday Club</button></div>
+          </form>
+        </div>
+        <div class="done-panel" id="bday-done" hidden></div>
+      </div>
+    </section>
   </div>
 </main>
 
 <footer>
   <div class="wrap">
-    <span>© <span id="year"></span> Top Paws Pet Supply</span>
+    <span>© <span id="year"></span> Top Paws Pet Supply · Union Grove, WI</span>
     <svg aria-hidden="true"><use href="#trail"/></svg>
   </div>
 </footer>
@@ -362,100 +581,51 @@ footer svg { width: 60px; height: 32px; color: var(--violet); }
 const STORE = {
   address: "1033 Main Street, Union Grove, WI 53182",
   phone: "(262) 878-9393",
-  email: "", // add the store email here to show it on the site,
+  email: "tammy@toppawsgrooming.com",
   // Hours per weekday, 24h clock (17.5 = 5:30 PM). null = closed. Sunday is 0.
   hours: {
     0: null,
     1: [8, 17.5], 2: [8, 17.5], 3: [8, 17.5], 4: [8, 17.5], 5: [8, 17.5],
     6: [8, 14.5],
   },
-  // Where bakery orders are sent. Paste a form endpoint here (for example a
-  // Formspree URL like "https://formspree.io/f/xxxxxx") so orders reach the
-  // store's inbox. While empty, the site shows the order but does not send it.
-  orderEndpoint: "",
+  // Venmo username shown with payment info, e.g. "@TopPaws-PetSupply". Leave empty to hide.
+  venmo: "",
+  // Web3Forms access key (free at web3forms.com). Orders and Birthday Club
+  // sign-ups are emailed to the address the key was made for. While empty,
+  // the forms tell customers to call the store instead.
+  formKey: "",
 };
 
 /* ==========================================================================
-   STORE PRODUCTS: add, remove or re-price items here.
-   category: food | toys | treats | gear      stock: "in" | "low"
+   BRANDS WE CARRY: one list per shelf. Add or remove names freely.
    ========================================================================== */
-const PRODUCTS = [
-  // Dog food
-  { cat: "food", brand: "Purina Pro Plan", name: "Adult Chicken & Rice Formula", size: "35 lb bag", price: 76.99, stock: "in", desc: "High-protein dry food with real chicken as the first ingredient." },
-  { cat: "food", brand: "Purina Pro Plan", name: "Puppy Large Breed Chicken & Rice", size: "34 lb bag", price: 79.99, stock: "in", desc: "DHA for brain and vision development in big-breed puppies." },
-  { cat: "food", brand: "Blue Buffalo", name: "Life Protection Adult Chicken & Brown Rice", size: "30 lb bag", price: 68.99, stock: "in", desc: "Includes LifeSource Bits with antioxidants and vitamins." },
-  { cat: "food", brand: "Blue Buffalo", name: "Wilderness Grain-Free Salmon", size: "24 lb bag", price: 72.99, stock: "low", desc: "High-protein, grain-free recipe with deboned salmon." },
-  { cat: "food", brand: "Hill's Science Diet", name: "Adult Small Bites Chicken & Barley", size: "15 lb bag", price: 54.99, stock: "in", desc: "Vet-recommended nutrition in a smaller kibble size." },
-  { cat: "food", brand: "Hill's Science Diet", name: "Sensitive Stomach & Skin", size: "30 lb bag", price: 82.99, stock: "in", desc: "Gentle on digestion, with omega-6 for a healthy coat." },
-  { cat: "food", brand: "Royal Canin", name: "Medium Adult Dry Dog Food", size: "30 lb bag", price: 79.99, stock: "in", desc: "Tailored nutrition for dogs 23 to 55 lb." },
-  { cat: "food", brand: "Royal Canin", name: "Golden Retriever Adult", size: "30 lb bag", price: 92.99, stock: "low", desc: "Breed-specific kibble shape and formula." },
-  { cat: "food", brand: "Taste of the Wild", name: "High Prairie Bison & Venison", size: "28 lb bag", price: 64.99, stock: "in", desc: "Grain-free with roasted bison, venison and probiotics." },
-  { cat: "food", brand: "Merrick", name: "Grain-Free Texas Beef & Sweet Potato", size: "22 lb bag", price: 71.99, stock: "in", desc: "Real deboned beef with sweet potatoes and peas." },
-  { cat: "food", brand: "Orijen", name: "Original Dry Dog Food", size: "23.5 lb bag", price: 104.99, stock: "in", desc: "Biologically appropriate, with 85% animal ingredients." },
-  { cat: "food", brand: "Wellness", name: "CORE Grain-Free Original", size: "24 lb bag", price: 74.99, stock: "in", desc: "Protein-rich recipe with turkey and chicken." },
-  { cat: "food", brand: "Fromm", name: "Gold Adult Dry Dog Food", size: "30 lb bag", price: 69.99, stock: "in", desc: "Family-made recipe with duck, chicken and lamb." },
-  { cat: "food", brand: "Nutro", name: "Natural Choice Lamb & Brown Rice", size: "30 lb bag", price: 59.99, stock: "in", desc: "Non-GMO ingredients with real lamb first." },
-  { cat: "food", brand: "Purina Pro Plan", name: "Wet Adult Chicken & Rice Entrée", size: "13 oz can", price: 3.49, stock: "in", desc: "Classic pâté. Mix with dry food or serve alone." },
-
-  // Toys
-  { cat: "toys", brand: "KONG", name: "Classic Dog Toy", size: "Medium / Large", price: 13.99, stock: "in", desc: "The original rubber chew. Stuff it with treats or peanut butter." },
-  { cat: "toys", brand: "KONG", name: "Extreme Dog Toy", size: "Large", price: 18.99, stock: "in", desc: "Black rubber for power chewers." },
-  { cat: "toys", brand: "Chuckit!", name: "Ultra Ball 2-Pack", size: "Medium", price: 9.99, stock: "in", desc: "High-bounce, floats in water, fits the Chuckit! launcher." },
-  { cat: "toys", brand: "Chuckit!", name: "Classic Ball Launcher", size: "26 in", price: 14.99, stock: "in", desc: "Throw farther without bending over for a slobbery ball." },
-  { cat: "toys", brand: "Nylabone", name: "Power Chew Wishbone", size: "Large", price: 11.99, stock: "in", desc: "Bacon-flavored nylon chew for tough chewers." },
-  { cat: "toys", brand: "Benebone", name: "Wishbone Chew Toy", size: "Medium", price: 15.99, stock: "low", desc: "Real peanut flavor in an easy-to-hold shape." },
-  { cat: "toys", brand: "West Paw", name: "Zogoflex Tux Treat Toy", size: "Large", price: 21.99, stock: "in", desc: "Made in the USA. Guaranteed replacement if your dog chews through it." },
-  { cat: "toys", brand: "Outward Hound", name: "Hide-A-Squirrel Puzzle Plush", size: "Large", price: 19.99, stock: "in", desc: "Squeaky squirrels hide inside a plush tree trunk." },
-  { cat: "toys", brand: "Outward Hound", name: "Nina Ottosson Dog Brick Puzzle", size: "Level 2", price: 22.99, stock: "in", desc: "Slide-and-find treat puzzle for mental exercise." },
-  { cat: "toys", brand: "Tuffy", name: "Ultimate Tug-O-War", size: "Large", price: 24.99, stock: "in", desc: "Multi-layer stitched toy rated 9 out of 10 for toughness." },
-  { cat: "toys", brand: "Multipet", name: "Lamb Chop Plush", size: "10 in", price: 8.99, stock: "in", desc: "The classic squeaky lamb dogs love to carry around." },
-  { cat: "toys", brand: "GoughNuts", name: "Original Ring", size: "Large", price: 29.99, stock: "low", desc: "Indicator layer shows red before it's time to replace." },
-
-  // Treats & chews
-  { cat: "treats", brand: "Milk-Bone", name: "Original Dog Biscuits", size: "24 oz box", price: 6.99, stock: "in", desc: "Crunchy biscuits that help clean teeth." },
-  { cat: "treats", brand: "Greenies", name: "Original Dental Treats", size: "Regular, 36 ct", price: 34.99, stock: "in", desc: "VOHC-accepted for tartar control and fresh breath." },
-  { cat: "treats", brand: "Zuke's", name: "Mini Naturals Chicken", size: "16 oz bag", price: 14.99, stock: "in", desc: "Tiny, soft training treats under 3 calories each." },
-  { cat: "treats", brand: "Blue Buffalo", name: "Blue Bits Salmon Training Treats", size: "11 oz bag", price: 10.99, stock: "in", desc: "Soft-moist bites with real salmon." },
-  { cat: "treats", brand: "Bully Max", name: "Bully Sticks 6 in, 10-Pack", size: "10 ct", price: 24.99, stock: "in", desc: "Single-ingredient, long-lasting beef chews." },
-  { cat: "treats", brand: "Stella & Chewy's", name: "Freeze-Dried Meal Mixers", size: "8 oz bag", price: 21.99, stock: "in", desc: "Raw, freeze-dried topper to boost any kibble." },
-
-  // Gear & supplies
-  { cat: "gear", brand: "Ruffwear", name: "Front Range Harness", size: "S – XL", price: 49.95, stock: "in", desc: "Padded everyday harness with two leash points." },
-  { cat: "gear", brand: "Flexi", name: "New Classic Retractable Leash", size: "16 ft", price: 24.99, stock: "in", desc: "Cord leash with a one-button brake." },
-  { cat: "gear", brand: "PetSafe", name: "Easy Walk No-Pull Harness", size: "S – XL", price: 26.99, stock: "in", desc: "Front-clip design that gently discourages pulling." },
-  { cat: "gear", brand: "FURminator", name: "Undercoat deShedding Tool", size: "Medium dog", price: 39.99, stock: "in", desc: "Cuts shedding up to 90% with regular use." },
-  { cat: "gear", brand: "Earth Rated", name: "Poop Bags, 315 ct", size: "21 rolls", price: 15.99, stock: "in", desc: "Thick, leak-proof bags with a dispenser." },
-  { cat: "gear", brand: "Frisco", name: "Stainless Steel Bowl Set", size: "2 × 3 cup", price: 12.99, stock: "in", desc: "Non-slip rubber base, dishwasher safe." },
+const BRANDS = [
+  { group: "Pet food", names: ["Fromm", "American Natural Premium", "NutriSource", "Dr. Gary's Best Breed", "Zignature", "Nature's Logic", "Natural Balance", "Purina Pro Plan"] },
+  { group: "Treats & chews", names: ["St. Rocco's", "Frankly", "TruRanch", "Chompin Charlie", "TailBangers"] },
+  { group: "Health & supplements", names: ["Pet Releaf", "VetriScience"] },
+  { group: "For the humans", names: ["Grounds & Hounds Coffee"] },
 ];
+const EXTRAS = ["Treats", "Toys", "Collars", "Leashes", "Supplies"];
 
 /* ==========================================================================
-   BAKERY MENU: fresh items available for pickup orders.
-   needs48: true means the item needs 48 hours' notice instead of 24.
+   BAKERY: flavors and items from the store's bakery order form.
    ========================================================================== */
-const BAKERY = [
-  { id: "pupcake", name: "Peanut Butter Pupcakes", unit: "each", price: 3.50, ingredients: "Whole wheat flour, xylitol-free peanut butter, banana, egg, Greek yogurt frosting.", badges: ["Best seller"] },
-  { id: "pumpkin", name: "Pumpkin Paw Cookies", unit: "half dozen", price: 6.00, ingredients: "Oat flour, pumpkin purée, egg, a pinch of cinnamon. Shaped like paw prints.", badges: ["Wheat-free"] },
-  { id: "baconcheddar", name: "Bacon Cheddar Biscuits", unit: "half dozen", price: 7.00, ingredients: "Whole wheat flour, real bacon, cheddar cheese, egg, chicken broth (no onion or garlic).", badges: [] },
-  { id: "sweetpotato", name: "Sweet Potato Chews", unit: "4 oz bag", price: 6.50, ingredients: "One ingredient: sweet potato, slow-dried in our oven.", badges: ["Single ingredient", "Grain-free"] },
-  { id: "carob", name: "Carob Bark Brownies", unit: "2 pack", price: 5.00, ingredients: "Oat flour, carob powder (dog-safe, no chocolate), applesauce, egg.", badges: ["No chocolate"] },
-  { id: "applecrunch", name: "Apple Crunch Donuts", unit: "2 pack", price: 4.50, ingredients: "Whole wheat flour, unsweetened applesauce, oats, yogurt glaze.", badges: [] },
-  { id: "frosty", name: "Frosty Yogurt Paws", unit: "4 pack", price: 6.00, ingredients: "Plain Greek yogurt, peanut butter, blueberries. Kept frozen until pickup.", badges: ["Frozen"] },
-  { id: "barkcake", name: "Bark-day Cake", unit: "6 in cake", price: 28.00, ingredients: "Peanut butter and carrot cake with yogurt frosting. We pipe your dog's name on top.", badges: ["Serves 4–6 dogs"], needs48: true },
-];
+const BAKERY = {
+  noticeDays: 3,
+  flavors: ["Peanut Butter", "Carrot", "Apple", "Banana", "Strawberry", "Cinnamon"],
+  muffins: ["Blueberry", "Bacon & Egg", "Apple Cinnamon", "PB & J"],
+  cakes: ["Birthday", "Gotcha Day", "Gender Reveal"],
+};
 
-const CATS = [
-  { key: "all", label: "Everything" },
-  { key: "food", label: "Dog Food" },
-  { key: "toys", label: "Toys" },
-  { key: "treats", label: "Treats & Chews" },
-  { key: "gear", label: "Leashes & Supplies" },
-];
-const money = n => "$" + n.toFixed(2);
+/* ========================================================================== */
+
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const digits = s => s.replace(/\D/g, "");
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 /* ---------- Tabs ---------- */
-const VIEWS = ["home", "shop", "bakery"];
+const VIEWS = ["home", "shop", "bakery", "birthday"];
 function show(view) {
   if (!VIEWS.includes(view)) view = "home";
   VIEWS.forEach(v => $("view-" + v).hidden = v !== view);
@@ -467,219 +637,238 @@ document.addEventListener("click", e => {
   const a = e.target.closest("[data-go]");
   if (!a) return;
   e.preventDefault();
-  if (a.dataset.cat) { activeCat = a.dataset.cat; $("search").value = ""; renderCats(); renderCards(); }
   try { history.replaceState(null, "", "#" + a.dataset.go); } catch (_) {}
   show(a.dataset.go);
 });
 window.addEventListener("hashchange", () => show(location.hash.slice(1)));
 
-/* ---------- Shop ---------- */
-let activeCat = "all";
-const countFor = key => key === "all" ? PRODUCTS.length : PRODUCTS.filter(p => p.cat === key).length;
-
-function renderCats() {
-  $("cats").innerHTML = CATS.map(c =>
-    `<button class="cat-btn" type="button" data-cat="${c.key}" aria-pressed="${c.key === activeCat}">${c.label}<span>${countFor(c.key)}</span></button>`).join("");
+/* ---------- Dates & hours ---------- */
+const ymd = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+const parseYmd = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+const longDate = s => parseYmd(s).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+const isOpen = s => !!STORE.hours[parseYmd(s).getDay()];
+function fmtHour(h) {
+  const m = Math.round(h * 60), hh = Math.floor(m / 60), mm = m % 60;
+  return ((hh + 11) % 12 + 1) + (mm ? ":" + String(mm).padStart(2, "0") : "") + (hh < 12 ? " AM" : " PM");
 }
-
-function renderCards() {
-  const q = $("search").value.trim().toLowerCase();
-  const list = PRODUCTS.filter(p => (activeCat === "all" || p.cat === activeCat) &&
-    (!q || (p.brand + " " + p.name + " " + p.desc).toLowerCase().includes(q)));
-  const label = CATS.find(c => c.key === activeCat).label;
-  $("result-note").textContent = `${label}: ${list.length} item${list.length === 1 ? "" : "s"}` + (q ? ` matching "${$("search").value.trim()}"` : "");
-  $("cards").innerHTML = list.length ? list.map(p => `
-    <article class="card" data-cat="${p.cat}">
-      <div class="top">${esc(p.brand)}</div>
-      <div class="in">
-        <h3>${esc(p.name)}</h3>
-        <p class="desc">${esc(p.desc)}</p>
-        <div class="foot">
-          <div><div class="price">${money(p.price)}</div>${p.stock === "low" ? `<div class="few">Only a few left</div>` : ""}</div>
-          <div class="size">${esc(p.size)}</div>
-        </div>
-      </div>
-    </article>`).join("")
-    : `<div class="no-match">Nothing matches that. Try a different word, or call and ask. We may be able to order it.</div>`;
-}
-
-$("cats").addEventListener("click", e => {
-  const b = e.target.closest(".cat-btn");
-  if (!b) return;
-  activeCat = b.dataset.cat;
-  renderCats(); renderCards();
-});
-$("search").addEventListener("input", renderCards);
-
-function renderHomeDoors() {
-  $("cat-links").innerHTML = CATS.filter(c => c.key !== "all").map(c =>
-    `<a href="#shop" data-go="shop" data-cat="${c.key}">${c.label}<span>${countFor(c.key)} items</span></a>`).join("");
-  const brands = [...new Set(PRODUCTS.map(p => p.brand))];
-  $("brand-names").innerHTML = `<b>Brands we carry:</b> ${brands.slice(0, 12).map(esc).join(", ")} and more.`;
-  $("fresh").innerHTML = BAKERY.slice(0, 4).map(t =>
-    `<li><span>${esc(t.name)}</span><b>${money(t.price)}</b></li>`).join("");
-}
-
-/* ---------- Bakery ---------- */
-const cart = {};
-
-function renderMenu() {
-  $("menu").innerHTML = BAKERY.map(t => {
-    const notes = [...t.badges, t.needs48 ? "Needs 48 hours' notice" : ""].filter(Boolean).join(" · ");
-    return `
-    <article class="treat">
-      <div class="tag">${money(t.price).replace(".00", "")}</div>
-      <h3>${esc(t.name)}</h3>
-      <div class="unit">${esc(t.unit)}</div>
-      <p class="ing">${esc(t.ingredients)}</p>
-      ${notes ? `<div class="note">${esc(notes)}</div>` : ""}
-      <div class="qty" role="group" aria-label="How many ${esc(t.name)}">
-        <button type="button" data-id="${t.id}" data-d="-1" aria-label="One less ${esc(t.name)}">−</button>
-        <output id="qty-${t.id}" aria-live="polite">0</output>
-        <button type="button" data-id="${t.id}" data-d="1" aria-label="One more ${esc(t.name)}">+</button>
-      </div>
-    </article>`;
-  }).join("");
-}
-
-$("menu").addEventListener("click", e => {
-  const b = e.target.closest("button[data-id]");
-  if (!b) return;
-  const id = b.dataset.id;
-  cart[id] = Math.max(0, Math.min(24, (cart[id] || 0) + Number(b.dataset.d)));
-  if (!cart[id]) delete cart[id];
-  updateSlip();
-});
-
-function cartLines() {
-  return BAKERY.filter(t => cart[t.id]).map(t => ({ ...t, qty: cart[t.id], line: cart[t.id] * t.price }));
-}
-const lineHtml = l => `<li><span>${l.qty} × ${esc(l.name)}</span><span>${money(l.line)}</span></li>`;
-
-function updateSlip() {
-  const lines = cartLines();
-  BAKERY.forEach(t => {
-    $("qty-" + t.id).textContent = cart[t.id] || 0;
-    document.querySelector(`button[data-id="${t.id}"][data-d="-1"]`).disabled = !cart[t.id];
-  });
-  $("lines").innerHTML = lines.map(lineHtml).join("");
-  $("empty").hidden = lines.length > 0;
-  $("total").textContent = money(lines.reduce((s, l) => s + l.line, 0));
-  $("submit-btn").disabled = lines.length === 0;
-  setDateBounds();
-}
-
-/* Pickup scheduling */
-function ymd(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
-function parseYmd(s) { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); }
-function earliestPickup() {
-  const hrs = BAKERY.some(t => t.needs48 && cart[t.id]) ? 48 : 24;
-  return new Date(Date.now() + hrs * 3600 * 1000);
-}
-function slotsFor(dateStr) {
-  const d = parseYmd(dateStr);
-  const h = STORE.hours[d.getDay()];
-  if (!h) return [];
-  const earliest = earliestPickup();
-  const out = [];
-  for (let m = h[0] * 60; m <= h[1] * 60 - 30; m += 30) {
-    const slot = new Date(d); slot.setHours(0, m, 0, 0);
-    if (slot >= earliest) out.push(m);
-  }
-  return out;
-}
-function fmtTime(m) {
-  const h = Math.floor(m / 60), mm = m % 60;
-  return ((h + 11) % 12 + 1) + ":" + String(mm).padStart(2, "0") + (h < 12 ? " AM" : " PM");
-}
-const fmtHour = h => fmtTime(h * 60).replace(":00", "");
-function firstOpenDate() {
-  const d = new Date(earliestPickup()); d.setHours(0, 0, 0, 0);
-  for (let i = 0; i < 14; i++) {
-    if (slotsFor(ymd(d)).length) return ymd(d);
-    d.setDate(d.getDate() + 1);
-  }
+function firstOpenFrom(d) {
+  d = new Date(d); d.setHours(0, 0, 0, 0);
+  for (let i = 0; i < 14 && !STORE.hours[d.getDay()]; i++) d.setDate(d.getDate() + 1);
   return ymd(d);
 }
-function setDateBounds() {
-  const input = $("pickup-date");
-  const min = firstOpenDate();
-  const max = new Date(); max.setDate(max.getDate() + 30);
-  input.min = min; input.max = ymd(max);
-  if (!input.value || input.value < min) input.value = min;
-  renderSlots();
+function closedDays() {
+  const names = ["Sundays", "Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "Saturdays"];
+  return names.filter((_, i) => !STORE.hours[i]).join(" and ");
 }
-function renderSlots() {
-  const sel = $("pickup-time");
-  const prev = sel.value;
-  const slots = $("pickup-date").value ? slotsFor($("pickup-date").value) : [];
-  sel.innerHTML = slots.length
-    ? slots.map(m => `<option value="${m}"${String(m) === prev ? " selected" : ""}>${fmtTime(m)}</option>`).join("")
-    : `<option value="">We're closed that day</option>`;
+
+/* ---------- Sending forms ---------- */
+async function sendForm(subject, fields, replyTo) {
+  if (!STORE.formKey) return "not-connected";
+  try {
+    const res = await fetch("https://api.web3forms.com/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ access_key: STORE.formKey, subject, from_name: "Top Paws website", ...(replyTo ? { replyto: replyTo } : {}), ...fields }),
+    });
+    const data = await res.json().catch(() => ({}));
+    return res.ok && data.success !== false ? "sent" : "failed";
+  } catch (_) { return "failed"; }
 }
-$("pickup-date").addEventListener("change", renderSlots);
 
-/* Submit */
-$("order-form").addEventListener("submit", async e => {
-  e.preventDefault();
-  const err = $("error");
-  const name = $("cust-name").value.trim();
-  const phone = $("cust-phone").value.trim();
-  const date = $("pickup-date").value;
-  const time = $("pickup-time").value;
-  const problems = [];
-  if (!cartLines().length) problems.push("add at least one treat");
-  if (!date || !time) problems.push("pick a day and time we're open");
-  if (!name) problems.push("enter your name");
-  if (phone.replace(/\D/g, "").length < 10) problems.push("enter a 10-digit phone number");
-  if (problems.length) { err.textContent = "Please " + problems.join(", ") + "."; err.hidden = false; return; }
-  err.hidden = true;
-
-  const lines = cartLines();
-  const orderNo = "TP-" + Date.now().toString(36).slice(-5).toUpperCase();
-  const when = parseYmd(date).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) + " at " + fmtTime(Number(time));
-  const order = {
-    orderNumber: orderNo, pickup: when, name, phone,
-    dogName: $("dog-name").value.trim(), notes: $("notes").value.trim(),
-    items: lines.map(l => `${l.qty} x ${l.name} (${money(l.line)})`).join("\n"),
-    total: money(lines.reduce((s, l) => s + l.line, 0)),
-  };
-
-  let sent = false;
-  if (STORE.orderEndpoint) {
-    const btn = $("submit-btn");
-    btn.disabled = true; btn.textContent = "Sending…";
-    try {
-      const res = await fetch(STORE.orderEndpoint, {
-        method: "POST", headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify(order),
-      });
-      sent = res.ok;
-    } catch (_) { sent = false; }
-    btn.textContent = "Place pickup order"; btn.disabled = false;
-    if (!sent) {
-      err.textContent = `Your order didn't go through. Check your connection and try again, or call us at ${STORE.phone}.`;
-      err.hidden = false;
-      return;
-    }
+async function submitFlow(key, { subject, fields, replyTo, lines, sentTitle, sentText, callText }) {
+  const btn = $(key + "-submit"), err = $(key + "-error");
+  const label = btn.textContent;
+  btn.disabled = true; btn.textContent = "Sending…";
+  const result = await sendForm(subject, fields, replyTo);
+  btn.disabled = false; btn.textContent = label;
+  if (result === "failed") {
+    err.textContent = `That didn't go through. Check your connection and try again, or call us at ${STORE.phone}.`;
+    err.hidden = false;
+    return;
   }
+  const sent = result === "sent";
+  $(key + "-done").innerHTML = `
+    <div class="check"><svg aria-hidden="true"><use href="#i-check"/></svg></div>
+    <h2>${sent ? esc(sentTitle) : "Almost done"}</h2>
+    <p>${esc(sent ? sentText : callText)}</p>
+    ${lines.length ? `<ul>${lines.map(l => `<li>${esc(l)}</li>`).join("")}</ul>` : ""}
+    <div><button class="btn btn-lilac" type="button" data-again="${key}">Start over</button></div>`;
+  $(key + "-form-view").hidden = true;
+  $(key + "-done").hidden = false;
+  $(key + "-done").scrollIntoView({ block: "center" });
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-again]");
+  if (!b) return;
+  const key = b.dataset.again;
+  $(key + "-form").reset();
+  if (key === "bday") resetDogs();
+  if (key === "bake") { $("cake-box").hidden = true; setBakeDate(); }
+  if (key === "shop") $("so-address-field").hidden = true;
+  $(key + "-done").hidden = true;
+  $(key + "-form-view").hidden = false;
+});
+function fail(key, problems) {
+  if (!problems.length) { $(key + "-error").hidden = true; return false; }
+  $(key + "-error").textContent = "Please " + problems.join(", ") + ".";
+  $(key + "-error").hidden = false;
+  return true;
+}
+const botFilled = form => form.elements.botcheck.checked;
 
-  $("done-no").textContent = orderNo;
-  $("done-title").textContent = sent ? "Got it!" : "Almost done";
-  $("done-text").textContent = sent
-    ? `Thanks, ${name}. Your treats will be boxed up at the counter on ${when}. We'll text ${phone} if anything changes.`
-    : `Online ordering isn't hooked up yet. Please call ${STORE.phone} and read us order ${orderNo} for pickup on ${when}.`;
-  $("done-lines").innerHTML = lines.map(lineHtml).join("") + `<li><span>Pay at pickup</span><span>${order.total}</span></li>`;
-  $("slip-form").hidden = true;
-  $("slip-done").hidden = false;
+/* ---------- Shop ---------- */
+function renderShop() {
+  $("brand-groups").innerHTML = BRANDS.map((g, i) => `
+    <div class="brand-group"><h2>${esc(g.group)}</h2>
+      <div class="tiles">${g.names.map(n => `<div class="tile" data-g="${i % 4}">${esc(n)}</div>`).join("")}</div>
+    </div>`).join("");
+  $("extras").innerHTML = EXTRAS.map(x => `<span>${esc(x)}</span>`).join("");
+  $("home-brands").innerHTML = BRANDS[0].names.map(n => `<li>${esc(n)}</li>`).join("");
+  $("so-date").min = ymd(new Date());
+}
+$("shop-form").addEventListener("change", e => {
+  if (e.target.name === "method") $("so-address-field").hidden = e.target.value !== "Free delivery";
+});
+$("shop-form").addEventListener("submit", e => {
+  e.preventDefault();
+  const f = e.target, v = n => f.elements[n].value.trim();
+  const delivery = f.elements.method.value === "Free delivery";
+  const problems = [];
+  if (!v("name")) problems.push("enter your name");
+  if (digits(v("phone")).length < 10) problems.push("enter a 10-digit phone number");
+  if (delivery && !v("address")) problems.push("enter a delivery address");
+  if (!v("items")) problems.push("tell us what you need");
+  if (fail("shop", problems)) return;
+  if (botFilled(f)) return;
+  const lines = [f.elements.method.value + (v("date") ? " on " + longDate(v("date")) : ""), ...(delivery ? ["Deliver to " + v("address")] : []), ...v("items").split("\n").filter(Boolean)];
+  submitFlow("shop", {
+    subject: `${f.elements.method.value} order from ${v("name")}`,
+    fields: { Type: f.elements.method.value, Name: v("name"), Phone: v("phone"), Email: v("email"), Address: delivery ? v("address") : "", "Wanted on": v("date") ? longDate(v("date")) : "As soon as possible", Items: v("items"), Notes: v("notes") },
+    replyTo: v("email"), lines,
+    sentTitle: "Order sent!",
+    sentText: `Thanks, ${v("name")}! We'll text ${v("phone")} to confirm your order and total.`,
+    callText: `Online ordering isn't hooked up yet. Please call ${STORE.phone} and we'll take this order over the phone:`,
+  });
 });
 
-$("new-order").addEventListener("click", () => {
-  Object.keys(cart).forEach(k => delete cart[k]);
-  $("order-form").reset();
-  $("slip-done").hidden = true;
-  $("slip-form").hidden = false;
-  updateSlip();
+/* ---------- Bakery ---------- */
+function renderBakery() {
+  const chip = (name, value, type = "checkbox") => `<label class="chip"><input type="${type}" name="${name}" value="${esc(value)}"><span>${esc(value)}</span></label>`;
+  $("menu").innerHTML = `
+    <article class="menu-card"><img src="img/pupcakes.jpg" alt="Pupcakes with orange icing drizzle in clear cases">
+      <div class="in"><h3>Pupcakes &amp; doggie donuts</h3><p>Combine any flavors:</p><ul>${BAKERY.flavors.map(f => `<li>${esc(f)}</li>`).join("")}</ul></div></article>
+    <article class="menu-card"><div class="swatch" style="background:var(--violet)"><svg aria-hidden="true"><use href="#i-bake"/></svg></div>
+      <div class="in"><h3>Muffins</h3><ul>${BAKERY.muffins.map(f => `<li>${esc(f)}</li>`).join("")}</ul></div></article>
+    <article class="menu-card"><div class="swatch" style="background:var(--orchid)"><svg aria-hidden="true"><use href="#paw"/></svg></div>
+      <div class="in"><h3>Fresh-baked cookies</h3><p>Baked fresh for your pup. Ask about this week's shapes.</p></div></article>
+    <article class="menu-card"><div class="swatch" style="background:var(--plum)"><svg aria-hidden="true"><use href="#i-gift"/></svg></div>
+      <div class="in"><h3>Custom cakes</h3><ul>${BAKERY.cakes.map(c => `<li>${esc(c)}</li>`).join("")}</ul><p>Pick the flavor and colors and tell us what we're celebrating.</p></div></article>`;
+  $("flavor-chips").innerHTML = BAKERY.flavors.map(f => chip("flavor", f)).join("");
+  $("muffin-qty").innerHTML = BAKERY.muffins.map((m, i) =>
+    `<div class="field"><label for="bo-muffin-${i}">${esc(m)}</label><input id="bo-muffin-${i}" name="muffin-${i}" type="number" min="0" max="99" inputmode="numeric" placeholder="0"></div>`).join("");
+  $("cake-chips").innerHTML = BAKERY.cakes.map((c, i) => chip("occasion", c, "radio").replace("<input", i === 0 ? "<input checked" : "<input")).join("");
+  $("notice-days").textContent = BAKERY.noticeDays;
+  setBakeDate();
+}
+function bakeMinDate() { const d = new Date(); d.setDate(d.getDate() + BAKERY.noticeDays); return firstOpenFrom(d); }
+function setBakeDate() {
+  const min = bakeMinDate();
+  $("bo-date").min = min;
+  if (!$("bo-date").value || $("bo-date").value < min) $("bo-date").value = min;
+  bakeDateHint();
+}
+function bakeDateHint() {
+  const val = $("bo-date").value;
+  $("bo-date-hint").textContent = val && !isOpen(val) ? `We're closed ${closedDays()}. Please pick another day.` : `Earliest is ${longDate(bakeMinDate())}.`;
+}
+$("bo-date").addEventListener("change", bakeDateHint);
+$("bo-cake").addEventListener("change", e => $("cake-box").hidden = !e.target.checked);
+
+$("bake-form").addEventListener("submit", e => {
+  e.preventDefault();
+  const f = e.target, v = n => f.elements[n].value.trim(), n = k => Math.max(0, parseInt(v(k), 10) || 0);
+  const flavors = [...f.querySelectorAll('input[name="flavor"]:checked')].map(i => i.value);
+  const lines = [];
+  if (n("pupcakes")) lines.push(`${n("pupcakes")} pupcake${n("pupcakes") > 1 ? "s" : ""}`);
+  if (n("donuts")) lines.push(`${n("donuts")} doggie donut${n("donuts") > 1 ? "s" : ""}`);
+  if ((n("pupcakes") || n("donuts")) && flavors.length) lines.push("Flavors: " + flavors.join(", "));
+  BAKERY.muffins.forEach((m, i) => { if (n("muffin-" + i)) lines.push(`${n("muffin-" + i)} ${m} muffin${n("muffin-" + i) > 1 ? "s" : ""}`); });
+  if (n("cookies")) lines.push(`${n("cookies")} cookie${n("cookies") > 1 ? "s" : ""}`);
+  const cake = f.elements.cake.checked;
+  if (cake) {
+    const bits = [v("cakeFlavor") && "flavor: " + v("cakeFlavor"), v("cakeColors") && "colors: " + v("cakeColors")].filter(Boolean);
+    lines.push(`${f.elements.occasion.value} cake${v("cakeDog") ? " for " + v("cakeDog") : ""}${bits.length ? " (" + bits.join(", ") + ")" : ""}`);
+    if (v("cakeDetails")) lines.push("Celebration: " + v("cakeDetails"));
+  }
+  const problems = [];
+  if (!v("name")) problems.push("enter your name");
+  if (digits(v("phone")).length < 10) problems.push("enter a 10-digit phone number");
+  if (!v("date") || v("date") < bakeMinDate()) problems.push(`pick a date at least ${BAKERY.noticeDays} days away`);
+  else if (!isOpen(v("date"))) problems.push(`pick a day we're open (we're closed ${closedDays()})`);
+  if (!lines.length) problems.push("add at least one treat");
+  if ((n("pupcakes") || n("donuts")) && !flavors.length) problems.push("choose at least one pupcake or donut flavor");
+  if (cake && !v("cakeFlavor")) problems.push("tell us the cake flavor");
+  if (fail("bake", problems)) return;
+  if (botFilled(f)) return;
+  const when = longDate(v("date"));
+  submitFlow("bake", {
+    subject: `Bakery order from ${v("name")} for ${when}`,
+    fields: { Name: v("name"), Phone: v("phone"), Email: v("email"), "Date needed": when, Pickup: f.elements.pickup.value, Order: lines.join("\n"), "Special instructions": v("notes") },
+    replyTo: v("email"), lines: [`Pickup ${f.elements.pickup.value === "Curbside" ? "curbside" : "in the store"} on ${when}`, ...lines, ...(v("notes") ? ["Notes: " + v("notes")] : [])],
+    sentTitle: "Bakery order sent!",
+    sentText: `Thanks, ${v("name")}! We'll call or text ${v("phone")} to confirm your order and total.`,
+    callText: `Online ordering isn't hooked up yet. Please call ${STORE.phone} and we'll take this order over the phone:`,
+  });
+});
+
+/* ---------- Birthday Club ---------- */
+let dogSeq = 0;
+function addDog() {
+  const i = ++dogSeq;
+  const row = document.createElement("div");
+  row.className = "dog-row";
+  row.innerHTML = `
+    <div class="field"><label for="dog-name-${i}">Dog's name</label><input id="dog-name-${i}" data-k="name" type="text"></div>
+    <div class="field"><label for="dog-month-${i}">Birthday month</label><select id="dog-month-${i}" data-k="month"><option value="">Month</option>${MONTHS.map((m, j) => `<option value="${j}">${m}</option>`).join("")}</select></div>
+    <div class="field"><label for="dog-day-${i}">Day</label><select id="dog-day-${i}" data-k="day"><option value="">Day</option>${Array.from({ length: 31 }, (_, j) => `<option>${j + 1}</option>`).join("")}</select></div>
+    <button class="remove" type="button" aria-label="Remove this dog">Remove</button>`;
+  $("dogs").appendChild(row);
+  syncRemove();
+}
+function syncRemove() {
+  const rows = $("dogs").children;
+  [...rows].forEach(r => r.querySelector(".remove").hidden = rows.length < 2);
+  $("add-dog").hidden = rows.length >= 6;
+}
+function resetDogs() { $("dogs").innerHTML = ""; addDog(); }
+$("add-dog").addEventListener("click", addDog);
+$("dogs").addEventListener("click", e => {
+  if (!e.target.closest(".remove")) return;
+  e.target.closest(".dog-row").remove();
+  syncRemove();
+});
+$("bday-form").addEventListener("submit", e => {
+  e.preventDefault();
+  const f = e.target, v = n => f.elements[n].value.trim();
+  const dogs = [...$("dogs").children].map(r => {
+    const g = k => r.querySelector(`[data-k="${k}"]`).value.trim();
+    return { name: g("name"), month: g("month"), day: g("day") };
+  });
+  const problems = [];
+  if (!v("name")) problems.push("enter your name");
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v("email"))) problems.push("enter your email so we can send the coupon");
+  if (dogs.some(d => !d.name || d.month === "" || !d.day)) problems.push("fill in each dog's name and birthday");
+  if (fail("bday", problems)) return;
+  if (botFilled(f)) return;
+  const lines = dogs.map(d => `${d.name}: ${MONTHS[d.month]} ${d.day}`);
+  submitFlow("bday", {
+    subject: `Birthday Club sign-up: ${dogs.map(d => d.name).join(", ")}`,
+    fields: { Name: v("name"), Email: v("email"), Phone: v("phone"), Dogs: lines.join("\n") },
+    replyTo: v("email"), lines,
+    sentTitle: "Welcome to the club!",
+    sentText: `Thanks, ${v("name")}! We'll email ${v("email")} a coupon around ${dogs.length > 1 ? "each dog's" : dogs[0].name + "'s"} birthday.`,
+    callText: `Online sign-up isn't hooked up yet. Stop in or call ${STORE.phone} to join with these birthdays:`,
+  });
 });
 
 /* ---------- Hours & contact ---------- */
@@ -699,11 +888,13 @@ function renderVisit() {
   $("phone").textContent = STORE.phone;
   $("strip-phone").textContent = STORE.phone;
   $("email").textContent = STORE.email;
-  $("email").hidden = !STORE.email;
+  $("email").href = "mailto:" + STORE.email;
+  $("email-line").hidden = !STORE.email;
+  document.querySelectorAll(".venmo-line").forEach(el => el.textContent = STORE.venmo ? " (" + STORE.venmo + ")" : "");
   $("year").textContent = now.getFullYear();
 }
 
-renderCats(); renderCards(); renderHomeDoors(); renderMenu(); updateSlip(); renderVisit();
+renderShop(); renderBakery(); resetDogs(); renderVisit();
 show(location.hash.slice(1));
 </script>
 </body>

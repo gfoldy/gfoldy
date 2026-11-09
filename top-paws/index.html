@@ -184,6 +184,10 @@ textarea { resize: vertical; min-height: 84px; }
 .cake-toggle { display: flex; gap: 10px; align-items: center; font-weight: 800; color: var(--plum); cursor: pointer; }
 .cake-toggle input { width: 22px; height: 22px; accent-color: var(--violet); }
 .cake-box { background: var(--mist); border-radius: 16px; padding: 18px; display: grid; gap: 14px; }
+.estimate { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; background: var(--mist); border-radius: 14px; padding: 14px 18px; }
+.estimate b { font: 600 24px/1 var(--display); color: var(--plum); font-variant-numeric: tabular-nums; }
+.estimate span { font-size: 14px; color: var(--muted); }
+.price-tag { font: 600 18px/1.2 var(--display); color: var(--brown); }
 
 .dog-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 0.7fr) auto; gap: 10px; align-items: end; background: var(--mist); border-radius: 14px; padding: 14px; }
 .dog-row .remove { background: none; border: 0; color: var(--tongue); font: 800 14px/1 var(--body); padding: 14px 4px; cursor: pointer; }
@@ -311,8 +315,8 @@ footer svg { width: 60px; height: 32px; color: var(--violet); }
     <section class="perks" aria-label="Ways to shop">
       <div class="wrap">
         <div class="perk"><svg aria-hidden="true"><use href="#i-car"/></svg><div><b>Curbside pickup</b><span>Park in our lot and we'll bring your order out.</span></div></div>
-        <div class="perk"><svg aria-hidden="true"><use href="#i-truck"/></svg><div><b>Free delivery</b><span>No minimum order. Pay with Venmo<span class="venmo-line"></span>.</span></div></div>
-        <div class="perk"><svg aria-hidden="true"><use href="#i-cal"/></svg><div><b>Birthday Club</b><span>Sign up your dog for a birthday coupon.</span></div></div>
+        <div class="perk"><svg aria-hidden="true"><use href="#i-truck"/></svg><div><b>Free delivery</b><span>No minimum, to Union Grove and nearby towns.</span></div></div>
+        <div class="perk"><svg aria-hidden="true"><use href="#i-cal"/></svg><div><b>Birthday Club</b><span>Get <span class="bday-perk"></span> on your dog's birthday.</span></div></div>
       </div>
     </section>
 
@@ -324,12 +328,12 @@ footer svg { width: 60px; height: 32px; color: var(--violet); }
       </section>
       <section class="door door-bake" aria-labelledby="door-bake-title">
         <h2 id="door-bake-title">TopPaws Bakery</h2>
-        <p>Pupcakes, doggie donuts, muffins, cookies and custom cakes for birthdays and Gotcha Days.</p>
+        <p>Pupcakes and doggie donuts for $2, plus muffins, cookies and custom cakes for birthdays and Gotcha Days. Pickup or free delivery.</p>
         <a class="btn btn-lilac" href="#bakery" data-go="bakery">Order bakery treats</a>
       </section>
       <section class="door door-bday" aria-labelledby="door-bday-title">
         <h2 id="door-bday-title">Birthday Club</h2>
-        <p>Tell us your dog's birthday and we'll send you a coupon to celebrate.</p>
+        <p>Tell us your dog's birthday and we'll send you a coupon for <span class="bday-perk"></span> to celebrate.</p>
         <a class="btn btn-lilac" href="#birthday" data-go="birthday">Join the club</a>
       </section>
     </div>
@@ -382,7 +386,7 @@ footer svg { width: 60px; height: 32px; color: var(--violet); }
       <div class="order-wrap">
         <div class="how">
           <div><h3><svg aria-hidden="true"><use href="#i-car"/></svg>Curbside pickup</h3><p>Park in our lot and give us a call when you get here. We'll bring your order out to your car.</p></div>
-          <div><h3><svg aria-hidden="true"><use href="#i-truck"/></svg>Free delivery</h3><p>We deliver for free with no minimum order. We'll text you to set up a time.</p></div>
+          <div><h3><svg aria-hidden="true"><use href="#i-truck"/></svg>Free delivery</h3><p>We deliver for free with no minimum order to <span class="towns"></span>. We'll text you to set up a time.</p></div>
           <div><h3><svg aria-hidden="true"><use href="#paw"/></svg>Paying</h3><p>We'll text you your total. Pay with Venmo<span class="venmo-line"></span>.</p></div>
         </div>
         <div class="form-card">
@@ -403,7 +407,10 @@ footer svg { width: 60px; height: 32px; color: var(--violet); }
                   <div class="field"><label for="so-phone">Phone</label><input id="so-phone" name="phone" type="tel" autocomplete="tel"></div>
                 </div>
                 <div class="field"><label for="so-email">Email <span class="opt">(optional)</span></label><input id="so-email" name="email" type="email" autocomplete="email"></div>
-                <div class="field" id="so-address-field" hidden><label for="so-address">Delivery address</label><input id="so-address" name="address" type="text" autocomplete="street-address" placeholder="Street, town"></div>
+                <div class="grid2" id="so-address-field" hidden>
+                  <div class="field"><label for="so-address">Street address</label><input id="so-address" name="address" type="text" autocomplete="street-address"></div>
+                  <div class="field"><label for="so-town">Town</label><select id="so-town" name="town" class="town-select"></select></div>
+                </div>
               </fieldset>
               <fieldset>
                 <legend>What do you need?<small>Brand, recipe, bag size and how many.</small></legend>
@@ -455,17 +462,22 @@ footer svg { width: 60px; height: 32px; color: var(--violet); }
                 </div>
                 <div class="grid2">
                   <div class="field"><label for="bo-date">Date needed</label><input id="bo-date" name="date" type="date"><div class="hint" id="bo-date-hint"></div></div>
-                  <div class="field"><span class="label">Pickup</span>
+                  <div class="field"><span class="label">Pickup or delivery</span>
                     <div class="chips">
                       <label class="chip"><input type="radio" name="pickup" value="In the store" checked><span>In the store</span></label>
                       <label class="chip"><input type="radio" name="pickup" value="Curbside"><span>Curbside</span></label>
+                      <label class="chip"><input type="radio" name="pickup" value="Free delivery"><span>Free delivery</span></label>
                     </div>
                   </div>
+                </div>
+                <div class="grid2" id="bo-address-field" hidden>
+                  <div class="field"><label for="bo-address">Street address</label><input id="bo-address" name="address" type="text" autocomplete="street-address"></div>
+                  <div class="field"><label for="bo-town">Town</label><select id="bo-town" name="town" class="town-select"></select></div>
                 </div>
               </fieldset>
               <hr class="divider">
               <fieldset>
-                <legend>Pupcakes &amp; doggie donuts<small>Combine any flavors.</small></legend>
+                <legend>Pupcakes &amp; doggie donuts<small>$2 each. Combine any flavors.</small></legend>
                 <div class="qty-row">
                   <div class="field"><label for="bo-pupcakes">Pupcakes</label><input id="bo-pupcakes" name="pupcakes" type="number" min="0" max="99" inputmode="numeric" placeholder="0"></div>
                   <div class="field"><label for="bo-donuts">Doggie donuts</label><input id="bo-donuts" name="donuts" type="number" min="0" max="99" inputmode="numeric" placeholder="0"></div>
@@ -488,6 +500,7 @@ footer svg { width: 60px; height: 32px; color: var(--violet); }
                 <label class="cake-toggle"><input type="checkbox" id="bo-cake" name="cake">I'd like a custom cake</label>
                 <div class="cake-box" id="cake-box" hidden>
                   <div class="field"><span class="label">What are we celebrating?</span><div class="chips" id="cake-chips"></div></div>
+                  <div class="field"><span class="label">Size</span><div class="chips" id="cake-size-chips"></div></div>
                   <div class="grid2">
                     <div class="field"><label for="bo-cake-dog">Dog's name</label><input id="bo-cake-dog" name="cakeDog" type="text"></div>
                     <div class="field"><label for="bo-cake-flavor">Flavor</label><input id="bo-cake-flavor" name="cakeFlavor" type="text" placeholder="Peanut butter, banana…"></div>
@@ -502,6 +515,7 @@ footer svg { width: 60px; height: 32px; color: var(--violet); }
                 <div class="field"><textarea aria-label="Special instructions" id="bo-notes" name="notes" rows="3"></textarea></div>
               </fieldset>
               <p class="error" id="bake-error" role="alert" hidden></p>
+              <div class="estimate" aria-live="polite"><div><div class="label" style="margin:0">Estimated total</div><span id="bake-estimate-note">Pay at pickup or with Venmo on delivery.</span></div><b id="bake-estimate">$0</b></div>
               <div class="btn-row" style="align-items:center"><button class="btn btn-plum" type="submit" id="bake-submit">Send bakery order</button><span class="fine">We'll call or text to confirm.</span></div>
             </form>
           </div>
@@ -525,7 +539,7 @@ footer svg { width: 60px; height: 32px; color: var(--violet); }
       <svg class="swoosh" aria-hidden="true"><use href="#swoosh"/></svg>
       <div class="wrap">
         <h1>Birthday Club</h1>
-        <p>Every dog deserves a birthday party. Sign up and we'll send you a coupon when your dog's big day comes around.</p>
+        <p>Every dog deserves a birthday party. Sign up and we'll send you a coupon for <span class="bday-perk"></span> when your dog's big day comes around.</p>
       </div>
     </section>
 
@@ -536,8 +550,8 @@ footer svg { width: 60px; height: 32px; color: var(--violet); }
           <h3 id="bday-how">How it works</h3>
           <ol>
             <li><b>Sign up</b> with your dog's name and birthday. It's free.</li>
-            <li><b>Around their birthday</b>, we'll email you a birthday coupon.</li>
-            <li><b>Celebrate at Top Paws</b>. Use it in the store or on a bakery treat at the Doggie Diner.</li>
+            <li><b>Around their birthday</b>, we'll email you a coupon for <span class="bday-perk"></span>.</li>
+            <li><b>Celebrate at Top Paws</b>. Bring in the coupon and enjoy the treat at our Doggie Diner.</li>
           </ol>
         </div>
       </aside>
@@ -591,6 +605,8 @@ const STORE = {
   },
   // Venmo username (without the @) shown and linked with payment info. Leave empty to hide.
   venmo: "toppawspetsupply",
+  // Towns we deliver to for free.
+  deliveryTowns: ["Union Grove", "Burlington", "Kenosha", "Waterford", "Racine", "Yorkville", "Kansasville"],
   // Web3Forms access key (free at web3forms.com). Orders and Birthday Club
   // sign-ups are emailed to the address the key was made for. While empty,
   // the forms tell customers to call the store instead.
@@ -616,6 +632,14 @@ const BAKERY = {
   flavors: ["Peanut Butter", "Carrot", "Apple", "Banana", "Strawberry", "Cinnamon"],
   muffins: ["Blueberry", "Bacon & Egg", "Apple Cinnamon", "PB & J"],
   cakes: ["Birthday", "Gotcha Day", "Gender Reveal"],
+  // Prices. Leave an item out (like muffins and cookies) to have it priced at pickup.
+  pupcakeDonutPrice: 2,
+  cakeSizes: [{ name: "Small", price: 10 }, { name: "Medium", price: 15 }, { name: "Large", price: 20 }],
+};
+
+/* What Birthday Club members get. Shown on the site and in the sign-up message. */
+const BIRTHDAY = {
+  perk: "a free birthday pupcake",
 };
 
 /* ========================================================================== */
@@ -623,6 +647,7 @@ const BAKERY = {
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const digits = s => s.replace(/\D/g, "");
+const money = n => "$" + (Number.isInteger(n) ? n : n.toFixed(2));
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 /* ---------- Tabs ---------- */
@@ -704,7 +729,7 @@ document.addEventListener("click", e => {
   const key = b.dataset.again;
   $(key + "-form").reset();
   if (key === "bday") resetDogs();
-  if (key === "bake") { $("cake-box").hidden = true; setBakeDate(); }
+  if (key === "bake") { $("cake-box").hidden = true; $("bo-address-field").hidden = true; setBakeDate(); updateEstimate(); }
   if (key === "shop") $("so-address-field").hidden = true;
   $(key + "-done").hidden = true;
   $(key + "-form-view").hidden = false;
@@ -737,14 +762,14 @@ $("shop-form").addEventListener("submit", e => {
   const problems = [];
   if (!v("name")) problems.push("enter your name");
   if (digits(v("phone")).length < 10) problems.push("enter a 10-digit phone number");
-  if (delivery && !v("address")) problems.push("enter a delivery address");
+  if (delivery && (!v("address") || !v("town"))) problems.push("enter your street address and town");
   if (!v("items")) problems.push("tell us what you need");
   if (fail("shop", problems)) return;
   if (botFilled(f)) return;
-  const lines = [f.elements.method.value + (v("date") ? " on " + longDate(v("date")) : ""), ...(delivery ? ["Deliver to " + v("address")] : []), ...v("items").split("\n").filter(Boolean)];
+  const lines = [f.elements.method.value + (v("date") ? " on " + longDate(v("date")) : ""), ...(delivery ? ["Deliver to " + v("address") + ", " + v("town")] : []), ...v("items").split("\n").filter(Boolean)];
   submitFlow("shop", {
     subject: `${f.elements.method.value} order from ${v("name")}`,
-    fields: { Type: f.elements.method.value, Name: v("name"), Phone: v("phone"), Email: v("email"), Address: delivery ? v("address") : "", "Wanted on": v("date") ? longDate(v("date")) : "As soon as possible", Items: v("items"), Notes: v("notes") },
+    fields: { Type: f.elements.method.value, Name: v("name"), Phone: v("phone"), Email: v("email"), Address: delivery ? v("address") + ", " + v("town") : "", "Wanted on": v("date") ? longDate(v("date")) : "As soon as possible", Items: v("items"), Notes: v("notes") },
     replyTo: v("email"), lines,
     sentTitle: "Order sent!",
     sentText: `Thanks, ${v("name")}! We'll text ${v("phone")} to confirm your order and total.` + (STORE.venmo ? ` You can pay with Venmo at @${STORE.venmo}.` : ""),
@@ -757,17 +782,19 @@ function renderBakery() {
   const chip = (name, value, type = "checkbox") => `<label class="chip"><input type="${type}" name="${name}" value="${esc(value)}"><span>${esc(value)}</span></label>`;
   $("menu").innerHTML = `
     <article class="menu-card"><img src="img/pupcakes.jpg" alt="Pupcakes with orange icing drizzle in clear cases">
-      <div class="in"><h3>Pupcakes &amp; doggie donuts</h3><p>Combine any flavors:</p><ul>${BAKERY.flavors.map(f => `<li>${esc(f)}</li>`).join("")}</ul></div></article>
+      <div class="in"><h3>Pupcakes &amp; doggie donuts</h3><div class="price-tag">${money(BAKERY.pupcakeDonutPrice)} each</div><p>Combine any flavors:</p><ul>${BAKERY.flavors.map(f => `<li>${esc(f)}</li>`).join("")}</ul></div></article>
     <article class="menu-card"><div class="swatch" style="background:var(--violet)"><svg aria-hidden="true"><use href="#i-bake"/></svg></div>
       <div class="in"><h3>Muffins</h3><ul>${BAKERY.muffins.map(f => `<li>${esc(f)}</li>`).join("")}</ul></div></article>
     <article class="menu-card"><div class="swatch" style="background:var(--orchid)"><svg aria-hidden="true"><use href="#paw"/></svg></div>
       <div class="in"><h3>Fresh-baked cookies</h3><p>Baked fresh for your pup. Ask about this week's shapes.</p></div></article>
     <article class="menu-card"><div class="swatch" style="background:var(--plum)"><svg aria-hidden="true"><use href="#i-gift"/></svg></div>
-      <div class="in"><h3>Custom cakes</h3><ul>${BAKERY.cakes.map(c => `<li>${esc(c)}</li>`).join("")}</ul><p>Pick the flavor and colors and tell us what we're celebrating.</p></div></article>`;
+      <div class="in"><h3>Custom cakes</h3><div class="price-tag">${BAKERY.cakeSizes.map(c => `${c.name} ${money(c.price)}`).join(" · ")}</div><ul>${BAKERY.cakes.map(c => `<li>${esc(c)}</li>`).join("")}</ul><p>Pick the flavor and colors and tell us what we're celebrating.</p></div></article>`;
   $("flavor-chips").innerHTML = BAKERY.flavors.map(f => chip("flavor", f)).join("");
   $("muffin-qty").innerHTML = BAKERY.muffins.map((m, i) =>
     `<div class="field"><label for="bo-muffin-${i}">${esc(m)}</label><input id="bo-muffin-${i}" name="muffin-${i}" type="number" min="0" max="99" inputmode="numeric" placeholder="0"></div>`).join("");
   $("cake-chips").innerHTML = BAKERY.cakes.map((c, i) => chip("occasion", c, "radio").replace("<input", i === 0 ? "<input checked" : "<input")).join("");
+  $("cake-size-chips").innerHTML = BAKERY.cakeSizes.map(c =>
+    `<label class="chip"><input type="radio" name="cakeSize" value="${esc(c.name)}"><span>${esc(c.name)} · ${money(c.price)}</span></label>`).join("");
   $("notice-days").textContent = BAKERY.noticeDays;
   setBakeDate();
 }
@@ -784,6 +811,26 @@ function bakeDateHint() {
 }
 $("bo-date").addEventListener("change", bakeDateHint);
 $("bo-cake").addEventListener("change", e => $("cake-box").hidden = !e.target.checked);
+$("bake-form").addEventListener("change", e => {
+  if (e.target.name === "pickup") $("bo-address-field").hidden = e.target.value !== "Free delivery";
+  updateEstimate();
+});
+$("bake-form").addEventListener("input", updateEstimate);
+function bakeEstimate(f) {
+  const n = k => Math.max(0, parseInt(f.elements[k].value, 10) || 0);
+  let total = (n("pupcakes") + n("donuts")) * BAKERY.pupcakeDonutPrice;
+  const size = f.elements.cake.checked && BAKERY.cakeSizes.find(c => c.name === f.elements.cakeSize.value);
+  if (size) total += size.price;
+  const unpriced = n("cookies") > 0 || BAKERY.muffins.some((_, i) => n("muffin-" + i) > 0);
+  return { total, unpriced };
+}
+function updateEstimate() {
+  const { total, unpriced } = bakeEstimate($("bake-form"));
+  $("bake-estimate").textContent = money(total) + (unpriced ? " +" : "");
+  $("bake-estimate-note").textContent = unpriced
+    ? "Plus muffins and cookies, which we'll price when we confirm."
+    : "We'll confirm your total. Pay at pickup or with Venmo on delivery.";
+}
 
 $("bake-form").addEventListener("submit", e => {
   e.preventDefault();
@@ -798,7 +845,7 @@ $("bake-form").addEventListener("submit", e => {
   const cake = f.elements.cake.checked;
   if (cake) {
     const bits = [v("cakeFlavor") && "flavor: " + v("cakeFlavor"), v("cakeColors") && "colors: " + v("cakeColors")].filter(Boolean);
-    lines.push(`${f.elements.occasion.value} cake${v("cakeDog") ? " for " + v("cakeDog") : ""}${bits.length ? " (" + bits.join(", ") + ")" : ""}`);
+    lines.push(`${f.elements.cakeSize.value} ${f.elements.occasion.value} cake${v("cakeDog") ? " for " + v("cakeDog") : ""}${bits.length ? " (" + bits.join(", ") + ")" : ""}`);
     if (v("cakeDetails")) lines.push("Celebration: " + v("cakeDetails"));
   }
   const problems = [];
@@ -808,14 +855,20 @@ $("bake-form").addEventListener("submit", e => {
   else if (!isOpen(v("date"))) problems.push(`pick a day we're open (we're closed ${closedDays()})`);
   if (!lines.length) problems.push("add at least one treat");
   if ((n("pupcakes") || n("donuts")) && !flavors.length) problems.push("choose at least one pupcake or donut flavor");
+  if (cake && !f.elements.cakeSize.value) problems.push("choose a cake size");
   if (cake && !v("cakeFlavor")) problems.push("tell us the cake flavor");
+  const delivery = f.elements.pickup.value === "Free delivery";
+  if (delivery && (!v("address") || !v("town"))) problems.push("enter your street address and town for delivery");
   if (fail("bake", problems)) return;
   if (botFilled(f)) return;
   const when = longDate(v("date"));
+  const est = bakeEstimate(f);
+  const estText = money(est.total) + (est.unpriced ? " plus muffins/cookies" : "");
+  const how = delivery ? `Free delivery to ${v("address")}, ${v("town")} on ${when}` : `Pickup ${f.elements.pickup.value === "Curbside" ? "curbside" : "in the store"} on ${when}`;
   submitFlow("bake", {
     subject: `Bakery order from ${v("name")} for ${when}`,
-    fields: { Name: v("name"), Phone: v("phone"), Email: v("email"), "Date needed": when, Pickup: f.elements.pickup.value, Order: lines.join("\n"), "Special instructions": v("notes") },
-    replyTo: v("email"), lines: [`Pickup ${f.elements.pickup.value === "Curbside" ? "curbside" : "in the store"} on ${when}`, ...lines, ...(v("notes") ? ["Notes: " + v("notes")] : [])],
+    fields: { Name: v("name"), Phone: v("phone"), Email: v("email"), "Date needed": when, "Pickup or delivery": f.elements.pickup.value, Address: delivery ? v("address") + ", " + v("town") : "", Order: lines.join("\n"), "Estimated total": estText, "Special instructions": v("notes") },
+    replyTo: v("email"), lines: [how, ...lines, "Estimated total: " + estText, ...(v("notes") ? ["Notes: " + v("notes")] : [])],
     sentTitle: "Bakery order sent!",
     sentText: `Thanks, ${v("name")}! We'll call or text ${v("phone")} to confirm your order and total.`,
     callText: `Online ordering isn't hooked up yet. Please call ${STORE.phone} and we'll take this order over the phone:`,
@@ -867,7 +920,7 @@ $("bday-form").addEventListener("submit", e => {
     fields: { Name: v("name"), Email: v("email"), Phone: v("phone"), Dogs: lines.join("\n") },
     replyTo: v("email"), lines,
     sentTitle: "Welcome to the club!",
-    sentText: `Thanks, ${v("name")}! We'll email ${v("email")} a coupon around ${dogs.length > 1 ? "each dog's" : dogs[0].name + "'s"} birthday.`,
+    sentText: `Thanks, ${v("name")}! We'll email ${v("email")} a coupon for ${BIRTHDAY.perk} around ${dogs.length > 1 ? "each dog's" : dogs[0].name + "'s"} birthday.`,
     callText: `Online sign-up isn't hooked up yet. Stop in or call ${STORE.phone} to join with these birthdays:`,
   });
 });
@@ -894,9 +947,13 @@ function renderVisit() {
   document.querySelectorAll(".venmo-line").forEach(el => el.innerHTML = STORE.venmo
     ? ` at <a href="https://venmo.com/u/${encodeURIComponent(STORE.venmo)}" target="_blank" rel="noopener" class="venmo-link">@${esc(STORE.venmo)}</a>` : "");
   $("year").textContent = now.getFullYear();
+  const towns = STORE.deliveryTowns;
+  document.querySelectorAll(".towns").forEach(el => el.textContent = towns.slice(0, -1).join(", ") + " and " + towns[towns.length - 1]);
+  document.querySelectorAll(".town-select").forEach(el => el.innerHTML = `<option value="">Choose your town</option>` + towns.map(t => `<option>${esc(t)}</option>`).join(""));
+  document.querySelectorAll(".bday-perk").forEach(el => el.textContent = BIRTHDAY.perk);
 }
 
-renderShop(); renderBakery(); resetDogs(); renderVisit();
+renderShop(); renderBakery(); resetDogs(); renderVisit(); updateEstimate();
 show(location.hash.slice(1));
 </script>
 </body>

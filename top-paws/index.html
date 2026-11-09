@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Top Paws Pet Supply</title>
-<meta name="description" content="Top Paws Pet Supply in Union Grove, WI: quality pet food brands, the TopPaws Bakery and Doggie Diner, curbside pickup, free delivery and a dog Birthday Club.">
+<meta name="description" content="Top Paws Pet Supply in Union Grove, WI: quality pet food brands, the TopPaws Bakery and Doggie Diner, curbside pickup, local delivery and a dog Birthday Club.">
 <link rel="icon" href="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -315,7 +315,7 @@ footer svg { width: 60px; height: 32px; color: var(--violet); }
     <section class="perks" aria-label="Ways to shop">
       <div class="wrap">
         <div class="perk"><svg aria-hidden="true"><use href="#i-car"/></svg><div><b>Curbside pickup</b><span>Park in our lot and we'll bring your order out.</span></div></div>
-        <div class="perk"><svg aria-hidden="true"><use href="#i-truck"/></svg><div><b>Free delivery</b><span>No minimum, to Union Grove and nearby towns.</span></div></div>
+        <div class="perk"><svg aria-hidden="true"><use href="#i-truck"/></svg><div><b>Local delivery</b><span>Free in Union Grove, <span class="fee"></span> to nearby towns.</span></div></div>
         <div class="perk"><svg aria-hidden="true"><use href="#i-cal"/></svg><div><b>Birthday Club</b><span>Get <span class="bday-perk"></span> during your dog's birthday month.</span></div></div>
       </div>
     </section>
@@ -328,7 +328,7 @@ footer svg { width: 60px; height: 32px; color: var(--violet); }
       </section>
       <section class="door door-bake" aria-labelledby="door-bake-title">
         <h2 id="door-bake-title">TopPaws Bakery</h2>
-        <p>Pupcakes and doggie donuts for $2, plus muffins, cookies and custom cakes for birthdays and Gotcha Days. Pickup or free delivery.</p>
+        <p>Pupcakes, doggie donuts, muffins, cookies and custom cakes for birthdays and Gotcha Days. Pickup or delivery.</p>
         <a class="btn btn-lilac" href="#bakery" data-go="bakery">Order bakery treats</a>
       </section>
       <section class="door door-bday" aria-labelledby="door-bday-title">
@@ -368,7 +368,7 @@ footer svg { width: 60px; height: 32px; color: var(--violet); }
       <svg class="swoosh" aria-hidden="true"><use href="#swoosh"/></svg>
       <div class="wrap">
         <h1>Shop</h1>
-        <p>These are the brands on our shelves. Stop in, or send us an order below for curbside pickup or free delivery.</p>
+        <p>These are the brands on our shelves. Stop in, or send us an order below for curbside pickup or delivery.</p>
       </div>
     </section>
 
@@ -381,12 +381,12 @@ footer svg { width: 60px; height: 32px; color: var(--violet); }
     </section>
 
     <section class="wrap section" id="shop-order" aria-labelledby="shop-order-title" style="padding-top:8px">
-      <h2 class="section-title" id="shop-order-title">Curbside pickup &amp; free delivery</h2>
+      <h2 class="section-title" id="shop-order-title">Curbside pickup &amp; delivery</h2>
       <p class="lede">Tell us what you need and we'll get it ready.</p>
       <div class="order-wrap">
         <div class="how">
           <div><h3><svg aria-hidden="true"><use href="#i-car"/></svg>Curbside pickup</h3><p>Park in our lot and give us a call when you get here. We'll bring your order out to your car.</p></div>
-          <div><h3><svg aria-hidden="true"><use href="#i-truck"/></svg>Free delivery</h3><p>We deliver for free with no minimum order to <span class="towns"></span>. We'll text you to set up a time.</p></div>
+          <div><h3><svg aria-hidden="true"><use href="#i-truck"/></svg>Delivery</h3><p>Free in <span class="free-towns"></span> with no minimum order. <span class="fee"></span> to <span class="fee-towns"></span>. We'll text you to set up a time.</p></div>
           <div><h3><svg aria-hidden="true"><use href="#paw"/></svg>Paying</h3><p>We'll text you your total. Pay with Venmo<span class="venmo-line"></span>.</p></div>
         </div>
         <div class="form-card">
@@ -397,7 +397,7 @@ footer svg { width: 60px; height: 32px; color: var(--violet); }
                 <legend>How do you want it?</legend>
                 <div class="choice">
                   <label class="chip"><input type="radio" name="method" value="Curbside pickup" checked><span>Curbside pickup<small>Pick up in our lot</small></span></label>
-                  <label class="chip"><input type="radio" name="method" value="Free delivery"><span>Free delivery<small>No minimum</small></span></label>
+                  <label class="chip"><input type="radio" name="method" value="Delivery"><span>Delivery<small>Free in Union Grove</small></span></label>
                 </div>
               </fieldset>
               <fieldset>
@@ -466,7 +466,7 @@ footer svg { width: 60px; height: 32px; color: var(--violet); }
                     <div class="chips">
                       <label class="chip"><input type="radio" name="pickup" value="In the store" checked><span>In the store</span></label>
                       <label class="chip"><input type="radio" name="pickup" value="Curbside"><span>Curbside</span></label>
-                      <label class="chip"><input type="radio" name="pickup" value="Free delivery"><span>Free delivery</span></label>
+                      <label class="chip"><input type="radio" name="pickup" value="Delivery"><span>Delivery</span></label>
                     </div>
                   </div>
                 </div>
@@ -477,7 +477,7 @@ footer svg { width: 60px; height: 32px; color: var(--violet); }
               </fieldset>
               <hr class="divider">
               <fieldset>
-                <legend>Pupcakes &amp; doggie donuts<small>$2 each. Combine any flavors.</small></legend>
+                <legend>Pupcakes &amp; doggie donuts<small><span class="pd-prices"></span>. Combine any flavors.</small></legend>
                 <div class="qty-row">
                   <div class="field"><label for="bo-pupcakes">Pupcakes</label><input id="bo-pupcakes" name="pupcakes" type="number" min="0" max="99" inputmode="numeric" placeholder="0"></div>
                   <div class="field"><label for="bo-donuts">Doggie donuts</label><input id="bo-donuts" name="donuts" type="number" min="0" max="99" inputmode="numeric" placeholder="0"></div>
@@ -605,8 +605,10 @@ const STORE = {
   },
   // Venmo username (without the @) shown and linked with payment info. Leave empty to hide.
   venmo: "toppawspetsupply",
-  // Towns we deliver to for free.
+  // Towns we deliver to. Towns in freeDeliveryTowns are free; the rest pay deliveryFee.
   deliveryTowns: ["Union Grove", "Burlington", "Kenosha", "Waterford", "Racine", "Yorkville", "Kansasville"],
+  freeDeliveryTowns: ["Union Grove"],
+  deliveryFee: 5,
   // Web3Forms access key (free at web3forms.com). Orders and Birthday Club
   // sign-ups are emailed to the address the key was made for. While empty,
   // the forms tell customers to call the store instead.
@@ -633,7 +635,8 @@ const BAKERY = {
   muffins: ["Blueberry", "Bacon & Egg", "Apple Cinnamon", "PB & J"],
   cakes: ["Birthday", "Gotcha Day", "Gender Reveal"],
   // Prices. Leave an item out (like muffins and cookies) to have it priced at pickup.
-  pupcakeDonutPrice: 2,
+  pupcakePrice: 4,
+  donutPrice: 2,
   cakeSizes: [{ name: "Small", price: 10 }, { name: "Medium", price: 15 }, { name: "Large", price: 20 }],
 };
 
@@ -648,6 +651,9 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const digits = s => s.replace(/\D/g, "");
 const money = n => "$" + (Number.isInteger(n) ? n : n.toFixed(2));
+const deliveryFee = town => STORE.freeDeliveryTowns.includes(town) ? 0 : STORE.deliveryFee;
+const feeText = town => deliveryFee(town) ? money(deliveryFee(town)) + " delivery fee" : "Free delivery";
+const listText = a => a.length > 1 ? a.slice(0, -1).join(", ") + " and " + a[a.length - 1] : a.join("");
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 /* ---------- Tabs ---------- */
@@ -753,12 +759,12 @@ function renderShop() {
   $("so-date").min = ymd(new Date());
 }
 $("shop-form").addEventListener("change", e => {
-  if (e.target.name === "method") $("so-address-field").hidden = e.target.value !== "Free delivery";
+  if (e.target.name === "method") $("so-address-field").hidden = e.target.value !== "Delivery";
 });
 $("shop-form").addEventListener("submit", e => {
   e.preventDefault();
   const f = e.target, v = n => f.elements[n].value.trim();
-  const delivery = f.elements.method.value === "Free delivery";
+  const delivery = f.elements.method.value === "Delivery";
   const problems = [];
   if (!v("name")) problems.push("enter your name");
   if (digits(v("phone")).length < 10) problems.push("enter a 10-digit phone number");
@@ -766,10 +772,10 @@ $("shop-form").addEventListener("submit", e => {
   if (!v("items")) problems.push("tell us what you need");
   if (fail("shop", problems)) return;
   if (botFilled(f)) return;
-  const lines = [f.elements.method.value + (v("date") ? " on " + longDate(v("date")) : ""), ...(delivery ? ["Deliver to " + v("address") + ", " + v("town")] : []), ...v("items").split("\n").filter(Boolean)];
+  const lines = [f.elements.method.value + (v("date") ? " on " + longDate(v("date")) : ""), ...(delivery ? ["Deliver to " + v("address") + ", " + v("town"), feeText(v("town"))] : []), ...v("items").split("\n").filter(Boolean)];
   submitFlow("shop", {
     subject: `${f.elements.method.value} order from ${v("name")}`,
-    fields: { Type: f.elements.method.value, Name: v("name"), Phone: v("phone"), Email: v("email"), Address: delivery ? v("address") + ", " + v("town") : "", "Wanted on": v("date") ? longDate(v("date")) : "As soon as possible", Items: v("items"), Notes: v("notes") },
+    fields: { Type: f.elements.method.value, Name: v("name"), Phone: v("phone"), Email: v("email"), Address: delivery ? v("address") + ", " + v("town") : "", "Delivery fee": delivery ? feeText(v("town")) : "", "Wanted on": v("date") ? longDate(v("date")) : "As soon as possible", Items: v("items"), Notes: v("notes") },
     replyTo: v("email"), lines,
     sentTitle: "Order sent!",
     sentText: `Thanks, ${v("name")}! We'll text ${v("phone")} to confirm your order and total.` + (STORE.venmo ? ` You can pay with Venmo at @${STORE.venmo}.` : ""),
@@ -782,7 +788,7 @@ function renderBakery() {
   const chip = (name, value, type = "checkbox") => `<label class="chip"><input type="${type}" name="${name}" value="${esc(value)}"><span>${esc(value)}</span></label>`;
   $("menu").innerHTML = `
     <article class="menu-card"><img src="img/pupcakes.jpg" alt="Pupcakes with orange icing drizzle in clear cases">
-      <div class="in"><h3>Pupcakes &amp; doggie donuts</h3><div class="price-tag">${money(BAKERY.pupcakeDonutPrice)} each</div><p>Combine any flavors:</p><ul>${BAKERY.flavors.map(f => `<li>${esc(f)}</li>`).join("")}</ul></div></article>
+      <div class="in"><h3>Pupcakes &amp; doggie donuts</h3><div class="price-tag">Pupcakes ${money(BAKERY.pupcakePrice)} · Donuts ${money(BAKERY.donutPrice)}</div><p>Combine any flavors:</p><ul>${BAKERY.flavors.map(f => `<li>${esc(f)}</li>`).join("")}</ul></div></article>
     <article class="menu-card"><div class="swatch" style="background:var(--violet)"><svg aria-hidden="true"><use href="#i-bake"/></svg></div>
       <div class="in"><h3>Muffins</h3><ul>${BAKERY.muffins.map(f => `<li>${esc(f)}</li>`).join("")}</ul></div></article>
     <article class="menu-card"><div class="swatch" style="background:var(--orchid)"><svg aria-hidden="true"><use href="#paw"/></svg></div>
@@ -812,24 +818,26 @@ function bakeDateHint() {
 $("bo-date").addEventListener("change", bakeDateHint);
 $("bo-cake").addEventListener("change", e => $("cake-box").hidden = !e.target.checked);
 $("bake-form").addEventListener("change", e => {
-  if (e.target.name === "pickup") $("bo-address-field").hidden = e.target.value !== "Free delivery";
+  if (e.target.name === "pickup") $("bo-address-field").hidden = e.target.value !== "Delivery";
   updateEstimate();
 });
 $("bake-form").addEventListener("input", updateEstimate);
 function bakeEstimate(f) {
   const n = k => Math.max(0, parseInt(f.elements[k].value, 10) || 0);
-  let total = (n("pupcakes") + n("donuts")) * BAKERY.pupcakeDonutPrice;
+  let total = n("pupcakes") * BAKERY.pupcakePrice + n("donuts") * BAKERY.donutPrice;
   const size = f.elements.cake.checked && BAKERY.cakeSizes.find(c => c.name === f.elements.cakeSize.value);
   if (size) total += size.price;
+  const fee = f.elements.pickup.value === "Delivery" && f.elements.town.value ? deliveryFee(f.elements.town.value) : 0;
+  total += fee;
   const unpriced = n("cookies") > 0 || BAKERY.muffins.some((_, i) => n("muffin-" + i) > 0);
-  return { total, unpriced };
+  return { total, unpriced, fee };
 }
 function updateEstimate() {
-  const { total, unpriced } = bakeEstimate($("bake-form"));
+  const { total, unpriced, fee } = bakeEstimate($("bake-form"));
   $("bake-estimate").textContent = money(total) + (unpriced ? " +" : "");
-  $("bake-estimate-note").textContent = unpriced
+  $("bake-estimate-note").textContent = (fee ? `Includes ${money(fee)} delivery. ` : "") + (unpriced
     ? "Plus muffins and cookies, which we'll price when we confirm."
-    : "We'll confirm your total. Pay at pickup or with Venmo on delivery.";
+    : "We'll confirm your total. Pay at pickup or with Venmo on delivery.");
 }
 
 $("bake-form").addEventListener("submit", e => {
@@ -857,17 +865,17 @@ $("bake-form").addEventListener("submit", e => {
   if ((n("pupcakes") || n("donuts")) && !flavors.length) problems.push("choose at least one pupcake or donut flavor");
   if (cake && !f.elements.cakeSize.value) problems.push("choose a cake size");
   if (cake && !v("cakeFlavor")) problems.push("tell us the cake flavor");
-  const delivery = f.elements.pickup.value === "Free delivery";
+  const delivery = f.elements.pickup.value === "Delivery";
   if (delivery && (!v("address") || !v("town"))) problems.push("enter your street address and town for delivery");
   if (fail("bake", problems)) return;
   if (botFilled(f)) return;
   const when = longDate(v("date"));
   const est = bakeEstimate(f);
   const estText = money(est.total) + (est.unpriced ? " plus muffins/cookies" : "");
-  const how = delivery ? `Free delivery to ${v("address")}, ${v("town")} on ${when}` : `Pickup ${f.elements.pickup.value === "Curbside" ? "curbside" : "in the store"} on ${when}`;
+  const how = delivery ? `Delivery to ${v("address")}, ${v("town")} on ${when} (${feeText(v("town")).toLowerCase()})` : `Pickup ${f.elements.pickup.value === "Curbside" ? "curbside" : "in the store"} on ${when}`;
   submitFlow("bake", {
     subject: `Bakery order from ${v("name")} for ${when}`,
-    fields: { Name: v("name"), Phone: v("phone"), Email: v("email"), "Date needed": when, "Pickup or delivery": f.elements.pickup.value, Address: delivery ? v("address") + ", " + v("town") : "", Order: lines.join("\n"), "Estimated total": estText, "Special instructions": v("notes") },
+    fields: { Name: v("name"), Phone: v("phone"), Email: v("email"), "Date needed": when, "Pickup or delivery": f.elements.pickup.value, Address: delivery ? v("address") + ", " + v("town") : "", "Delivery fee": delivery ? feeText(v("town")) : "", Order: lines.join("\n"), "Estimated total": estText, "Special instructions": v("notes") },
     replyTo: v("email"), lines: [how, ...lines, "Estimated total: " + estText, ...(v("notes") ? ["Notes: " + v("notes")] : [])],
     sentTitle: "Bakery order sent!",
     sentText: `Thanks, ${v("name")}! We'll call or text ${v("phone")} to confirm your order and total.`,
@@ -948,8 +956,12 @@ function renderVisit() {
     ? ` at <a href="https://venmo.com/u/${encodeURIComponent(STORE.venmo)}" target="_blank" rel="noopener" class="venmo-link">@${esc(STORE.venmo)}</a>` : "");
   $("year").textContent = now.getFullYear();
   const towns = STORE.deliveryTowns;
-  document.querySelectorAll(".towns").forEach(el => el.textContent = towns.slice(0, -1).join(", ") + " and " + towns[towns.length - 1]);
-  document.querySelectorAll(".town-select").forEach(el => el.innerHTML = `<option value="">Choose your town</option>` + towns.map(t => `<option>${esc(t)}</option>`).join(""));
+  document.querySelectorAll(".free-towns").forEach(el => el.textContent = listText(STORE.freeDeliveryTowns));
+  document.querySelectorAll(".fee-towns").forEach(el => el.textContent = listText(towns.filter(t => !STORE.freeDeliveryTowns.includes(t))));
+  document.querySelectorAll(".fee").forEach(el => el.textContent = money(STORE.deliveryFee));
+  document.querySelectorAll(".town-select").forEach(el => el.innerHTML = `<option value="">Choose your town</option>` +
+    towns.map(t => `<option value="${esc(t)}">${esc(t)} · ${deliveryFee(t) ? money(deliveryFee(t)) + " delivery" : "free delivery"}</option>`).join(""));
+  document.querySelectorAll(".pd-prices").forEach(el => el.textContent = `Pupcakes ${money(BAKERY.pupcakePrice)} each, doggie donuts ${money(BAKERY.donutPrice)} each`);
   document.querySelectorAll(".bday-perk").forEach(el => el.textContent = BIRTHDAY.perk);
 }
 

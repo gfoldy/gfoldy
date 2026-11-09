@@ -81,6 +81,9 @@ p { margin: 0; }
 .band .wrap { position: relative; }
 .notice { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; background: var(--paper); color: var(--plum); font-weight: 800; border-radius: 999px; padding: 8px 16px; font-size: 15px; }
 .notice svg { width: 18px; height: 18px; color: var(--brown); flex: none; }
+.notices { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.notices .notice { margin-top: 0; border-radius: 16px; }
+.notice a { color: var(--violet); }
 
 .section { padding-block: 44px; }
 .section-title { font-size: clamp(28px, 3.6vw, 36px); color: var(--plum); margin-bottom: 8px; }
@@ -437,7 +440,10 @@ footer svg { width: 60px; height: 32px; color: var(--violet); }
       <div class="wrap">
         <h1>TopPaws Bakery</h1>
         <p>Fresh-baked treats made for dogs. Whether you're celebrating a special day or just because, we've got something special waiting.</p>
-        <div class="notice"><svg aria-hidden="true"><use href="#i-cal"/></svg><span>Please allow <span id="notice-days"></span> days for bakery orders.</span></div>
+        <div class="notices">
+          <div class="notice"><svg aria-hidden="true"><use href="#i-cal"/></svg><span>Please allow <span id="notice-days"></span> days for bakery orders.</span></div>
+          <div class="notice"><svg aria-hidden="true"><use href="#paw"/></svg><span>Flavors change every week. <span class="fb-flavors"></span></span></div>
+        </div>
       </div>
     </section>
 
@@ -477,22 +483,15 @@ footer svg { width: 60px; height: 32px; color: var(--violet); }
               </fieldset>
               <hr class="divider">
               <fieldset>
-                <legend>Pupcakes &amp; doggie donuts<small><span class="pd-prices"></span>. Combine any flavors.</small></legend>
+                <legend>Treats<small><span class="pd-prices"></span>. Flavors change every week.</small></legend>
                 <div class="qty-row">
                   <div class="field"><label for="bo-pupcakes">Pupcakes</label><input id="bo-pupcakes" name="pupcakes" type="number" min="0" max="99" inputmode="numeric" placeholder="0"></div>
                   <div class="field"><label for="bo-donuts">Doggie donuts</label><input id="bo-donuts" name="donuts" type="number" min="0" max="99" inputmode="numeric" placeholder="0"></div>
+                  <div class="field"><label for="bo-muffins">Muffins</label><input id="bo-muffins" name="muffins" type="number" min="0" max="99" inputmode="numeric" placeholder="0"></div>
+                  <div class="field"><label for="bo-cookies">Cookies</label><input id="bo-cookies" name="cookies" type="number" min="0" max="99" inputmode="numeric" placeholder="0"></div>
                 </div>
-                <div><span class="label">Flavors</span><div class="chips" id="flavor-chips"></div></div>
-              </fieldset>
-              <hr class="divider">
-              <fieldset>
-                <legend>Muffins<small>How many of each?</small></legend>
-                <div class="qty-row" id="muffin-qty"></div>
-              </fieldset>
-              <hr class="divider">
-              <fieldset>
-                <legend>Fresh-baked cookies</legend>
-                <div class="qty-row"><div class="field"><label for="bo-cookies">How many?</label><input id="bo-cookies" name="cookies" type="number" min="0" max="99" inputmode="numeric" placeholder="0"></div></div>
+                <div class="field"><label for="bo-flavors">Which flavors?</label><input id="bo-flavors" name="flavors" type="text" placeholder="Example: 2 peanut butter pupcakes, 2 pumpkin donuts">
+                  <div class="hint"><span class="fb-flavors"></span> You can mix flavors.</div></div>
               </fieldset>
               <hr class="divider">
               <fieldset>
@@ -605,6 +604,8 @@ const STORE = {
   },
   // Venmo username (without the @) shown and linked with payment info. Leave empty to hide.
   venmo: "toppawspetsupply",
+  // Facebook page link, where the weekly bakery flavors are posted. Leave empty to show the page name without a link.
+  facebookUrl: "",
   // Towns we deliver to. Towns in freeDeliveryTowns are free; the rest pay deliveryFee.
   deliveryTowns: ["Union Grove", "Burlington", "Kenosha", "Waterford", "Racine", "Yorkville", "Kansasville"],
   freeDeliveryTowns: ["Union Grove"],
@@ -627,16 +628,14 @@ const BRANDS = [
 const EXTRAS = ["Treats", "Toys", "Collars", "Leashes", "Supplies"];
 
 /* ==========================================================================
-   BAKERY: flavors and items from the store's bakery order form.
+   BAKERY: items and prices. Flavors change weekly and are posted on Facebook.
    ========================================================================== */
 const BAKERY = {
   noticeDays: 3,
-  flavors: ["Peanut Butter", "Carrot", "Apple", "Banana", "Strawberry", "Cinnamon"],
-  muffins: ["Blueberry", "Bacon & Egg", "Apple Cinnamon", "PB & J"],
   cakes: ["Birthday", "Gotcha Day", "Gender Reveal"],
-  // Prices. Leave an item out (like muffins and cookies) to have it priced at pickup.
+  // Prices. Muffins and cookies have no price here, so they are priced when the order is confirmed.
   pupcakePrice: 4,
-  donutPrice: 2,
+  donutPrice: 4,
   cakeSizes: [{ name: "Small", price: 10 }, { name: "Medium", price: 15 }, { name: "Large", price: 20 }],
 };
 
@@ -653,6 +652,9 @@ const digits = s => s.replace(/\D/g, "");
 const money = n => "$" + (Number.isInteger(n) ? n : n.toFixed(2));
 const deliveryFee = town => STORE.freeDeliveryTowns.includes(town) ? 0 : STORE.deliveryFee;
 const feeText = town => deliveryFee(town) ? money(deliveryFee(town)) + " delivery fee" : "Free delivery";
+const pdPriceText = () => BAKERY.pupcakePrice === BAKERY.donutPrice
+  ? `Pupcakes and doggie donuts ${money(BAKERY.pupcakePrice)} each`
+  : `Pupcakes ${money(BAKERY.pupcakePrice)}, doggie donuts ${money(BAKERY.donutPrice)} each`;
 const listText = a => a.length > 1 ? a.slice(0, -1).join(", ") + " and " + a[a.length - 1] : a.join("");
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
@@ -788,16 +790,16 @@ function renderBakery() {
   const chip = (name, value, type = "checkbox") => `<label class="chip"><input type="${type}" name="${name}" value="${esc(value)}"><span>${esc(value)}</span></label>`;
   $("menu").innerHTML = `
     <article class="menu-card"><img src="img/pupcakes.jpg" alt="Pupcakes with orange icing drizzle in clear cases">
-      <div class="in"><h3>Pupcakes &amp; doggie donuts</h3><div class="price-tag">Pupcakes ${money(BAKERY.pupcakePrice)} · Donuts ${money(BAKERY.donutPrice)}</div><p>Combine any flavors:</p><ul>${BAKERY.flavors.map(f => `<li>${esc(f)}</li>`).join("")}</ul></div></article>
+      <div class="in"><h3>Pupcakes &amp; doggie donuts</h3><div class="price-tag">${BAKERY.pupcakePrice === BAKERY.donutPrice ? money(BAKERY.pupcakePrice) + " each" : pdPriceText()}</div><p>New flavors every week. Mix and match.</p></div></article>
     <article class="menu-card"><div class="swatch" style="background:var(--violet)"><svg aria-hidden="true"><use href="#i-bake"/></svg></div>
-      <div class="in"><h3>Muffins</h3><ul>${BAKERY.muffins.map(f => `<li>${esc(f)}</li>`).join("")}</ul></div></article>
+      <div class="in"><h3>Muffins</h3><p>A different lineup of flavors every week.</p></div></article>
     <article class="menu-card"><div class="swatch" style="background:var(--orchid)"><svg aria-hidden="true"><use href="#paw"/></svg></div>
-      <div class="in"><h3>Fresh-baked cookies</h3><p>Baked fresh for your pup. Ask about this week's shapes.</p></div></article>
+      <div class="in"><h3>Fresh-baked cookies</h3><p>Baked fresh for your pup in this week's flavors.</p></div></article>
     <article class="menu-card"><div class="swatch" style="background:var(--plum)"><svg aria-hidden="true"><use href="#i-gift"/></svg></div>
       <div class="in"><h3>Custom cakes</h3><div class="price-tag">${BAKERY.cakeSizes.map(c => `${c.name} ${money(c.price)}`).join(" · ")}</div><ul>${BAKERY.cakes.map(c => `<li>${esc(c)}</li>`).join("")}</ul><p>Pick the flavor and colors and tell us what we're celebrating.</p></div></article>`;
-  $("flavor-chips").innerHTML = BAKERY.flavors.map(f => chip("flavor", f)).join("");
-  $("muffin-qty").innerHTML = BAKERY.muffins.map((m, i) =>
-    `<div class="field"><label for="bo-muffin-${i}">${esc(m)}</label><input id="bo-muffin-${i}" name="muffin-${i}" type="number" min="0" max="99" inputmode="numeric" placeholder="0"></div>`).join("");
+  document.querySelectorAll(".fb-flavors").forEach(el => el.innerHTML = STORE.facebookUrl
+    ? `See this week's flavors on <a href="${esc(STORE.facebookUrl)}" target="_blank" rel="noopener">our Facebook page</a>.`
+    : "See this week's flavors on our Facebook page, Top Paws Pet Supply.");
   $("cake-chips").innerHTML = BAKERY.cakes.map((c, i) => chip("occasion", c, "radio").replace("<input", i === 0 ? "<input checked" : "<input")).join("");
   $("cake-size-chips").innerHTML = BAKERY.cakeSizes.map(c =>
     `<label class="chip"><input type="radio" name="cakeSize" value="${esc(c.name)}"><span>${esc(c.name)} · ${money(c.price)}</span></label>`).join("");
@@ -829,7 +831,7 @@ function bakeEstimate(f) {
   if (size) total += size.price;
   const fee = f.elements.pickup.value === "Delivery" && f.elements.town.value ? deliveryFee(f.elements.town.value) : 0;
   total += fee;
-  const unpriced = n("cookies") > 0 || BAKERY.muffins.some((_, i) => n("muffin-" + i) > 0);
+  const unpriced = n("cookies") > 0 || n("muffins") > 0;
   return { total, unpriced, fee };
 }
 function updateEstimate() {
@@ -843,13 +845,13 @@ function updateEstimate() {
 $("bake-form").addEventListener("submit", e => {
   e.preventDefault();
   const f = e.target, v = n => f.elements[n].value.trim(), n = k => Math.max(0, parseInt(v(k), 10) || 0);
-  const flavors = [...f.querySelectorAll('input[name="flavor"]:checked')].map(i => i.value);
   const lines = [];
   if (n("pupcakes")) lines.push(`${n("pupcakes")} pupcake${n("pupcakes") > 1 ? "s" : ""}`);
   if (n("donuts")) lines.push(`${n("donuts")} doggie donut${n("donuts") > 1 ? "s" : ""}`);
-  if ((n("pupcakes") || n("donuts")) && flavors.length) lines.push("Flavors: " + flavors.join(", "));
-  BAKERY.muffins.forEach((m, i) => { if (n("muffin-" + i)) lines.push(`${n("muffin-" + i)} ${m} muffin${n("muffin-" + i) > 1 ? "s" : ""}`); });
+  if (n("muffins")) lines.push(`${n("muffins")} muffin${n("muffins") > 1 ? "s" : ""}`);
   if (n("cookies")) lines.push(`${n("cookies")} cookie${n("cookies") > 1 ? "s" : ""}`);
+  const anyTreats = n("pupcakes") || n("donuts") || n("muffins") || n("cookies");
+  if (anyTreats && v("flavors")) lines.push("Flavors: " + v("flavors"));
   const cake = f.elements.cake.checked;
   if (cake) {
     const bits = [v("cakeFlavor") && "flavor: " + v("cakeFlavor"), v("cakeColors") && "colors: " + v("cakeColors")].filter(Boolean);
@@ -862,7 +864,7 @@ $("bake-form").addEventListener("submit", e => {
   if (!v("date") || v("date") < bakeMinDate()) problems.push(`pick a date at least ${BAKERY.noticeDays} days away`);
   else if (!isOpen(v("date"))) problems.push(`pick a day we're open (we're closed ${closedDays()})`);
   if (!lines.length) problems.push("add at least one treat");
-  if ((n("pupcakes") || n("donuts")) && !flavors.length) problems.push("choose at least one pupcake or donut flavor");
+  if (anyTreats && !v("flavors")) problems.push("tell us which flavors you'd like");
   if (cake && !f.elements.cakeSize.value) problems.push("choose a cake size");
   if (cake && !v("cakeFlavor")) problems.push("tell us the cake flavor");
   const delivery = f.elements.pickup.value === "Delivery";
@@ -961,7 +963,7 @@ function renderVisit() {
   document.querySelectorAll(".fee").forEach(el => el.textContent = money(STORE.deliveryFee));
   document.querySelectorAll(".town-select").forEach(el => el.innerHTML = `<option value="">Choose your town</option>` +
     towns.map(t => `<option value="${esc(t)}">${esc(t)} · ${deliveryFee(t) ? money(deliveryFee(t)) + " delivery" : "free delivery"}</option>`).join(""));
-  document.querySelectorAll(".pd-prices").forEach(el => el.textContent = `Pupcakes ${money(BAKERY.pupcakePrice)} each, doggie donuts ${money(BAKERY.donutPrice)} each`);
+  document.querySelectorAll(".pd-prices").forEach(el => el.textContent = pdPriceText());
   document.querySelectorAll(".bday-perk").forEach(el => el.textContent = BIRTHDAY.perk);
 }
 

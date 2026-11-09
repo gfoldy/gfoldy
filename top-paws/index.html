@@ -631,9 +631,12 @@ const EXTRAS = ["Treats", "Toys", "Collars", "Leashes", "Supplies"];
 const BAKERY = {
   noticeDays: 3,
   cakes: ["Birthday", "Gotcha Day", "Gender Reveal"],
-  // Prices. Muffins and cookies have no price here, so they are priced when the order is confirmed.
+  // Prices for each treat. Set one to null to have it priced when the order is confirmed.
   pupcakePrice: 4,
   donutPrice: 4,
+  muffinPrice: 5,
+  cookiePrice: 5,
+  wooflePrice: 5,
   cakeSizes: [{ name: "Small", price: 10 }, { name: "Medium", price: 15 }, { name: "Large", price: 20 }],
 };
 
@@ -650,9 +653,25 @@ const digits = s => s.replace(/\D/g, "");
 const money = n => "$" + (Number.isInteger(n) ? n : n.toFixed(2));
 const deliveryFee = town => STORE.freeDeliveryTowns.includes(town) ? 0 : STORE.deliveryFee;
 const feeText = town => deliveryFee(town) ? money(deliveryFee(town)) + " delivery fee" : "Free delivery";
-const pdPriceText = () => BAKERY.pupcakePrice === BAKERY.donutPrice
-  ? `Pupcakes and doggie donuts ${money(BAKERY.pupcakePrice)} each`
-  : `Pupcakes ${money(BAKERY.pupcakePrice)}, doggie donuts ${money(BAKERY.donutPrice)} each`;
+// Treat order-form fields and their prices.
+const TREATS = () => [
+  { key: "pupcakes", label: "pupcakes", price: BAKERY.pupcakePrice },
+  { key: "donuts", label: "donuts", price: BAKERY.donutPrice },
+  { key: "muffins", label: "muffins", price: BAKERY.muffinPrice },
+  { key: "cookies", label: "cookies", price: BAKERY.cookiePrice },
+  { key: "woofles", label: "Woofles", price: BAKERY.wooflePrice },
+];
+const priceEach = price => price == null ? "Priced when we confirm" : money(price) + " each";
+// "Pupcakes and donuts $4, muffins, cookies and Woofles $5 each"
+function pdPriceText() {
+  const groups = [];
+  TREATS().filter(t => t.price != null).forEach(t => {
+    const g = groups.find(x => x.price === t.price);
+    g ? g.labels.push(t.label) : groups.push({ price: t.price, labels: [t.label] });
+  });
+  const text = groups.map(g => `${listText(g.labels)} ${money(g.price)}`).join(", ") + " each";
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
 const listText = a => a.length > 1 ? a.slice(0, -1).join(", ") + " and " + a[a.length - 1] : a.join("");
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
@@ -788,13 +807,13 @@ function renderBakery() {
   const chip = (name, value, type = "checkbox") => `<label class="chip"><input type="${type}" name="${name}" value="${esc(value)}"><span>${esc(value)}</span></label>`;
   $("menu").innerHTML = `
     <article class="menu-card"><img src="img/pupcakes.jpg" alt="Pupcakes with orange icing drizzle in clear cases">
-      <div class="in"><h3>Pupcakes &amp; doggie donuts</h3><div class="price-tag">${BAKERY.pupcakePrice === BAKERY.donutPrice ? money(BAKERY.pupcakePrice) + " each" : pdPriceText()}</div><p>New flavors every week. Mix and match.</p></div></article>
+      <div class="in"><h3>Pupcakes &amp; doggie donuts</h3><div class="price-tag">${BAKERY.pupcakePrice === BAKERY.donutPrice ? priceEach(BAKERY.pupcakePrice) : `Pupcakes ${money(BAKERY.pupcakePrice)} · Donuts ${money(BAKERY.donutPrice)}`}</div><p>New flavors every week. Mix and match.</p></div></article>
     <article class="menu-card"><img src="img/muffin.jpg" alt="A dog muffin with white icing drizzle">
-      <div class="in"><h3>Muffins</h3><p>A different lineup of flavors every week.</p></div></article>
+      <div class="in"><h3>Muffins</h3><div class="price-tag">${priceEach(BAKERY.muffinPrice)}</div><p>A different lineup of flavors every week.</p></div></article>
     <article class="menu-card"><img src="img/cookies.jpg" alt="A paw-shaped cookie and a bone-shaped cookie">
-      <div class="in"><h3>Fresh-baked cookies</h3><p>Paw and bone shapes, baked fresh in this week's flavors.</p></div></article>
+      <div class="in"><h3>Fresh-baked cookies</h3><div class="price-tag">${priceEach(BAKERY.cookiePrice)}</div><p>Paw and bone shapes, baked fresh in this week's flavors.</p></div></article>
     <article class="menu-card"><img src="img/woofles.jpg" alt="Waffle-shaped dog treats cooling on a rack">
-      <div class="in"><h3>Woofles</h3><p>Waffles made for dogs, in this week's flavors.</p></div></article>
+      <div class="in"><h3>Woofles</h3><div class="price-tag">${priceEach(BAKERY.wooflePrice)}</div><p>Waffles made for dogs, in this week's flavors.</p></div></article>
     <article class="menu-card"><img src="img/birthday-cake.jpg" alt="A dog birthday cake with blue frosting, a bone cookie on top and Happy Birthday piped in white">
       <div class="in"><h3>Custom cakes</h3><div class="price-tag">${BAKERY.cakeSizes.map(c => `${c.name} ${money(c.price)}`).join(" · ")}</div><ul>${BAKERY.cakes.map(c => `<li>${esc(c)}</li>`).join("")}</ul><p>Pick the flavor and colors and tell us what we're celebrating.</p></div></article>`;
   document.querySelectorAll(".fb-flavors").forEach(el => el.innerHTML = STORE.facebookUrl
@@ -826,19 +845,19 @@ $("bake-form").addEventListener("change", e => {
 $("bake-form").addEventListener("input", updateEstimate);
 function bakeEstimate(f) {
   const n = k => Math.max(0, parseInt(f.elements[k].value, 10) || 0);
-  let total = n("pupcakes") * BAKERY.pupcakePrice + n("donuts") * BAKERY.donutPrice;
+  let total = 0, unpriced = false;
+  TREATS().forEach(t => { if (!n(t.key)) return; t.price == null ? unpriced = true : total += n(t.key) * t.price; });
   const size = f.elements.cake.checked && BAKERY.cakeSizes.find(c => c.name === f.elements.cakeSize.value);
   if (size) total += size.price;
   const fee = f.elements.pickup.value === "Delivery" && f.elements.town.value ? deliveryFee(f.elements.town.value) : 0;
   total += fee;
-  const unpriced = n("cookies") > 0 || n("muffins") > 0 || n("woofles") > 0;
   return { total, unpriced, fee };
 }
 function updateEstimate() {
   const { total, unpriced, fee } = bakeEstimate($("bake-form"));
   $("bake-estimate").textContent = money(total) + (unpriced ? " +" : "");
   $("bake-estimate-note").textContent = (fee ? `Includes ${money(fee)} delivery. ` : "") + (unpriced
-    ? "Plus muffins, cookies or Woofles, which we'll price when we confirm."
+    ? "Plus treats we'll price when we confirm."
     : "We'll confirm your total. Pay at pickup or with Venmo on delivery.");
 }
 
@@ -874,7 +893,7 @@ $("bake-form").addEventListener("submit", e => {
   if (botFilled(f)) return;
   const when = longDate(v("date"));
   const est = bakeEstimate(f);
-  const estText = money(est.total) + (est.unpriced ? " plus muffins/cookies/Woofles" : "");
+  const estText = money(est.total) + (est.unpriced ? " plus unpriced treats" : "");
   const how = delivery ? `Delivery to ${v("address")}, ${v("town")} on ${when} (${feeText(v("town")).toLowerCase()})` : `Pickup ${f.elements.pickup.value === "Curbside" ? "curbside" : "in the store"} on ${when}`;
   submitFlow("bake", {
     subject: `Bakery order from ${v("name")} for ${when}`,

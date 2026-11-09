@@ -148,6 +148,7 @@ p { margin: 0; }
 .how h3 { font-size: 22px; color: #fff; display: flex; align-items: center; gap: 10px; }
 .how h3 svg { width: 22px; height: 22px; color: var(--orchid); }
 .how p { color: var(--lilac); font-size: 16px; margin-top: 4px; }
+.venmo-link { color: #fff; font-weight: 800; }
 
 /* ---------- Forms ---------- */
 .form-card { background: var(--paper); border-radius: 22px; padding: 28px; }
@@ -310,7 +311,7 @@ footer svg { width: 60px; height: 32px; color: var(--violet); }
     <section class="perks" aria-label="Ways to shop">
       <div class="wrap">
         <div class="perk"><svg aria-hidden="true"><use href="#i-car"/></svg><div><b>Curbside pickup</b><span>Park in our lot and we'll bring your order out.</span></div></div>
-        <div class="perk"><svg aria-hidden="true"><use href="#i-truck"/></svg><div><b>Free delivery</b><span>No minimum order. Pay with Venmo.</span></div></div>
+        <div class="perk"><svg aria-hidden="true"><use href="#i-truck"/></svg><div><b>Free delivery</b><span>No minimum order. Pay with Venmo<span class="venmo-line"></span>.</span></div></div>
         <div class="perk"><svg aria-hidden="true"><use href="#i-cal"/></svg><div><b>Birthday Club</b><span>Sign up your dog for a birthday coupon.</span></div></div>
       </div>
     </section>
@@ -588,8 +589,8 @@ const STORE = {
     1: [8, 17.5], 2: [8, 17.5], 3: [8, 17.5], 4: [8, 17.5], 5: [8, 17.5],
     6: [8, 14.5],
   },
-  // Venmo username shown with payment info, e.g. "@TopPaws-PetSupply". Leave empty to hide.
-  venmo: "",
+  // Venmo username (without the @) shown and linked with payment info. Leave empty to hide.
+  venmo: "toppawspetsupply",
   // Web3Forms access key (free at web3forms.com). Orders and Birthday Club
   // sign-ups are emailed to the address the key was made for. While empty,
   // the forms tell customers to call the store instead.
@@ -746,7 +747,7 @@ $("shop-form").addEventListener("submit", e => {
     fields: { Type: f.elements.method.value, Name: v("name"), Phone: v("phone"), Email: v("email"), Address: delivery ? v("address") : "", "Wanted on": v("date") ? longDate(v("date")) : "As soon as possible", Items: v("items"), Notes: v("notes") },
     replyTo: v("email"), lines,
     sentTitle: "Order sent!",
-    sentText: `Thanks, ${v("name")}! We'll text ${v("phone")} to confirm your order and total.`,
+    sentText: `Thanks, ${v("name")}! We'll text ${v("phone")} to confirm your order and total.` + (STORE.venmo ? ` You can pay with Venmo at @${STORE.venmo}.` : ""),
     callText: `Online ordering isn't hooked up yet. Please call ${STORE.phone} and we'll take this order over the phone:`,
   });
 });
@@ -890,7 +891,8 @@ function renderVisit() {
   $("email").textContent = STORE.email;
   $("email").href = "mailto:" + STORE.email;
   $("email-line").hidden = !STORE.email;
-  document.querySelectorAll(".venmo-line").forEach(el => el.textContent = STORE.venmo ? " (" + STORE.venmo + ")" : "");
+  document.querySelectorAll(".venmo-line").forEach(el => el.innerHTML = STORE.venmo
+    ? ` at <a href="https://venmo.com/u/${encodeURIComponent(STORE.venmo)}" target="_blank" rel="noopener" class="venmo-link">@${esc(STORE.venmo)}</a>` : "");
   $("year").textContent = now.getFullYear();
 }
 

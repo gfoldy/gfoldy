@@ -205,11 +205,9 @@ textarea { resize: vertical; min-height: 84px; }
 .done-panel ul { margin: 0; padding: 14px 18px 14px 34px; background: var(--mist); border-radius: 14px; display: grid; gap: 4px; }
 
 /* ---------- BAKERY ---------- */
-.menu { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.menu { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
 .menu-card { background: var(--paper); border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
 .menu-card img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
-.menu-card .swatch { aspect-ratio: 4 / 3; display: grid; place-items: center; }
-.menu-card .swatch svg { width: 64px; height: 64px; color: rgba(255,255,255,0.85); }
 .menu-card .in { padding: 16px 18px 20px; display: grid; gap: 8px; }
 .menu-card h3 { font-size: 22px; color: var(--plum); }
 .menu-card p { color: var(--muted); font-size: 15px; }
@@ -237,7 +235,6 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
 footer svg { width: 60px; height: 32px; color: var(--violet); }
 
 @media (max-width: 960px) {
-  .menu { grid-template-columns: 1fr 1fr; }
   .doors { grid-template-columns: 1fr; }
 }
 @media (max-width: 880px) {
@@ -331,7 +328,7 @@ footer svg { width: 60px; height: 32px; color: var(--violet); }
       </section>
       <section class="door door-bake" aria-labelledby="door-bake-title">
         <h2 id="door-bake-title">TopPaws Bakery</h2>
-        <p>Pupcakes, doggie donuts, muffins, cookies and custom cakes for birthdays and Gotcha Days. Pickup or delivery.</p>
+        <p>Pupcakes, doggie donuts, muffins, cookies, Woofles and custom cakes for birthdays and Gotcha Days. Pickup or delivery.</p>
         <a class="btn btn-lilac" href="#bakery" data-go="bakery">Order bakery treats</a>
       </section>
       <section class="door door-bday" aria-labelledby="door-bday-title">
@@ -489,6 +486,7 @@ footer svg { width: 60px; height: 32px; color: var(--violet); }
                   <div class="field"><label for="bo-donuts">Doggie donuts</label><input id="bo-donuts" name="donuts" type="number" min="0" max="99" inputmode="numeric" placeholder="0"></div>
                   <div class="field"><label for="bo-muffins">Muffins</label><input id="bo-muffins" name="muffins" type="number" min="0" max="99" inputmode="numeric" placeholder="0"></div>
                   <div class="field"><label for="bo-cookies">Cookies</label><input id="bo-cookies" name="cookies" type="number" min="0" max="99" inputmode="numeric" placeholder="0"></div>
+                  <div class="field"><label for="bo-woofles">Woofles</label><input id="bo-woofles" name="woofles" type="number" min="0" max="99" inputmode="numeric" placeholder="0"></div>
                 </div>
                 <div class="field"><label for="bo-flavors">Which flavors?</label><input id="bo-flavors" name="flavors" type="text" placeholder="Example: 2 peanut butter pupcakes, 2 pumpkin donuts">
                   <div class="hint"><span class="fb-flavors"></span> You can mix flavors.</div></div>
@@ -791,11 +789,13 @@ function renderBakery() {
   $("menu").innerHTML = `
     <article class="menu-card"><img src="img/pupcakes.jpg" alt="Pupcakes with orange icing drizzle in clear cases">
       <div class="in"><h3>Pupcakes &amp; doggie donuts</h3><div class="price-tag">${BAKERY.pupcakePrice === BAKERY.donutPrice ? money(BAKERY.pupcakePrice) + " each" : pdPriceText()}</div><p>New flavors every week. Mix and match.</p></div></article>
-    <article class="menu-card"><div class="swatch" style="background:var(--violet)"><svg aria-hidden="true"><use href="#i-bake"/></svg></div>
+    <article class="menu-card"><img src="img/muffin.jpg" alt="A dog muffin with white icing drizzle">
       <div class="in"><h3>Muffins</h3><p>A different lineup of flavors every week.</p></div></article>
-    <article class="menu-card"><div class="swatch" style="background:var(--orchid)"><svg aria-hidden="true"><use href="#paw"/></svg></div>
-      <div class="in"><h3>Fresh-baked cookies</h3><p>Baked fresh for your pup in this week's flavors.</p></div></article>
-    <article class="menu-card"><div class="swatch" style="background:var(--plum)"><svg aria-hidden="true"><use href="#i-gift"/></svg></div>
+    <article class="menu-card"><img src="img/cookies.jpg" alt="A paw-shaped cookie and a bone-shaped cookie">
+      <div class="in"><h3>Fresh-baked cookies</h3><p>Paw and bone shapes, baked fresh in this week's flavors.</p></div></article>
+    <article class="menu-card"><img src="img/woofles.jpg" alt="Waffle-shaped dog treats cooling on a rack">
+      <div class="in"><h3>Woofles</h3><p>Waffles made for dogs, in this week's flavors.</p></div></article>
+    <article class="menu-card"><img src="img/birthday-cake.jpg" alt="A dog birthday cake with blue frosting, a bone cookie on top and Happy Birthday piped in white">
       <div class="in"><h3>Custom cakes</h3><div class="price-tag">${BAKERY.cakeSizes.map(c => `${c.name} ${money(c.price)}`).join(" · ")}</div><ul>${BAKERY.cakes.map(c => `<li>${esc(c)}</li>`).join("")}</ul><p>Pick the flavor and colors and tell us what we're celebrating.</p></div></article>`;
   document.querySelectorAll(".fb-flavors").forEach(el => el.innerHTML = STORE.facebookUrl
     ? `See this week's flavors on <a href="${esc(STORE.facebookUrl)}" target="_blank" rel="noopener">our Facebook page</a>.`
@@ -831,14 +831,14 @@ function bakeEstimate(f) {
   if (size) total += size.price;
   const fee = f.elements.pickup.value === "Delivery" && f.elements.town.value ? deliveryFee(f.elements.town.value) : 0;
   total += fee;
-  const unpriced = n("cookies") > 0 || n("muffins") > 0;
+  const unpriced = n("cookies") > 0 || n("muffins") > 0 || n("woofles") > 0;
   return { total, unpriced, fee };
 }
 function updateEstimate() {
   const { total, unpriced, fee } = bakeEstimate($("bake-form"));
   $("bake-estimate").textContent = money(total) + (unpriced ? " +" : "");
   $("bake-estimate-note").textContent = (fee ? `Includes ${money(fee)} delivery. ` : "") + (unpriced
-    ? "Plus muffins and cookies, which we'll price when we confirm."
+    ? "Plus muffins, cookies or Woofles, which we'll price when we confirm."
     : "We'll confirm your total. Pay at pickup or with Venmo on delivery.");
 }
 
@@ -850,7 +850,8 @@ $("bake-form").addEventListener("submit", e => {
   if (n("donuts")) lines.push(`${n("donuts")} doggie donut${n("donuts") > 1 ? "s" : ""}`);
   if (n("muffins")) lines.push(`${n("muffins")} muffin${n("muffins") > 1 ? "s" : ""}`);
   if (n("cookies")) lines.push(`${n("cookies")} cookie${n("cookies") > 1 ? "s" : ""}`);
-  const anyTreats = n("pupcakes") || n("donuts") || n("muffins") || n("cookies");
+  if (n("woofles")) lines.push(`${n("woofles")} Woofle${n("woofles") > 1 ? "s" : ""}`);
+  const anyTreats = n("pupcakes") || n("donuts") || n("muffins") || n("cookies") || n("woofles");
   if (anyTreats && v("flavors")) lines.push("Flavors: " + v("flavors"));
   const cake = f.elements.cake.checked;
   if (cake) {
@@ -873,7 +874,7 @@ $("bake-form").addEventListener("submit", e => {
   if (botFilled(f)) return;
   const when = longDate(v("date"));
   const est = bakeEstimate(f);
-  const estText = money(est.total) + (est.unpriced ? " plus muffins/cookies" : "");
+  const estText = money(est.total) + (est.unpriced ? " plus muffins/cookies/Woofles" : "");
   const how = delivery ? `Delivery to ${v("address")}, ${v("town")} on ${when} (${feeText(v("town")).toLowerCase()})` : `Pickup ${f.elements.pickup.value === "Curbside" ? "curbside" : "in the store"} on ${when}`;
   submitFlow("bake", {
     subject: `Bakery order from ${v("name")} for ${when}`,

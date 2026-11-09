@@ -360,7 +360,7 @@ footer svg { width: 60px; height: 32px; color: var(--violet); }
       <div class="wrap visit-grid">
         <div><h2><svg aria-hidden="true"><use href="#paw"/></svg>Hours</h2><table class="hours" id="hours"></table></div>
         <div><h2><svg aria-hidden="true"><use href="#paw"/></svg>Where we are</h2><p id="addr"></p><p>Plenty of parking in our lot. Ask for curbside and we'll bring your order to your car.</p></div>
-        <div><h2><svg aria-hidden="true"><use href="#paw"/></svg>Get in touch</h2><p>Call <span class="num" id="phone"></span></p><p id="email-line">Email <a id="email"></a></p></div>
+        <div><h2><svg aria-hidden="true"><use href="#paw"/></svg>Get in touch</h2><p>Call <span class="num" id="phone"></span></p><p id="email-line">Email <a id="email"></a></p><p id="fb-line">Find us on <a id="fb-link" target="_blank" rel="noopener">Facebook</a> for weekly bakery flavors.</p></div>
       </div>
     </section>
   </div>
@@ -605,7 +605,7 @@ const STORE = {
   // Venmo username (without the @) shown and linked with payment info. Leave empty to hide.
   venmo: "toppawspetsupply",
   // Facebook page link, where the weekly bakery flavors are posted. Leave empty to show the page name without a link.
-  facebookUrl: "",
+  facebookUrl: "https://www.facebook.com/share/1K5sizPY4o/",
   // Towns we deliver to. Towns in freeDeliveryTowns are free; the rest pay deliveryFee.
   deliveryTowns: ["Union Grove", "Burlington", "Kenosha", "Waterford", "Racine", "Yorkville", "Kansasville"],
   freeDeliveryTowns: ["Union Grove"],
@@ -954,6 +954,8 @@ function renderVisit() {
   $("email").textContent = STORE.email;
   $("email").href = "mailto:" + STORE.email;
   $("email-line").hidden = !STORE.email;
+  $("fb-link").href = STORE.facebookUrl;
+  $("fb-line").hidden = !STORE.facebookUrl;
   document.querySelectorAll(".venmo-line").forEach(el => el.innerHTML = STORE.venmo
     ? ` at <a href="https://venmo.com/u/${encodeURIComponent(STORE.venmo)}" target="_blank" rel="noopener" class="venmo-link">@${esc(STORE.venmo)}</a>` : "");
   $("year").textContent = now.getFullYear();
